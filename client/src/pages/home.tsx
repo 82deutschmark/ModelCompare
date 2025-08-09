@@ -24,12 +24,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Moon, Sun, Send, MessageSquare, Brain, Zap, Settings } from "lucide-react";
+import { Moon, Sun, Send, MessageSquare, Brain, Zap, Settings, Sword } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { ResponseCard } from "@/components/ResponseCard";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 import type { AIModel, ModelResponse, ComparisonResult } from "@/types/ai-models";
 
 export default function Home() {
@@ -153,14 +154,22 @@ export default function Home() {
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Model Comparison</h1>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className="p-2"
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </Button>
+            <div className="flex items-center space-x-4">
+              <Link href="/battle">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Sword className="w-4 h-4" />
+                  <span>Battle Mode</span>
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleTheme}
+                className="p-2"
+              >
+                {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+              </Button>
+            </div>
           </div>
         </div>
       </header>

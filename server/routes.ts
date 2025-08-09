@@ -113,6 +113,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Battle mode endpoints
+  app.post("/api/battle/start", async (req, res) => {
+    try {
+      const { prompt, model1Id, model2Id } = req.body;
+      
+      if (!prompt || !model1Id || !model2Id) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Get initial response from Model 1
+      const model1Response = await callAIModel(prompt, model1Id);
+
+      // Create system prompt for Model 2 to challenge Model 1's response
+      const challengePrompt = `Your competitor told the user this: "${model1Response.content}"
+
+Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.
+
+Original user prompt was: "${prompt}"`;
+
+      // Get challenging response from Model 2
+      const model2Response = await callAIModel(challengePrompt, model2Id);
+
+      res.json({
+        model1Response: {
+          content: model1Response.content,
+          responseTime: model1Response.responseTime,
+          status: 'success'
+        },
+        model2Response: {
+          content: model2Response.content,
+          responseTime: model2Response.responseTime,
+          status: 'success'
+        }
+      });
+
+    } catch (error) {
+      console.error("Battle start error:", error);
+      res.status(500).json({ error: "Failed to start battle" });
+    }
+  });
+
+  app.post("/api/battle/continue", async (req, res) => {
+    try {
+      const { battleHistory, nextModelId } = req.body;
+      
+      if (!battleHistory || !nextModelId) {
+        return res.status(400).json({ error: "Missing battle history or next model ID" });
+      }
+
+      // Build conversation context from battle history
+      const conversationContext = battleHistory
+        .map((msg: any) => `${msg.modelName}: ${msg.content}`)
+        .join("\n\n");
+
+      // Create continuation prompt for the next model
+      const continuationPrompt = `You are in an ongoing debate. Here's the conversation so far:
+
+${conversationContext}
+
+Continue the debate by responding to the last message. Be analytical, challenge assumptions, and provide counter-arguments or alternative perspectives. Keep the discussion engaging and substantive.`;
+
+      // Get response from the next model
+      const response = await callAIModel(continuationPrompt, nextModelId);
+
+      res.json({
+        response: {
+          content: response.content,
+          responseTime: response.responseTime,
+          status: 'success'
+        },
+        modelId: nextModelId
+      });
+
+    } catch (error) {
+      console.error("Battle continue error:", error);
+      res.status(500).json({ error: "Failed to continue battle" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
