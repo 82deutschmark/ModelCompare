@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarProvider } from "@/components/ui/sidebar";
-import { Moon, Sun, Send, MessageSquare } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Moon, Sun, Send, MessageSquare, Brain, Zap, Settings } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { ResponseCard } from "@/components/ResponseCard";
 import { useTheme } from "@/components/ThemeProvider";
@@ -120,124 +119,145 @@ export default function Home() {
   const selectedModelData = models.filter(model => selectedModels.includes(model.id));
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex bg-gray-50 dark:bg-slate-900">
-        {/* Sidebar */}
-        <Sidebar className="w-80 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700">
-          <SidebarHeader className="p-6 border-b border-gray-200 dark:border-slate-700">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Comparison</h1>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleTheme}
-                className="p-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
-              >
-                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-              </Button>
-            </div>
-          </SidebarHeader>
-          
-          <SidebarContent className="flex-1 p-6 overflow-y-auto">
-            {modelsLoading ? (
-              <div className="space-y-4">
-                <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
-                <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded animate-pulse w-3/4" />
-                <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded animate-pulse w-1/2" />
-              </div>
-            ) : (
-              <ModelSelector
-                models={models}
-                selectedModels={selectedModels}
-                onSelectionChange={setSelectedModels}
-              />
-            )}
-          </SidebarContent>
-        </Sidebar>
-
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
-            <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <Brain className="w-8 h-8 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Model Comparison</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {selectedModels.length} models selected
-                </p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Model Comparison</h1>
               </div>
             </div>
-          </header>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              className="p-2"
+            >
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </Button>
+          </div>
+        </div>
+      </header>
 
-          {/* Prompt Input */}
-          <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-6">
-            <div className="max-w-4xl">
-              <Label htmlFor="prompt" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-                Enter your prompt
-              </Label>
-              <div className="relative">
-                <Textarea
-                  id="prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                  className="resize-none"
-                  placeholder="Ask a question or provide a prompt to compare across selected AI models..."
-                />
-                <div className="absolute bottom-3 right-3">
-                  <span className="text-xs text-gray-400">{prompt.length}</span>
-                  <span className="text-xs text-gray-400">/4000</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="stream"
-                      checked={streamResponses}
-                      onCheckedChange={(checked) => setStreamResponses(checked === true)}
-                    />
-                    <Label htmlFor="stream" className="text-sm text-gray-600 dark:text-gray-400">
-                      Stream responses
-                    </Label>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Model Selection Panel */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-8">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Settings className="w-5 h-5" />
+                  <span>Select Models</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {modelsLoading ? (
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="timing"
-                      checked={showTiming}
-                      onCheckedChange={(checked) => setShowTiming(checked === true)}
-                    />
-                    <Label htmlFor="timing" className="text-sm text-gray-600 dark:text-gray-400">
-                      Show timing
-                    </Label>
+                ) : (
+                  <ModelSelector
+                    models={models}
+                    selectedModels={selectedModels}
+                    onSelectionChange={setSelectedModels}
+                  />
+                )}
+                
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    {selectedModels.length} model{selectedModels.length !== 1 ? 's' : ''} selected
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="timing"
+                        checked={showTiming}
+                        onCheckedChange={(checked) => setShowTiming(checked === true)}
+                      />
+                      <Label htmlFor="timing" className="text-sm">
+                        Show response timing
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Prompt Input */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <MessageSquare className="w-5 h-5" />
+                  <span>Enter Your Prompt</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    rows={4}
+                    className="resize-none pr-16"
+                    placeholder="Ask a question or provide a prompt to compare across selected AI models..."
+                  />
+                  <div className="absolute bottom-3 right-3 text-xs text-gray-400">
+                    {prompt.length}/4000
                   </div>
                 </div>
                 
-                <Button
-                  onClick={handleSubmit}
-                  disabled={compareModelsMutation.isPending || !prompt.trim() || selectedModels.length === 0}
-                  className="bg-brand-500 hover:bg-brand-600 focus:ring-brand-500"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Compare Responses
-                </Button>
-              </div>
-            </div>
-          </div>
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedModels.length === 0 ? (
+                      "Select models to start comparing"
+                    ) : (
+                      `Ready to compare with ${selectedModels.length} model${selectedModels.length !== 1 ? 's' : ''}`
+                    )}
+                  </div>
+                  
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={compareModelsMutation.isPending || !prompt.trim() || selectedModels.length === 0}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    size="lg"
+                  >
+                    {compareModelsMutation.isPending ? (
+                      <>
+                        <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Comparing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 mr-2" />
+                        Compare Models
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Response Grid */}
-          <div className="flex-1 p-6 overflow-auto">
+            {/* Results Grid */}
             {selectedModelData.length === 0 ? (
-              <div className="text-center py-12">
-                <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Models Selected</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Select some models from the sidebar to start comparing AI responses.
-                </p>
-              </div>
+              <Card>
+                <CardContent className="text-center py-12">
+                  <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Models Selected</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Select some models from the panel on the left to start comparing AI responses.
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {selectedModelData.map((model) => (
                   <ResponseCard
                     key={model.id}
@@ -249,8 +269,8 @@ export default function Home() {
               </div>
             )}
           </div>
-        </main>
+        </div>
       </div>
-    </SidebarProvider>
+    </div>
   );
 }
