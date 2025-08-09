@@ -28,6 +28,7 @@ export interface ModelResponse {
   status: 'success' | 'error' | 'loading';
   responseTime: number;
   error?: string;
+  reasoning?: string;
 }
 
 export interface ComparisonResult {

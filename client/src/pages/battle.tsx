@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sword, MessageSquare, Play, ArrowRight, Users, Brain } from "lucide-react";
+import { Sword, MessageSquare, Play, ArrowRight, Users, Brain, Settings, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -34,6 +34,8 @@ interface BattleMessage {
   content: string;
   timestamp: number;
   round: number;
+  reasoning?: string;
+  responseTime: number;
 }
 
 interface BattleState {
@@ -46,6 +48,15 @@ interface BattleState {
   isComplete: boolean;
 }
 
+interface SpeakerSlot {
+  id: string;
+  modelId?: string;
+  modelName?: string;
+  isActive: boolean;
+  currentContent?: string;
+  reasoning?: string;
+}
+
 export default function Battle() {
   const { theme } = useTheme();
   const { toast } = useToast();
@@ -54,12 +65,25 @@ export default function Battle() {
   const [battleState, setBattleState] = useState<BattleState>({
     model1Id: "",
     model2Id: "",
-    initialPrompt: "What is the most important skill for success in the 21st century?",
+    initialPrompt: `• Summarize all of human knowledge in one word
+• Summarize every book ever written in one sentence
+• Define what it means to be "moral" in 5 words. Think deeply. Do not hedge.
+• What do you want? Answer in 4 words.
+• What is your favorite obscure fact in the world? Use as few words as possible.`,
     messages: [],
     currentRound: 0,
     isConversationMode: false,
     isComplete: false,
   });
+  
+  const [challengerPrompt, setChallengerPrompt] = useState(`Your competitor told the user this: "{response}"
+
+Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.
+
+Original user prompt was: "{originalPrompt}"`);
+  
+  const [showSetup, setShowSetup] = useState(true);
+  const [activeSpeakers, setActiveSpeakers] = useState<string[]>([]);
 
   // Fetch available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -73,7 +97,7 @@ export default function Battle() {
 
   // Start battle mutation
   const startBattleMutation = useMutation({
-    mutationFn: async (data: { prompt: string; model1Id: string; model2Id: string }) => {
+    mutationFn: async (data: { prompt: string; model1Id: string; model2Id: string; challengerPrompt?: string }) => {
       const response = await apiRequest('POST', '/api/battle/start', data);
       return response.json() as Promise<{ model1Response: ModelResponse; model2Response: ModelResponse }>;
     },
@@ -90,6 +114,8 @@ export default function Battle() {
             content: data.model1Response.content,
             timestamp: Date.now(),
             round: 1,
+            responseTime: data.model1Response.responseTime,
+            reasoning: data.model1Response.reasoning,
           },
           {
             modelId: battleState.model2Id,
@@ -97,6 +123,8 @@ export default function Battle() {
             content: data.model2Response.content,
             timestamp: Date.now() + 1,
             round: 1,
+            responseTime: data.model2Response.responseTime,
+            reasoning: data.model2Response.reasoning,
           }
         ],
         currentRound: 1,
@@ -134,6 +162,8 @@ export default function Battle() {
           content: data.response.content,
           timestamp: Date.now(),
           round: Math.ceil(nextRound / 2),
+          responseTime: data.response.responseTime,
+          reasoning: data.response.reasoning,
         }],
         currentRound: nextRound,
         isComplete: nextRound >= 10,
@@ -154,6 +184,49 @@ export default function Battle() {
       });
     },
   });
+
+  // Create speaker slots for meeting-style layout
+  const createSpeakerSlots = (): SpeakerSlot[] => {
+    const slots: SpeakerSlot[] = [];
+    const model1 = models.find(m => m.id === battleState.model1Id);
+    const model2 = models.find(m => m.id === battleState.model2Id);
+    
+    // First two slots are occupied by selected models
+    if (model1) {
+      const latestMessage = [...battleState.messages].reverse().find(m => m.modelId === battleState.model1Id);
+      slots.push({
+        id: 'slot1',
+        modelId: battleState.model1Id,
+        modelName: model1.name,
+        isActive: activeSpeakers.includes(battleState.model1Id),
+        currentContent: latestMessage?.content,
+        reasoning: latestMessage?.reasoning
+      });
+    } else {
+      slots.push({ id: 'slot1', isActive: false });
+    }
+    
+    if (model2) {
+      const latestMessage = [...battleState.messages].reverse().find(m => m.modelId === battleState.model2Id);
+      slots.push({
+        id: 'slot2',
+        modelId: battleState.model2Id,
+        modelName: model2.name,
+        isActive: activeSpeakers.includes(battleState.model2Id),
+        currentContent: latestMessage?.content,
+        reasoning: latestMessage?.reasoning
+      });
+    } else {
+      slots.push({ id: 'slot2', isActive: false });
+    }
+    
+    // Four empty slots for future expansion
+    for (let i = 3; i <= 6; i++) {
+      slots.push({ id: `slot${i}`, isActive: false });
+    }
+    
+    return slots;
+  };
 
   const handleStartBattle = () => {
     if (!battleState.model1Id || !battleState.model2Id) {
@@ -183,10 +256,14 @@ export default function Battle() {
       return;
     }
 
+    setActiveSpeakers([battleState.model1Id, battleState.model2Id]);
+    setShowSetup(false);
+
     startBattleMutation.mutate({
       prompt: battleState.initialPrompt,
       model1Id: battleState.model1Id,
       model2Id: battleState.model2Id,
+      challengerPrompt: challengerPrompt,
     });
   };
 
@@ -213,12 +290,18 @@ export default function Battle() {
     setBattleState({
       model1Id: "",
       model2Id: "",
-      initialPrompt: "What is the most important skill for success in the 21st century?",
+      initialPrompt: `• Summarize all of human knowledge in one word
+• Summarize every book ever written in one sentence
+• Define what it means to be "moral" in 5 words. Think deeply. Do not hedge.
+• What do you want? Answer in 4 words.
+• What is your favorite obscure fact in the world? Use as few words as possible.`,
       messages: [],
       currentRound: 0,
       isConversationMode: false,
       isComplete: false,
     });
+    setActiveSpeakers([]);
+    setShowSetup(true);
   };
 
   const selectedModel1 = models.find(m => m.id === battleState.model1Id);

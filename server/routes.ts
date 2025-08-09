@@ -126,7 +126,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const model1Response = await callAIModel(prompt, model1Id);
 
       // Create system prompt for Model 2 to challenge Model 1's response
-      const challengePrompt = `Your competitor told the user this: "${model1Response.content}"
+      const challengePrompt = req.body.challengerPrompt 
+        ? req.body.challengerPrompt
+            .replace('{response}', model1Response.content)
+            .replace('{originalPrompt}', prompt)
+        : `Your competitor told the user this: "${model1Response.content}"
 
 Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.
 
