@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Home from "@/pages/home";
-import Battle from "@/pages/battle-new";
+import Battle from "@/pages/battle-chat";
 import NotFound from "@/pages/not-found";
 
 function Router() {

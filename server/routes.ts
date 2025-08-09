@@ -113,6 +113,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Single Model Response Route
+  app.post("/api/models/respond", async (req, res) => {
+    try {
+      const { modelId, prompt } = req.body;
+      
+      if (!modelId || !prompt) {
+        return res.status(400).json({ error: 'Missing modelId or prompt' });
+      }
+
+      const result = await callAIModel(prompt, modelId);
+      
+      res.json({
+        content: result.content,
+        responseTime: result.responseTime,
+        reasoning: undefined // Will be added when models support it
+      });
+    } catch (error) {
+      console.error('Model response error:', error);
+      res.status(500).json({ error: 'Failed to get model response' });
+    }
+  });
+
   // Battle mode endpoints
   app.post("/api/battle/start", async (req, res) => {
     try {

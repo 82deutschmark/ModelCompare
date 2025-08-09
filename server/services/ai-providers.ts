@@ -91,7 +91,7 @@ export async function callOpenAI(prompt: string, model: string): Promise<string>
   const response = await openai.chat.completions.create({
     model: model,
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 2000,
+    max_completion_tokens: 2000,
   });
   
   return response.choices[0].message.content || "No response generated";
