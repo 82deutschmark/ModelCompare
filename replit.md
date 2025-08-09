@@ -8,6 +8,17 @@ This is a full-stack web application that allows users to compare responses from
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### August 9, 2025 - Comprehensive Documentation and Code Comments
+- Created comprehensive README.md with full project architecture documentation
+- Added detailed header comments to all major files with author attribution (Replit Agent)
+- Updated default prompt to philosophical multi-question format as requested
+- Completely redesigned UI with clean, modern layout removing previous terrible design
+- Fixed all TypeScript errors and LSP diagnostics
+- Prepared foundation for future "battle mode" feature where models critique each other
+- All files now properly documented with purpose, functionality, and architecture details
+
 ## System Architecture
 
 ### Frontend Architecture

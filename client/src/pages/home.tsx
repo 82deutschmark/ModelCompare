@@ -1,3 +1,22 @@
+/**
+ * Home Page Component - AI Model Comparison Interface
+ * 
+ * This is the main application page that provides the user interface for comparing
+ * AI model responses. It manages the entire comparison workflow including:
+ * - Model selection from multiple AI providers (OpenAI, Anthropic, Gemini, DeepSeek, xAI)
+ * - Prompt input with validation and character counting
+ * - Parallel API calls to selected models for response comparison
+ * - Real-time display of responses in a grid layout with loading states
+ * - Error handling and retry functionality for failed requests
+ * - Theme switching between light and dark modes
+ * 
+ * The component uses TanStack Query for server state management and provides
+ * a clean, modern interface for side-by-side AI model comparison.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -18,7 +37,11 @@ export default function Home() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [prompt, setPrompt] = useState("Explain the concept of recursion in programming with a simple example.");
+  const [prompt, setPrompt] = useState(`• Summarize all of human knowledge in one word
+• Summarize every book ever written in one sentence
+• Define what it means to be "moral" in 5 words. Think deeply. Do not hedge.
+• What do you want? Answer in 4 words.
+• What is your favorite obscure fact in the world? Use as few words as possible.`);
   const [selectedModels, setSelectedModels] = useState<string[]>([
     "openai-gpt-5",
     "anthropic-claude-sonnet-4", 

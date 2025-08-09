@@ -1,5 +1,22 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+/**
+ * Model Selector Component - AI Provider and Model Selection Interface
+ * 
+ * This component renders a hierarchical selection interface for AI models organized
+ * by provider (OpenAI, Anthropic, Gemini, DeepSeek, xAI). It provides:
+ * - Provider-level selection/deselection (select all models from a provider)
+ * - Individual model selection with checkboxes
+ * - Clear all functionality to reset selections
+ * - Clean, organized display with proper grouping and spacing
+ * 
+ * The component manages the selection state through parent component callbacks
+ * and uses provider groupings to organize models logically for better UX.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { providerGroups } from "@/types/ai-models";

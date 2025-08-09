@@ -1,3 +1,24 @@
+/**
+ * AI Providers Service - Multi-Provider AI Model Integration
+ * 
+ * This service module provides a unified interface for interacting with multiple
+ * AI providers including OpenAI, Anthropic, Google Gemini, DeepSeek, and xAI Grok.
+ * It abstracts the differences between provider APIs and provides:
+ * 
+ * - Unified model definitions with provider-specific configurations
+ * - Parallel API calls to multiple models for comparison
+ * - Error handling and graceful degradation per provider
+ * - Response time tracking for performance analysis
+ * - Secure API key management through environment variables
+ * - Request/response normalization across different API formats
+ * 
+ * Each provider has its own implementation while conforming to a common interface
+ * that enables seamless comparison of responses across different AI models.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 import OpenAI from "openai";
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from "@google/genai";

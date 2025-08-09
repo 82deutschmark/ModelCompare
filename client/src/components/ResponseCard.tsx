@@ -1,3 +1,22 @@
+/**
+ * Response Card Component - Individual AI Model Response Display
+ * 
+ * This component renders a single AI model's response in a card format with:
+ * - Model name and provider information in the header
+ * - Status indicators (loading, success, error) with appropriate styling
+ * - Response timing information when available
+ * - Loading skeleton animations during API calls
+ * - Error states with retry functionality
+ * - Response content with proper typography and formatting
+ * - Copy-to-clipboard functionality for successful responses
+ * 
+ * The component handles all possible response states and provides a consistent
+ * interface for displaying AI model outputs in the comparison grid.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

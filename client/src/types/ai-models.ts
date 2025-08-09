@@ -1,3 +1,21 @@
+/**
+ * AI Models Type Definitions - Frontend Model Interfaces and Provider Mappings
+ * 
+ * This module contains TypeScript type definitions specific to the frontend
+ * application for AI model management and response handling. It provides:
+ * 
+ * - Model interface definitions for UI components
+ * - Provider grouping mappings for organized model selection
+ * - Response status types and result interfaces
+ * - Frontend-specific type extensions for UI state management
+ * 
+ * These types complement the shared schema definitions and provide additional
+ * frontend-specific typing for component props, state management, and UI logic.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 export interface AIModel {
   id: string;
   name: string;

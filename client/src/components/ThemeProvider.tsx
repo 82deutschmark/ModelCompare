@@ -1,3 +1,22 @@
+/**
+ * Theme Provider Component - Dark/Light Mode Management
+ * 
+ * This component provides global theme management for the application using
+ * React Context. It handles:
+ * 
+ * - Theme state management (light/dark modes)
+ * - Persistence to localStorage for user preferences
+ * - CSS class toggling on document element for Tailwind CSS
+ * - Theme context provider for child components
+ * - Theme toggle functionality accessible throughout the app
+ * 
+ * The theme system integrates with Tailwind CSS dark mode classes and
+ * provides a consistent theming experience across all components.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";

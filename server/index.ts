@@ -1,3 +1,24 @@
+/**
+ * Server Entry Point - Express Application Bootstrap
+ * 
+ * This is the main server entry point that initializes and starts the Express.js
+ * application. It handles:
+ * 
+ * - Express server setup with middleware configuration
+ * - Static file serving for the Vite frontend application
+ * - API route registration and middleware setup
+ * - Session management with PostgreSQL store
+ * - Environment configuration and error handling
+ * - Development vs production mode detection
+ * - Server startup and port binding
+ * 
+ * The server integrates the frontend Vite build with the backend API,
+ * providing a unified application served from a single port.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";

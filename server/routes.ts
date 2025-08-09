@@ -1,3 +1,23 @@
+/**
+ * API Routes - RESTful Endpoints for AI Model Comparison
+ * 
+ * This module defines the Express.js API routes for the AI model comparison application.
+ * It provides endpoints for:
+ * 
+ * - GET /api/models - Retrieve all available AI models from configured providers
+ * - POST /api/compare - Submit a prompt to selected models for parallel comparison
+ * - Error handling and validation for all request/response cycles
+ * - Integration with the storage layer for persistence
+ * - Request logging and performance monitoring
+ * 
+ * Routes handle authentication through API keys, validate request payloads using
+ * Zod schemas, and coordinate with the AI providers service for actual model calls.
+ * All responses are formatted consistently for frontend consumption.
+ * 
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
@@ -42,7 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             content: '',
             status: 'error',
             responseTime: 0,
-            error: error.message,
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
         }
       });
