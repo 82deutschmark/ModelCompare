@@ -70,6 +70,8 @@ Original user prompt was: "{originalPrompt}"`);
   const [currentRound, setCurrentRound] = useState(0);
   const [showSetup, setShowSetup] = useState(true);
   const [activeSpeakers, setActiveSpeakers] = useState<string[]>([]);
+  const [autoConversation, setAutoConversation] = useState(false);
+  const [isAutoRunning, setIsAutoRunning] = useState(false);
 
   // Fetch available models
   const { data: models = [] } = useQuery({
@@ -155,12 +157,20 @@ Original user prompt was: "{originalPrompt}"`);
           reasoning: data.model2Response.reasoning,
         }
       ]);
-      setCurrentRound(1);
+      setCurrentRound(2);
       
       toast({
         title: "Battle Started!",
         description: "Models have provided their initial responses",
       });
+
+      // Auto-start continuous conversation if enabled
+      if (autoConversation) {
+        setIsAutoRunning(true);
+        setTimeout(() => {
+          triggerNextResponse();
+        }, 2000); // 2 second delay between responses
+      }
     },
     onError: (error) => {
       toast({
@@ -194,10 +204,16 @@ Original user prompt was: "{originalPrompt}"`);
       setActiveSpeakers([]);
 
       if (nextRound >= 10) {
+        setIsAutoRunning(false);
         toast({
           title: "Battle Complete!",
           description: "The 10-round debate has concluded.",
         });
+      } else if (isAutoRunning && autoConversation) {
+        // Continue auto-conversation
+        setTimeout(() => {
+          triggerNextResponse();
+        }, 2000); // 2 second delay between responses
       }
     },
     onError: (error) => {
@@ -208,6 +224,29 @@ Original user prompt was: "{originalPrompt}"`);
       });
     },
   });
+
+  // Function to automatically trigger the next response
+  const triggerNextResponse = () => {
+    if (currentRound >= 10 || !model1Id || !model2Id) {
+      setIsAutoRunning(false);
+      return;
+    }
+
+    // Determine which model should respond next (alternate between them)
+    const nextModelId = currentRound % 2 === 0 ? model1Id : model2Id;
+    setActiveSpeakers([nextModelId]);
+
+    continueBattleMutation.mutate({
+      battleHistory: messages,
+      nextModelId: nextModelId
+    });
+  };
+
+  // Stop auto-conversation
+  const stopAutoConversation = () => {
+    setIsAutoRunning(false);
+    setActiveSpeakers([]);
+  };
 
   const handleStartBattle = () => {
     if (!model1Id || !model2Id) {
@@ -280,6 +319,8 @@ Original user prompt was: "{originalPrompt}"`);
     setCurrentRound(0);
     setIsConversationMode(false);
     setActiveSpeakers([]);
+    setAutoConversation(false);
+    setIsAutoRunning(false);
     setShowSetup(true);
   };
 
@@ -362,6 +403,24 @@ Original user prompt was: "{originalPrompt}"`);
                       </Select>
                     </div>
                     
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="autoConversation"
+                          checked={autoConversation}
+                          onChange={(e) => setAutoConversation(e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label htmlFor="autoConversation" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Auto-conversation mode (10 rounds)
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        When enabled, models will automatically debate back and forth for 10 rounds without manual intervention.
+                      </p>
+                    </div>
+
                     <Button
                       onClick={handleStartBattle}
                       disabled={startBattleMutation.isPending || !model1Id || !model2Id}
@@ -375,7 +434,7 @@ Original user prompt was: "{originalPrompt}"`);
                       ) : (
                         <>
                           <Play className="w-4 h-4 mr-2" />
-                          Start Battle
+                          {autoConversation ? 'Start Auto Battle (10 rounds)' : 'Start Battle'}
                         </>
                       )}
                     </Button>
@@ -482,39 +541,64 @@ Original user prompt was: "{originalPrompt}"`);
           
           {/* Battle Controls */}
           {messages.length > 0 && (
-            <div className="mt-6 flex justify-center space-x-4">
-              {!isConversationMode ? (
-                <Button
-                  onClick={handleEnterConversationMode}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Enter Conversation Mode
-                </Button>
-              ) : currentRound < 10 ? (
-                <Button
-                  onClick={handleContinueConversation}
-                  disabled={continueBattleMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {continueBattleMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Continuing...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight className="w-4 h-4 mr-2" />
-                      Continue Debate (Round {Math.ceil((currentRound + 1) / 2)})
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <div className="text-center">
-                  <Badge variant="secondary" className="mb-4">Battle Complete!</Badge>
-                  <Button onClick={handleResetBattle} variant="outline">
-                    Start New Battle
+            <div className="mt-6 flex flex-col items-center space-y-4">
+              {/* Auto-conversation status */}
+              {isAutoRunning && (
+                <div className="flex items-center space-x-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      Auto-conversation running... Round {Math.ceil(currentRound / 2)} of 5
+                    </span>
+                  </div>
+                  <Button
+                    onClick={stopAutoConversation}
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  >
+                    Stop Auto-Conversation
                   </Button>
+                </div>
+              )}
+
+              {/* Manual controls (only show when not in auto mode) */}
+              {!isAutoRunning && (
+                <div className="flex justify-center space-x-4">
+                  {!isConversationMode ? (
+                    <Button
+                      onClick={handleEnterConversationMode}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Enter Conversation Mode
+                    </Button>
+                  ) : currentRound < 10 ? (
+                    <Button
+                      onClick={handleContinueConversation}
+                      disabled={continueBattleMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {continueBattleMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Continuing...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowRight className="w-4 h-4 mr-2" />
+                          Continue Debate (Round {Math.ceil((currentRound + 1) / 2)})
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="text-center">
+                      <Badge variant="secondary" className="mb-4">Battle Complete!</Badge>
+                      <Button onClick={handleResetBattle} variant="outline">
+                        Start New Battle
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
