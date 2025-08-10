@@ -197,26 +197,37 @@ Original user prompt was: "${prompt}"`;
 
   app.post("/api/battle/continue", async (req, res) => {
     try {
-      const { battleHistory, nextModelId } = req.body;
+      const { battleHistory, nextModelId, challengerPrompt, originalPrompt } = req.body;
       
       if (!battleHistory || !nextModelId) {
         return res.status(400).json({ error: "Missing battle history or next model ID" });
       }
 
-      // Build conversation context from battle history
-      const conversationContext = battleHistory
-        .map((msg: any) => `${msg.modelName}: ${msg.content}`)
-        .join("\n\n");
+      // Get the last response to challenge
+      const lastMessage = battleHistory[battleHistory.length - 1];
+      
+      let finalPrompt: string;
+      
+      if (challengerPrompt && lastMessage) {
+        // Use the challenger prompt template with variable replacement
+        finalPrompt = challengerPrompt
+          .replace('{response}', lastMessage.content)
+          .replace('{originalPrompt}', originalPrompt || 'the original question');
+      } else {
+        // Fallback to conversation context
+        const conversationContext = battleHistory
+          .map((msg: any) => `${msg.modelName}: ${msg.content}`)
+          .join("\n\n");
 
-      // Create continuation prompt for the next model
-      const continuationPrompt = `You are in an ongoing debate. Here's the conversation so far:
+        finalPrompt = `You are in an ongoing debate. Here's the conversation so far:
 
 ${conversationContext}
 
 Continue the debate by responding to the last message. Be analytical, challenge assumptions, and provide counter-arguments or alternative perspectives. Keep the discussion engaging and substantive.`;
+      }
 
       // Get response from the next model
-      const response = await callModel(continuationPrompt, nextModelId);
+      const response = await callModel(finalPrompt, nextModelId);
 
       res.json({
         response: {

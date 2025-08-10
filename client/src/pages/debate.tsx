@@ -167,7 +167,11 @@ Original user prompt was: "{originalPrompt}"`);
   // Continue debate mutation
   const continueDebateMutation = useMutation({
     mutationFn: async (data: { battleHistory: DebateMessage[]; nextModelId: string }) => {
-      const response = await apiRequest('POST', '/api/battle/continue', data);
+      const response = await apiRequest('POST', '/api/battle/continue', {
+        ...data,
+        challengerPrompt: challengerPrompt,
+        originalPrompt: prompt
+      });
       return response.json() as Promise<{ response: ModelResponse; modelId: string }>;
     },
     onSuccess: (data) => {
@@ -197,9 +201,11 @@ Original user prompt was: "{originalPrompt}"`);
           description: "The 10-round debate has concluded.",
         });
       } else if (isRunning) {
-        // Continue auto-debate
+        // Continue auto-debate with delay
         setTimeout(() => {
-          continueDebate();
+          if (isRunning) { // Double-check we're still running
+            continueDebate();
+          }
         }, 3000); // 3 second delay between responses
       }
     },
@@ -215,9 +221,13 @@ Original user prompt was: "{originalPrompt}"`);
 
   // Function to automatically continue the debate
   const continueDebate = () => {
-    if (currentRound >= 10 || !model1Id || !model2Id || !isRunning) {
+    if (currentRound >= 10 || !model1Id || !model2Id) {
       setIsRunning(false);
       return;
+    }
+
+    if (!isRunning) {
+      return; // Don't continue if manually stopped
     }
 
     // Determine which model should respond next (alternate between them)
@@ -442,13 +452,26 @@ Original user prompt was: "{originalPrompt}"`);
                     <Button
                       onClick={() => {
                         setIsRunning(true);
-                        continueDebate();
+                        // Start the debate continuation immediately
+                        setTimeout(() => {
+                          continueDebate();
+                        }, 500); // Short delay to allow UI to update
                       }}
                       size="sm"
                       className="bg-green-600 hover:bg-green-700"
+                      disabled={continueDebateMutation.isPending}
                     >
-                      <Play className="w-4 h-4 mr-2" />
-                      Resume
+                      {continueDebateMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Resuming...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Resume Auto-Debate
+                        </>
+                      )}
                     </Button>
                   ) : null}
                   
@@ -474,7 +497,12 @@ Original user prompt was: "{originalPrompt}"`);
               {isRunning && (
                 <div className="flex items-center space-x-2 text-sm text-blue-600">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  <span>Debate in progress... Next response coming soon</span>
+                  <span>
+                    {continueDebateMutation.isPending ? 
+                      'Waiting for response...' : 
+                      'Auto-debate running... Next response in 3 seconds'
+                    }
+                  </span>
                 </div>
               )}
             </CardContent>
