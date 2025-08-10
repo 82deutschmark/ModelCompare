@@ -154,7 +154,7 @@ Pages using endpoints:
 ---
 
 ## Environment and Operational Notes
-- Required keys in `.env` per provider: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, `DEEPSEEK_API_KEY`. At least one must be set to use that provider.
+- Required keys in `.env` per provider: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROK_API_KEY`, `DEEPSEEK_API_KEY`. At least one must be set to use that provider.
 - Optional: `DATABASE_URL` for Drizzle migrations/CLI only. Runtime storage uses in-memory `MemStorage` (`server/storage.ts`).
 - `NODE_ENV`, `PORT` (default 5000). Production serves built client from `dist/public`.
 - No runtime filtering of models by missing keys; calls without keys fail at provider call time.

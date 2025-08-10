@@ -6,12 +6,13 @@
  * Date: August 9, 2025
  */
 
+import 'dotenv/config';
 import OpenAI from 'openai';
 import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
 
 const grok = new OpenAI({
   baseURL: "https://api.x.ai/v1",
-  apiKey: process.env.XAI_API_KEY,
+  apiKey: process.env.GROK_API_KEY,
 });
 
 export class XAIProvider extends BaseProvider {
