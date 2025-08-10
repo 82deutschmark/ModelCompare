@@ -23,8 +23,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Sword, MessageSquare, Play, Brain, Settings, Plus, Users,
-  ChevronDown, ChevronUp, Loader2, Send
+  ChevronDown, ChevronUp, Loader2, Send, ChevronRight, DollarSign, Timer, Zap, Clock
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -380,50 +381,146 @@ Original user prompt was: "{originalPrompt}"`);
                   ) : (
                     messages.map((message) => {
                       const seat = modelSeats.find(s => s.modelId && s.modelId === message.modelId);
+                      const model = models.find(m => m.id === message.modelId);
+                      
+                      // Get provider colors and info
+                      const getProviderColor = (provider: string) => {
+                        switch (provider) {
+                          case 'OpenAI': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
+                          case 'Anthropic': return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200';
+                          case 'Google': return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
+                          case 'xAI': return 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200';
+                          case 'DeepSeek': return 'bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-200';
+                          default: return 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200';
+                        }
+                      };
+
+                      const formatCost = (inputCost: number, outputCost: number) => {
+                        const inputFormatted = inputCost < 1 ? `$${(inputCost).toFixed(2)}` : `$${inputCost}`;
+                        const outputFormatted = outputCost < 1 ? `$${(outputCost).toFixed(2)}` : `$${outputCost}`;
+                        return `${inputFormatted}/${outputFormatted}`;
+                      };
+
+                      const getSpeedIcon = (responseTime: number) => {
+                        if (responseTime < 5000) return <Zap className="w-3 h-3" />;
+                        if (responseTime < 15000) return <Timer className="w-3 h-3" />;
+                        return <Clock className="w-3 h-3" />;
+                      };
+
                       return (
-                        <div key={message.id} className="flex flex-col space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge 
-                              variant="outline" 
-                              className={seat ? seat.color : 'bg-gray-100'}
-                            >
-                              {message.modelName}
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              Round {message.round} • {message.responseTime}ms
-                            </span>
-                            {message.modelConfig?.capabilities.reasoning && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                                <Brain className="w-3 h-3 mr-1" />
-                                Reasoning
+                        <div key={message.id} className="flex flex-col space-y-3">
+                          {/* Enhanced Model Header */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Badge 
+                                variant="outline" 
+                                className={`${seat ? seat.color : 'bg-gray-100'} font-medium`}
+                              >
+                                {message.modelName}
                               </Badge>
-                            )}
-                            {message.type === 'rebuttal' && (
-                              <Badge variant="secondary" className="text-xs">Rebuttal</Badge>
-                            )}
+                              <Badge 
+                                variant="secondary"
+                                className={`text-xs ${getProviderColor(model?.provider || 'Unknown')}`}
+                              >
+                                {model?.provider}
+                              </Badge>
+                              <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                {getSpeedIcon(message.responseTime)}
+                                <span>{(message.responseTime / 1000).toFixed(1)}s</span>
+                              </div>
+                              {message.type === 'rebuttal' && (
+                                <Badge variant="destructive" className="text-xs">Rebuttal</Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              {message.modelConfig?.capabilities.reasoning && (
+                                <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+                                  <Brain className="w-3 h-3 mr-1" />
+                                  Reasoning
+                                </Badge>
+                              )}
+                              {message.modelConfig && (
+                                <Badge variant="outline" className="text-xs">
+                                  <DollarSign className="w-3 h-3 mr-1" />
+                                  {formatCost(message.modelConfig.pricing.inputPerMillion, message.modelConfig.pricing.outputPerMillion)}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-l-4 border-gray-200 dark:border-gray-700">
+
+                          {/* Message Content */}
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
                             <div className="text-gray-900 dark:text-white whitespace-pre-wrap text-sm leading-relaxed">
                               {message.content}
                             </div>
+                            
+                            {/* Collapsible Chain of Thought */}
                             {message.reasoning && (
-                              <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Brain className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                                  <strong className="text-amber-800 dark:text-amber-200 text-sm">Chain of Thought</strong>
-                                </div>
-                                <div className="text-amber-900 dark:text-amber-100 text-sm whitespace-pre-wrap leading-relaxed">
-                                  {message.reasoning}
-                                </div>
+                              <div className="mt-4">
+                                <Collapsible>
+                                  <CollapsibleTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="flex items-center gap-2 p-2 h-auto text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                    >
+                                      <ChevronRight className="w-4 h-4 transition-transform duration-200 [&[data-state=open]]:rotate-90" />
+                                      <Brain className="w-4 h-4" />
+                                      <span className="font-medium text-sm">Chain of Thought</span>
+                                      <Badge variant="outline" className="text-xs ml-1">
+                                        {message.reasoning.split('\n').length} steps
+                                      </Badge>
+                                    </Button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="mt-2">
+                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                      <div className="text-amber-900 dark:text-amber-100 text-sm whitespace-pre-wrap leading-relaxed font-mono">
+                                        {message.reasoning}
+                                      </div>
+                                    </div>
+                                  </CollapsibleContent>
+                                </Collapsible>
                               </div>
                             )}
                             
-                            {message.tokenUsage && (
-                              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                Tokens: {message.tokenUsage.input} in, {message.tokenUsage.output} out
-                                {message.tokenUsage.reasoning && `, ${message.tokenUsage.reasoning} reasoning`}
+                            {/* Token Usage and Model Info */}
+                            <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                              <div className="flex items-center space-x-4">
+                                {message.tokenUsage && (
+                                  <div className="flex items-center space-x-1">
+                                    <span>Tokens:</span>
+                                    <span className="font-mono">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
+                                    {message.tokenUsage.reasoning && (
+                                      <span className="text-amber-600 dark:text-amber-400 font-mono">
+                                        +{message.tokenUsage.reasoning} reasoning
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {message.modelConfig && (
+                                  <div className="flex items-center space-x-2">
+                                    <span>Round {message.round}</span>
+                                    <span>•</span>
+                                    <span>Context: {(message.modelConfig.capabilities as any).contextWindow || 'N/A'}</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                              
+                              {message.modelConfig?.capabilities && (
+                                <div className="flex items-center space-x-1">
+                                  {message.modelConfig.capabilities.multimodal && (
+                                    <Badge variant="outline" className="text-xs">Vision</Badge>
+                                  )}
+                                  {message.modelConfig.capabilities.functionCalling && (
+                                    <Badge variant="outline" className="text-xs">Functions</Badge>
+                                  )}
+                                  {message.modelConfig.capabilities.streaming && (
+                                    <Badge variant="outline" className="text-xs">Streaming</Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -454,7 +551,31 @@ Original user prompt was: "{originalPrompt}"`);
                   <SelectContent>
                     {models.filter(model => !modelSeats.some(seat => seat.modelId === model.id)).map((model) => (
                       <SelectItem key={model.id} value={model.id}>
-                        {model.name} ({model.provider})
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{model.name}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {model.provider}
+                              </Badge>
+                              {(model as any).capabilities?.reasoning && (
+                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                                  <Brain className="w-3 h-3 mr-1" />
+                                  Reasoning
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {(model as any).capabilities?.multimodal && 'Vision • '}
+                              {(model as any).capabilities?.functionCalling && 'Functions • '}
+                              Context: {(model as any).limits?.contextWindow?.toLocaleString() || 'N/A'}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end text-xs text-gray-500">
+                            <span>${((model as any).pricing?.inputPerMillion || 0).toFixed(2)}/${((model as any).pricing?.outputPerMillion || 0).toFixed(2)}</span>
+                            <span>per 1M tokens</span>
+                          </div>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
