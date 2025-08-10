@@ -202,6 +202,7 @@ export class OpenAIProvider extends BaseProvider {
           reasoning: reasoning ?? undefined,
           responseTime: Date.now() - startTime,
           tokenUsage: undefined, // Responses API doesn't provide usage
+          cost: undefined, // Cannot calculate without token usage
           modelConfig: modelConfig ? {
             capabilities: modelConfig.capabilities,
             pricing: modelConfig.pricing,
@@ -219,15 +220,20 @@ export class OpenAIProvider extends BaseProvider {
       max_completion_tokens: 2000,
     });
     
+    const tokenUsage = chatResponse.usage ? {
+      input: chatResponse.usage.prompt_tokens,
+      output: chatResponse.usage.completion_tokens,
+      reasoning: chatResponse.usage.completion_tokens_details?.reasoning_tokens,
+    } : undefined;
+
+    const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
+
     return {
       content: chatResponse.choices[0].message.content || "No response generated",
       reasoning: reasoning ?? undefined,
       responseTime: Date.now() - startTime,
-      tokenUsage: chatResponse.usage ? {
-        input: chatResponse.usage.prompt_tokens,
-        output: chatResponse.usage.completion_tokens,
-        reasoning: chatResponse.usage.completion_tokens_details?.reasoning_tokens,
-      } : undefined,
+      tokenUsage: tokenUsage,
+      cost: cost,
       modelConfig: modelConfig ? {
         capabilities: modelConfig.capabilities,
         pricing: modelConfig.pricing,

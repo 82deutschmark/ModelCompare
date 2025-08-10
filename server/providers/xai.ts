@@ -129,17 +129,23 @@ export class XAIProvider extends BaseProvider {
       max_tokens: 2000,
     });
     
+    const modelConfig = this.models.find(m => m.id === model);
+    const tokenUsage = response.usage ? {
+      input: response.usage.prompt_tokens,
+      output: response.usage.completion_tokens,
+    } : undefined;
+
+    const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
+
     return {
       content: response.choices[0].message.content || "No response generated",
       reasoning: undefined, // Grok reasoning not directly exposed via API
       responseTime: Date.now() - startTime,
-      tokenUsage: response.usage ? {
-        input: response.usage.prompt_tokens,
-        output: response.usage.completion_tokens,
-      } : undefined,
-      modelConfig: this.models.find(m => m.id === model) ? {
-        capabilities: this.models.find(m => m.id === model)!.capabilities,
-        pricing: this.models.find(m => m.id === model)!.pricing,
+      tokenUsage: tokenUsage,
+      cost: cost,
+      modelConfig: modelConfig ? {
+        capabilities: modelConfig.capabilities,
+        pricing: modelConfig.pricing,
       } : undefined,
     };
   }

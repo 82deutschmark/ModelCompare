@@ -37,6 +37,12 @@ export interface ModelResponse {
     output: number;
     reasoning?: number;
   };
+  cost?: {
+    input: number;
+    output: number;
+    reasoning?: number;
+    total: number;
+  };
   modelConfig?: {
     capabilities: {
       reasoning: boolean;
@@ -64,5 +70,30 @@ export abstract class BaseProvider {
   
   getModelsByCapability(capability: keyof ModelConfig['capabilities']): ModelConfig[] {
     return this.models.filter(m => m.capabilities[capability]);
+  }
+  
+  // Calculate actual cost based on token usage
+  calculateCost(modelConfig: ModelConfig, tokenUsage: { input: number; output: number; reasoning?: number }): {
+    input: number;
+    output: number;
+    reasoning?: number;
+    total: number;
+  } {
+    const inputCost = (tokenUsage.input / 1_000_000) * modelConfig.pricing.inputPerMillion;
+    const outputCost = (tokenUsage.output / 1_000_000) * modelConfig.pricing.outputPerMillion;
+    
+    let reasoningCost = 0;
+    if (tokenUsage.reasoning && modelConfig.pricing.reasoningPerMillion) {
+      reasoningCost = (tokenUsage.reasoning / 1_000_000) * modelConfig.pricing.reasoningPerMillion;
+    }
+    
+    const total = inputCost + outputCost + reasoningCost;
+    
+    return {
+      input: inputCost,
+      output: outputCost,
+      reasoning: tokenUsage.reasoning ? reasoningCost : undefined,
+      total: total
+    };
   }
 }

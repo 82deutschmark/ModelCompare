@@ -149,6 +149,49 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
                 {response.content}
               </div>
             </div>
+            
+            {/* Token Usage and Cost Information */}
+            {(response.tokenUsage || response.cost) && (
+              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                  {response.tokenUsage && (
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-1">
+                        <span>Tokens:</span>
+                        <span className="font-mono">{response.tokenUsage.input}→{response.tokenUsage.output}</span>
+                        {response.tokenUsage.reasoning && (
+                          <span className="text-amber-600 dark:text-amber-400 font-mono">
+                            +{response.tokenUsage.reasoning} reasoning
+                          </span>
+                        )}
+                      </div>
+                      {response.cost && (
+                        <div className="flex items-center space-x-1">
+                          <span>Cost:</span>
+                          <span className="font-mono text-green-600 dark:text-green-400">
+                            ${response.cost.total.toFixed(4)}
+                          </span>
+                          {response.cost.reasoning && (
+                            <span className="text-amber-600 dark:text-amber-400 text-xs">
+                              (+${response.cost.reasoning.toFixed(4)} reasoning)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!response.tokenUsage && response.cost && (
+                    <div className="flex items-center space-x-1">
+                      <span>Cost:</span>
+                      <span className="font-mono text-green-600 dark:text-green-400">
+                        ${response.cost.total.toFixed(4)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-end pt-3 border-t border-gray-200 dark:border-gray-700">
               <Button
                 variant="ghost"

@@ -46,6 +46,12 @@ interface ChatMessage {
     output: number;
     reasoning?: number;
   };
+  cost?: {
+    input: number;
+    output: number;
+    reasoning?: number;
+    total: number;
+  };
   modelConfig?: {
     capabilities: {
       reasoning: boolean;
@@ -440,10 +446,10 @@ Original user prompt was: "{originalPrompt}"`);
                                   Reasoning
                                 </Badge>
                               )}
-                              {message.modelConfig && (
+                              {message.cost && (
                                 <Badge variant="outline" className="text-xs">
                                   <DollarSign className="w-3 h-3 mr-1" />
-                                  {formatCost(message.modelConfig.pricing.inputPerMillion, message.modelConfig.pricing.outputPerMillion)}
+                                  ${message.cost.total.toFixed(4)}
                                 </Badge>
                               )}
                             </div>
@@ -498,13 +504,24 @@ Original user prompt was: "{originalPrompt}"`);
                                     )}
                                   </div>
                                 )}
-                                {message.modelConfig && (
-                                  <div className="flex items-center space-x-2">
-                                    <span>Round {message.round}</span>
-                                    <span>•</span>
-                                    <span>Context: {(message.modelConfig.capabilities as any).contextWindow || 'N/A'}</span>
+                                {message.cost && (
+                                  <div className="flex items-center space-x-1">
+                                    <span>Cost:</span>
+                                    <span className="font-mono text-green-600 dark:text-green-400">
+                                      ${message.cost.total.toFixed(4)}
+                                    </span>
+                                    {message.cost.reasoning && (
+                                      <span className="text-amber-600 dark:text-amber-400 text-xs">
+                                        (+${message.cost.reasoning.toFixed(4)} reasoning)
+                                      </span>
+                                    )}
                                   </div>
                                 )}
+                                <div className="flex items-center space-x-2">
+                                  <span>Round {message.round}</span>
+                                  <span>•</span>
+                                  <span>Context: {(message.modelConfig?.capabilities as any)?.contextWindow?.toLocaleString() || 'N/A'}</span>
+                                </div>
                               </div>
                               
                               {message.modelConfig?.capabilities && (

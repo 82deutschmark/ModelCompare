@@ -58,6 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'success',
             responseTime: result.responseTime,
             tokenUsage: result.tokenUsage,
+            cost: result.cost,
             modelConfig: result.modelConfig,
           };
         } catch (error) {
@@ -132,6 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reasoning: result.reasoning,
         responseTime: result.responseTime,
         tokenUsage: result.tokenUsage,
+        cost: result.cost,
         modelConfig: result.modelConfig
       });
     } catch (error) {
@@ -172,6 +174,7 @@ Original user prompt was: "${prompt}"`;
           reasoning: model1Response.reasoning,
           responseTime: model1Response.responseTime,
           tokenUsage: model1Response.tokenUsage,
+          cost: model1Response.cost,
           modelConfig: model1Response.modelConfig,
           status: 'success'
         },
@@ -180,6 +183,7 @@ Original user prompt was: "${prompt}"`;
           reasoning: model2Response.reasoning,
           responseTime: model2Response.responseTime,
           tokenUsage: model2Response.tokenUsage,
+          cost: model2Response.cost,
           modelConfig: model2Response.modelConfig,
           status: 'success'
         }
@@ -220,6 +224,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
           reasoning: response.reasoning,
           responseTime: response.responseTime,
           tokenUsage: response.tokenUsage,
+          cost: response.cost,
           modelConfig: response.modelConfig,
           status: 'success'
         },

@@ -29,6 +29,30 @@ export interface ModelResponse {
   responseTime: number;
   error?: string;
   reasoning?: string;
+  tokenUsage?: {
+    input: number;
+    output: number;
+    reasoning?: number;
+  };
+  cost?: {
+    input: number;
+    output: number;
+    reasoning?: number;
+    total: number;
+  };
+  modelConfig?: {
+    capabilities: {
+      reasoning: boolean;
+      multimodal: boolean;
+      functionCalling: boolean;
+      streaming: boolean;
+    };
+    pricing: {
+      inputPerMillion: number;
+      outputPerMillion: number;
+      reasoningPerMillion?: number;
+    };
+  };
 }
 
 export interface ComparisonResult {

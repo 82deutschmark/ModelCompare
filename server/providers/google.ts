@@ -118,13 +118,23 @@ export class GoogleProvider extends BaseProvider {
     
     const response = await gemini.models.generateContent(requestConfig);
     
+    const modelConfig = this.models.find(m => m.id === model);
+    const tokenUsage = response.usageMetadata ? {
+      input: response.usageMetadata.promptTokenCount || 0,
+      output: response.usageMetadata.candidatesTokenCount || 0,
+    } : undefined;
+
+    const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
+
     return {
       content: response.text || "No response generated",
       reasoning: undefined, // Gemini thinking is abstracted, full logs not directly accessible via API
       responseTime: Date.now() - startTime,
-      tokenUsage: response.usageMetadata ? {
-        input: response.usageMetadata.promptTokenCount || 0,
-        output: response.usageMetadata.candidatesTokenCount || 0,
+      tokenUsage: tokenUsage,
+      cost: cost,
+      modelConfig: modelConfig ? {
+        capabilities: modelConfig.capabilities,
+        pricing: modelConfig.pricing,
       } : undefined,
     };
   }

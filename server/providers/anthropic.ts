@@ -144,15 +144,20 @@ ${prompt}`;
       }
     }
     
+    const tokenUsage = message.usage ? {
+      input: message.usage.input_tokens,
+      output: message.usage.output_tokens,
+      reasoning: reasoningTokens,
+    } : undefined;
+
+    const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
+
     return {
       content: cleanedContent,
       reasoning: reasoning ?? undefined,
       responseTime: Date.now() - startTime,
-      tokenUsage: message.usage ? {
-        input: message.usage.input_tokens,
-        output: message.usage.output_tokens,
-        reasoning: reasoningTokens,
-      } : undefined,
+      tokenUsage: tokenUsage,
+      cost: cost,
       modelConfig: modelConfig ? {
         capabilities: modelConfig.capabilities,
         pricing: modelConfig.pricing,
