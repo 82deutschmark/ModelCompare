@@ -179,18 +179,11 @@ Original user prompt was: "{originalPrompt}"`);
       
       setCurrentRound(nextRound);
 
-      if (nextRound >= 10) {
-        toast({
-          title: "Debate Complete!",
-          description: "The 10-round debate has concluded.",
-        });
-      } else {
-        const nextModel = models.find(m => m.id === (nextRound % 2 === 1 ? model2Id : model1Id));
-        toast({
-          title: "Response Added!",
-          description: `${model?.name} has responded. ${nextRound < 10 ? `Click Continue for ${nextModel?.name}'s turn.` : ''}`,
-        });
-      }
+      const nextModel = models.find(m => m.id === (nextRound % 2 === 1 ? model2Id : model1Id));
+      toast({
+        title: "Response Added!",
+        description: `${model?.name} has responded. Click Continue for ${nextModel?.name}'s turn.`,
+      });
     },
     onError: (error) => {
       setIsRunning(false);
@@ -204,7 +197,7 @@ Original user prompt was: "{originalPrompt}"`);
 
   // Function to manually continue the debate
   const continueDebate = () => {
-    if (currentRound >= 10 || !model1Id || !model2Id) {
+    if (!model1Id || !model2Id) {
       return;
     }
 
@@ -403,11 +396,7 @@ Original user prompt was: "{originalPrompt}"`);
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-4">
                   <div className="text-sm font-medium">
-                    Round {Math.ceil(currentRound / 2)} of 5
-                  </div>
-                  <Progress value={(currentRound / 10) * 100} className="w-40" />
-                  <div className="text-sm text-gray-500">
-                    {currentRound}/10 exchanges
+                    {currentRound} exchanges • Manual control
                   </div>
                   {totalCost > 0 && (
                     <div className="text-sm font-medium text-green-600">
@@ -417,7 +406,7 @@ Original user prompt was: "{originalPrompt}"`);
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {currentRound < 10 && currentRound > 0 ? (
+                  {currentRound > 0 ? (
                     <Button
                       onClick={continueDebate}
                       size="sm"
