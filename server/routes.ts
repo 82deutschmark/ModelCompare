@@ -21,7 +21,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
-import { callAIModel, availableModels } from "./services/ai-providers";
+import { callModel, getAllModels, getReasoningModels } from "./providers/index.js";
 import { storage } from "./storage";
 
 const compareModelsSchema = z.object({
@@ -34,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available models
   app.get("/api/models", async (req, res) => {
     try {
-      res.json(availableModels);
+      res.json(getAllModels());
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch models" });
     }
@@ -51,11 +51,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create promises for all model calls
       const modelPromises = modelIds.map(async (modelId) => {
         try {
-          const result = await callAIModel(prompt, modelId);
+          const result = await callModel(prompt, modelId);
           responses[modelId] = {
             content: result.content,
+            reasoning: result.reasoning,
             status: 'success',
             responseTime: result.responseTime,
+            tokenUsage: result.tokenUsage,
+            modelConfig: result.modelConfig,
           };
         } catch (error) {
           responses[modelId] = {
@@ -122,12 +125,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Missing modelId or prompt' });
       }
 
-      const result = await callAIModel(prompt, modelId);
+      const result = await callModel(prompt, modelId);
       
       res.json({
         content: result.content,
+        reasoning: result.reasoning,
         responseTime: result.responseTime,
-        reasoning: undefined // Will be added when models support it
+        tokenUsage: result.tokenUsage,
+        modelConfig: result.modelConfig
       });
     } catch (error) {
       console.error('Model response error:', error);
@@ -145,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get initial response from Model 1
-      const model1Response = await callAIModel(prompt, model1Id);
+      const model1Response = await callModel(prompt, model1Id);
 
       // Create system prompt for Model 2 to challenge Model 1's response
       const challengePrompt = req.body.challengerPrompt 
@@ -159,17 +164,23 @@ Push back on this information or advice. Explain why the user shouldn't trust th
 Original user prompt was: "${prompt}"`;
 
       // Get challenging response from Model 2
-      const model2Response = await callAIModel(challengePrompt, model2Id);
+      const model2Response = await callModel(challengePrompt, model2Id);
 
       res.json({
         model1Response: {
           content: model1Response.content,
+          reasoning: model1Response.reasoning,
           responseTime: model1Response.responseTime,
+          tokenUsage: model1Response.tokenUsage,
+          modelConfig: model1Response.modelConfig,
           status: 'success'
         },
         model2Response: {
           content: model2Response.content,
+          reasoning: model2Response.reasoning,
           responseTime: model2Response.responseTime,
+          tokenUsage: model2Response.tokenUsage,
+          modelConfig: model2Response.modelConfig,
           status: 'success'
         }
       });
@@ -201,12 +212,15 @@ ${conversationContext}
 Continue the debate by responding to the last message. Be analytical, challenge assumptions, and provide counter-arguments or alternative perspectives. Keep the discussion engaging and substantive.`;
 
       // Get response from the next model
-      const response = await callAIModel(continuationPrompt, nextModelId);
+      const response = await callModel(continuationPrompt, nextModelId);
 
       res.json({
         response: {
           content: response.content,
+          reasoning: response.reasoning,
           responseTime: response.responseTime,
+          tokenUsage: response.tokenUsage,
+          modelConfig: response.modelConfig,
           status: 'success'
         },
         modelId: nextModelId

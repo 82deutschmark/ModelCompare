@@ -1,0 +1,131 @@
+/**
+ * Google Provider
+ * 
+ * Handles Gemini models with thinking capabilities
+ * Author: Replit Agent
+ * Date: August 9, 2025
+ */
+
+import { GoogleGenAI } from '@google/genai';
+import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
+
+const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+export class GoogleProvider extends BaseProvider {
+  name = 'Google';
+  
+  models: ModelConfig[] = [
+    {
+      id: "gemini-2.5-pro",
+      name: "Gemini 2.5 Pro",
+      provider: "Google",
+      model: "gemini-2.5-pro",
+      capabilities: {
+        reasoning: true, // Thinking enabled by default
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 2.50,
+        outputPerMillion: 10.00,
+      },
+      limits: {
+        maxTokens: 8192,
+        contextWindow: 2000000,
+      },
+    },
+    {
+      id: "gemini-2.5-flash",
+      name: "Gemini 2.5 Flash",
+      provider: "Google",
+      model: "gemini-2.5-flash",
+      capabilities: {
+        reasoning: true, // Configurable thinking
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.075,
+        outputPerMillion: 0.30,
+      },
+      limits: {
+        maxTokens: 8192,
+        contextWindow: 1000000,
+      },
+    },
+    {
+      id: "gemini-2.0-flash-thinking-experimental",
+      name: "Gemini 2.0 Flash Thinking",
+      provider: "Google",
+      model: "gemini-2.0-flash-thinking-experimental",
+      capabilities: {
+        reasoning: true, // Optimized for reasoning
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.075,
+        outputPerMillion: 0.30,
+      },
+      limits: {
+        maxTokens: 8192,
+        contextWindow: 32768,
+      },
+    },
+    {
+      id: "gemini-2.0-flash",
+      name: "Gemini 2.0 Flash",
+      provider: "Google",
+      model: "gemini-2.0-flash",
+      capabilities: {
+        reasoning: false,
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.075,
+        outputPerMillion: 0.30,
+      },
+      limits: {
+        maxTokens: 8192,
+        contextWindow: 1000000,
+      },
+    },
+  ];
+
+  async callModel(prompt: string, model: string): Promise<ModelResponse> {
+    const startTime = Date.now();
+    
+    // Enable thinking for Gemini 2.5 models that support it
+    const enableThinking = model.includes('gemini-2.5') || model.includes('thinking');
+    
+    const requestConfig: any = {
+      model: model,
+      contents: prompt,
+    };
+    
+    if (enableThinking) {
+      requestConfig.config = {
+        thinking_config: {
+          thinking_budget: 4000 // Allow thinking tokens
+        }
+      };
+    }
+    
+    const response = await gemini.models.generateContent(requestConfig);
+    
+    return {
+      content: response.text || "No response generated",
+      reasoning: undefined, // Gemini thinking is abstracted, full logs not directly accessible via API
+      responseTime: Date.now() - startTime,
+      tokenUsage: response.usageMetadata ? {
+        input: response.usageMetadata.promptTokenCount || 0,
+        output: response.usageMetadata.candidatesTokenCount || 0,
+      } : undefined,
+    };
+  }
+}

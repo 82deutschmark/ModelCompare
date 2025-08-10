@@ -28,6 +28,21 @@ Preferred communication style: Simple, everyday language.
 - Models now engage in structured debates with challenging responses and counter-arguments
 - All API keys configured (OpenAI, Anthropic, Gemini, xAI, DeepSeek) for full functionality
 
+### August 10, 2025 - Modular Provider System & Reasoning Logs
+- Refactored from monolithic ai-providers.ts to modular provider architecture
+- Created separate provider files: openai.ts, anthropic.ts, google.ts, deepseek.ts, xai.ts
+- Each provider includes model capabilities, pricing, limits, and reasoning support
+- Implemented comprehensive reasoning log capture for supported models:
+  * DeepSeek R1: Full chain-of-thought reasoning via reasoning_content field
+  * Claude 3.7/4: Extended thinking logs via thinking API parameter
+  * Gemini 2.5: Thinking budget configuration (abstracted logs)
+  * OpenAI o1: Hidden reasoning tokens (not exposed via API)
+  * xAI Grok: Standard responses (reasoning capabilities but not exposed)
+- Enhanced Battle Mode chat interface to display reasoning logs with amber highlighting
+- Added model capability badges showing which models support reasoning
+- Included token usage tracking with separate reasoning token counts
+- Chat interface now shows Chain of Thought sections for supported models
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -59,12 +74,22 @@ Preferred communication style: Simple, everyday language.
 - **Access Control**: No explicit authentication system implemented (appears to be open access)
 
 ### AI Model Integration
-- **Multi-Provider Support**: Integrated with multiple AI providers through their respective SDKs
-- **OpenAI**: Official OpenAI SDK for GPT models (GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo)
-- **Anthropic**: Official Anthropic SDK for Claude models (Claude Sonnet 4, Claude 3 Sonnet, Claude 3 Haiku)
-- **Google**: Google GenAI SDK for Gemini models (Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini Pro)
-- **xAI**: OpenAI-compatible API client for Grok models (Grok 2, Grok Beta)
-- **DeepSeek**: Support for DeepSeek Chat and Coder models
+- **Modular Provider System**: Cleanly separated provider architecture with individual files for each service
+- **OpenAI**: Official OpenAI SDK for GPT models (GPT-5, GPT-4o, o1-preview, o1-mini) with hidden reasoning tokens
+- **Anthropic**: Official Anthropic SDK for Claude models with extended thinking API support
+  * Claude Sonnet 4: Summarized thinking output with 4000 token budget
+  * Claude 3.7 Sonnet: Full thinking output visibility for transparency
+  * Claude 3.5 Sonnet: Standard responses without thinking mode
+- **Google**: Google GenAI SDK for Gemini models with configurable thinking budgets
+  * Gemini 2.5 Pro: Always-enabled thinking with up to 4000 tokens
+  * Gemini 2.5 Flash: Configurable thinking budget (0-24576 tokens)
+  * Gemini 2.0 Flash Thinking: Optimized reasoning model
+- **xAI**: OpenAI-compatible API client for Grok models (Grok 4, Grok 2, Grok Vision)
+- **DeepSeek**: Support for reasoning and chat models with full CoT transparency
+  * DeepSeek R1 Reasoner: Complete chain-of-thought reasoning via reasoning_content field
+  * DeepSeek V3 Chat: Standard conversational model
+- **Reasoning Capabilities**: Full support for chain-of-thought, extended thinking, and reasoning logs
+- **Cost Tracking**: Detailed token usage including separate reasoning token counts and pricing
 - **Concurrent Processing**: Parallel API calls to multiple models for efficient comparison
 - **Error Handling**: Individual model error handling with graceful degradation
 

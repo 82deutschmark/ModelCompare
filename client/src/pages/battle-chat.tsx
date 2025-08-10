@@ -40,6 +40,24 @@ interface ChatMessage {
   reasoning?: string;
   responseTime: number;
   type: 'initial' | 'rebuttal' | 'prompt_response';
+  tokenUsage?: {
+    input: number;
+    output: number;
+    reasoning?: number;
+  };
+  modelConfig?: {
+    capabilities: {
+      reasoning: boolean;
+      multimodal: boolean;
+      functionCalling: boolean;
+      streaming: boolean;
+    };
+    pricing: {
+      inputPerMillion: number;
+      outputPerMillion: number;
+      reasoningPerMillion?: number;
+    };
+  };
 }
 
 interface ModelSeat {
@@ -123,11 +141,13 @@ Original user prompt was: "{originalPrompt}"`);
         modelId: data.modelId,
         prompt: finalPrompt
       });
-      const result = await response.json() as ModelResponse;
+      const result = await response.json() as any;
       return { 
         content: result.content,
         responseTime: result.responseTime,
         reasoning: result.reasoning,
+        tokenUsage: result.tokenUsage,
+        modelConfig: result.modelConfig,
         seatId: data.seatId,
         action: data.action
       };
@@ -146,7 +166,9 @@ Original user prompt was: "{originalPrompt}"`);
         round: messages.length + 1,
         reasoning: data.reasoning,
         responseTime: data.responseTime,
-        type: data.action === 'original' ? 'prompt_response' : 'rebuttal'
+        type: data.action === 'original' ? 'prompt_response' : 'rebuttal',
+        tokenUsage: data.tokenUsage,
+        modelConfig: data.modelConfig
       };
       
       setMessages(prev => [...prev, newMessage]);
@@ -370,6 +392,12 @@ Original user prompt was: "{originalPrompt}"`);
                             <span className="text-xs text-gray-500">
                               Round {message.round} • {message.responseTime}ms
                             </span>
+                            {message.modelConfig?.capabilities.reasoning && (
+                              <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                                <Brain className="w-3 h-3 mr-1" />
+                                Reasoning
+                              </Badge>
+                            )}
                             {message.type === 'rebuttal' && (
                               <Badge variant="secondary" className="text-xs">Rebuttal</Badge>
                             )}
@@ -379,11 +407,21 @@ Original user prompt was: "{originalPrompt}"`);
                               {message.content}
                             </div>
                             {message.reasoning && (
-                              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs">
-                                <strong className="text-yellow-800 dark:text-yellow-200">Reasoning:</strong>
-                                <div className="mt-1 text-yellow-700 dark:text-yellow-300">
+                              <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Brain className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                  <strong className="text-amber-800 dark:text-amber-200 text-sm">Chain of Thought</strong>
+                                </div>
+                                <div className="text-amber-900 dark:text-amber-100 text-sm whitespace-pre-wrap leading-relaxed">
                                   {message.reasoning}
                                 </div>
+                              </div>
+                            )}
+                            
+                            {message.tokenUsage && (
+                              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                Tokens: {message.tokenUsage.input} in, {message.tokenUsage.output} out
+                                {message.tokenUsage.reasoning && `, ${message.tokenUsage.reasoning} reasoning`}
                               </div>
                             )}
                           </div>
