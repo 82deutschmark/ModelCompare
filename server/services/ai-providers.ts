@@ -87,35 +87,71 @@ export const availableModels: AIModelConfig[] = [
   { id: "grok-2-vision-1212", name: "Grok 2 Vision", provider: "xAI", model: "grok-2-vision-1212" },
 ];
 
-export async function callOpenAI(prompt: string, model: string): Promise<string> {
+export async function callOpenAI(prompt: string, model: string): Promise<{ content: string; reasoning?: string }> {
   const response = await openai.chat.completions.create({
     model: model,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 2000,
   });
   
-  return response.choices[0].message.content || "No response generated";
+  return {
+    content: response.choices[0].message.content || "No response generated",
+    reasoning: undefined // OpenAI o1 models have hidden reasoning, not exposed via API
+  };
 }
 
-export async function callAnthropic(prompt: string, model: string): Promise<string> {
-  const message = await anthropic.messages.create({
+export async function callAnthropic(prompt: string, model: string): Promise<{ content: string; reasoning?: string }> {
+  // Enable thinking for Claude 3.7 Sonnet and Claude 4 models
+  const enableThinking = model.includes('claude-3-7-sonnet') || model.includes('claude-4') || model.includes('claude-sonnet-4');
+  
+  const requestConfig: any = {
+    model,
     max_tokens: 2000,
     messages: [{ role: 'user', content: prompt }],
-    model: model,
-  });
+  };
   
-  return Array.isArray(message.content) 
+  if (enableThinking) {
+    requestConfig.thinking = {
+      type: "enabled",
+      budget_tokens: 4000
+    };
+  }
+  
+  const message = await anthropic.messages.create(requestConfig);
+  
+  const content = Array.isArray(message.content) 
     ? message.content.map(block => block.type === 'text' ? block.text : '').join('')
     : message.content;
+    
+  return {
+    content,
+    reasoning: (message as any).thinking_content || undefined // Thinking logs for supported models
+  };
 }
 
-export async function callGemini(prompt: string, model: string): Promise<string> {
-  const response = await gemini.models.generateContent({
+export async function callGemini(prompt: string, model: string): Promise<{ content: string; reasoning?: string }> {
+  // Enable thinking for Gemini 2.5 models that support it
+  const enableThinking = model.includes('gemini-2.5') || model.includes('gemini-2.0-flash-thinking');
+  
+  const requestConfig: any = {
     model: model,
     contents: prompt,
-  });
+  };
   
-  return response.text || "No response generated";
+  if (enableThinking) {
+    requestConfig.config = {
+      thinking_config: {
+        thinking_budget: 4000 // Allow thinking tokens
+      }
+    };
+  }
+  
+  const response = await gemini.models.generateContent(requestConfig);
+  
+  return {
+    content: response.text || "No response generated",
+    reasoning: undefined // Gemini thinking is abstracted, full logs not directly accessible via API
+  };
 }
 
 export async function callDeepSeek(prompt: string, model: string): Promise<string> {
