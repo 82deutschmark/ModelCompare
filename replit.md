@@ -32,11 +32,12 @@ Preferred communication style: Simple, everyday language.
 - Refactored from monolithic ai-providers.ts to modular provider architecture
 - Created separate provider files: openai.ts, anthropic.ts, google.ts, deepseek.ts, xai.ts
 - Updated all providers with latest model versions and correct configurations:
-  * OpenAI: GPT-4.1 series (Nano, Mini, Standard), o3/o4 reasoning models with Responses API
+  * OpenAI: GPT-5 (flagship 2025-08-07), GPT-4.1 series, o3/o4 reasoning models with Responses API
   * xAI: Grok 4 (reasoning), Grok 3 series (standard, mini, fast variants)
   * Anthropic: Claude Sonnet 4, Claude 3.7 Sonnet with structured reasoning prompts
   * Gemini: 2.5 Pro/Flash with thinking budgets, 2.0 Flash Thinking experimental
   * DeepSeek: R1 Reasoner with full CoT, V3 Chat standard model
+- Added GPT-5 as newest flagship model with 400k context, reasoning token support, $1.25/$10 pricing
 - Implemented comprehensive reasoning log capture for supported models:
   * DeepSeek R1: Full chain-of-thought reasoning via reasoning_content field
   * Claude 3.7/4: Structured reasoning with <reasoning> tags in prompts
@@ -47,6 +48,9 @@ Preferred communication style: Simple, everyday language.
 - Added model capability badges showing which models support reasoning
 - Fixed all TypeScript errors and added proper model configuration interfaces
 - Chat interface now shows Chain of Thought sections for all supported reasoning models
+- Enhanced Battle Mode UI with collapsible reasoning sections and comprehensive model information
+- Added model source of truth documentation in README.md with provider-specific capabilities
+- Documented GPT-5 as newest flagship OpenAI model with superior coding and reasoning performance
 
 ## System Architecture
 

@@ -35,12 +35,13 @@ A sophisticated web application for comparing responses from multiple AI models 
 
 ### Supported Providers & Models
 
-**OpenAI**
-- GPT-5 (latest flagship model)
-- GPT-4.1 Turbo (enhanced reasoning)
-- GPT-4o (multimodal capabilities)
-- GPT-4o Mini (cost-optimized)
-- GPT-3.5 Turbo (legacy support)
+**OpenAI** - Source of Truth: server/providers/openai.ts
+- GPT-5 (2025-08-07) - Flagship model for coding, reasoning, and agentic tasks
+  * 400k context window, 128k max output, reasoning token support
+  * $1.25 input / $10.00 output per 1M tokens
+- GPT-4.1 series (Nano, Mini, Standard) - Latest GPT-4 improvements  
+- o3/o4 series - Advanced reasoning models with Responses API support
+- GPT-4o Mini - Cost-optimized multimodal model
 
 **Anthropic Claude**
 - Claude Opus 4.1 (most capable)
@@ -65,9 +66,35 @@ A sophisticated web application for comparing responses from multiple AI models 
 - Grok 2 1212 (text-only)
 - Grok Beta (experimental)
 
+## Model Source of Truth
+
+All AI model configurations, capabilities, pricing, and specifications are maintained in the modular provider system located in `server/providers/`. This serves as the single source of truth for:
+
+### Latest Model Versions (Updated: August 10, 2025)
+- **OpenAI**: GPT-5 (flagship model), GPT-4.1 series, o3/o4 reasoning models
+- **Anthropic**: Claude Sonnet 4, Claude 3.7 Sonnet, Claude 3.5 series
+- **Google**: Gemini 2.5 Pro/Flash, Gemini 2.0 Flash series  
+- **xAI**: Grok 4 (reasoning), Grok 3 series variants
+- **DeepSeek**: R1 Reasoner (CoT), V3 Chat
+
+### Model Capabilities Tracked
+- **Reasoning**: Full chain-of-thought support with visible reasoning logs
+- **Multimodal**: Text and image input processing capabilities
+- **Function Calling**: Tool use and API integration support
+- **Streaming**: Real-time response generation support
+
+### Provider-Specific Features
+- **OpenAI**: Responses API for o-series reasoning models, GPT-5 flagship performance
+- **Anthropic**: Structured reasoning with `<reasoning>` tags for Claude 3.7/4
+- **Google**: Thinking budget configuration for Gemini 2.5 models
+- **xAI**: Advanced reasoning capabilities in Grok 4
+- **DeepSeek**: Complete reasoning transparency via `reasoning_content` field
+
+**Note**: Model specifications are regularly updated. Check `server/providers/` for the most current model configurations, pricing, and capabilities.
+
 ### API Integration Architecture
 
-All AI providers are abstracted through a unified service layer (`server/services/ai-providers.ts`) that:
+All AI providers are abstracted through a unified modular provider system that:
 
 1. **Normalizes Request Format**: Converts internal prompt format to provider-specific API calls
 2. **Handles Authentication**: Manages API keys securely through environment variables

@@ -18,6 +18,26 @@ export class OpenAIProvider extends BaseProvider {
   
   models: ModelConfig[] = [
     {
+      id: "gpt-5-2025-08-07",
+      name: "GPT-5",
+      provider: "OpenAI",
+      model: "gpt-5-2025-08-07",
+      capabilities: {
+        reasoning: true, // Reasoning token support
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 1.25,
+        outputPerMillion: 10.00,
+      },
+      limits: {
+        maxTokens: 128000,
+        contextWindow: 400000,
+      },
+    },
+    {
       id: "gpt-4.1-nano-2025-04-14",
       name: "GPT-4.1 Nano",
       provider: "OpenAI",
@@ -144,7 +164,7 @@ export class OpenAIProvider extends BaseProvider {
     
     const modelConfig = this.models.find(m => m.id === model);
     const supportsReasoning = modelConfig?.capabilities.reasoning;
-    const reasoningModels = ['o3-mini-2025-01-31', 'o4-mini-2025-04-16', 'o3-2025-04-16'];
+    const reasoningModels = ['gpt-5-2025-08-07', 'o3-mini-2025-01-31', 'o4-mini-2025-04-16', 'o3-2025-04-16'];
     
     let response: any;
     let reasoning = null;
