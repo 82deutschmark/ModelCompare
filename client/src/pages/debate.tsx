@@ -79,7 +79,7 @@ export default function Debate() {
 
 Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.
 
-Original user prompt was: "{originalPrompt}"`);
+Then provide your own better answer to the original question: "{originalPrompt}"`);
 
   const [model1Id, setModel1Id] = useState('');
   const [model2Id, setModel2Id] = useState('');
@@ -406,26 +406,6 @@ Original user prompt was: "{originalPrompt}"`);
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {currentRound > 0 ? (
-                    <Button
-                      onClick={continueDebate}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                      disabled={continueDebateMutation.isPending}
-                    >
-                      {continueDebateMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Getting Response...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          Continue ({models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn)
-                        </>
-                      )}
-                    </Button>
-                  ) : null}
                   
                   <Button
                     onClick={handleResetDebate}
@@ -547,6 +527,30 @@ Original user prompt was: "{originalPrompt}"`);
                           </div>
                         )}
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* Continue Button - Only show on the last message */}
+                  {index === messages.length - 1 && currentRound > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <Button
+                        onClick={continueDebate}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 w-full"
+                        disabled={continueDebateMutation.isPending}
+                      >
+                        {continueDebateMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Getting {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 mr-2" />
+                            Continue - {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn
+                          </>
+                        )}
+                      </Button>
                     </div>
                   )}
                 </CardContent>
