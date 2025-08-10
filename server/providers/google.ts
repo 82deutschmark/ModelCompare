@@ -6,6 +6,7 @@
  * Date: August 9, 2025
  */
 
+import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
 import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
 
@@ -55,26 +56,7 @@ export class GoogleProvider extends BaseProvider {
         contextWindow: 1000000,
       },
     },
-    {
-      id: "gemini-2.0-flash-thinking-experimental",
-      name: "Gemini 2.0 Flash Thinking",
-      provider: "Google",
-      model: "gemini-2.0-flash-thinking-experimental",
-      capabilities: {
-        reasoning: true, // Optimized for reasoning
-        multimodal: true,
-        functionCalling: true,
-        streaming: true,
-      },
-      pricing: {
-        inputPerMillion: 0.075,
-        outputPerMillion: 0.30,
-      },
-      limits: {
-        maxTokens: 8192,
-        contextWindow: 32768,
-      },
-    },
+    
     {
       id: "gemini-2.0-flash",
       name: "Gemini 2.0 Flash",

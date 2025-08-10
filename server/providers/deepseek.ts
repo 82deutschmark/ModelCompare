@@ -6,6 +6,7 @@
  * Date: August 9, 2025
  */
 
+import 'dotenv/config';
 import OpenAI from 'openai';
 import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
 
