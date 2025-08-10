@@ -185,7 +185,7 @@ Original user prompt was: "{originalPrompt}"`);
           description: "The 10-round debate has concluded.",
         });
       } else {
-        const nextModel = models.find(m => m.id === (nextRound % 2 === 0 ? model1Id : model2Id));
+        const nextModel = models.find(m => m.id === (nextRound % 2 === 1 ? model2Id : model1Id));
         toast({
           title: "Response Added!",
           description: `${model?.name} has responded. ${nextRound < 10 ? `Click Continue for ${nextModel?.name}'s turn.` : ''}`,
@@ -209,7 +209,7 @@ Original user prompt was: "{originalPrompt}"`);
     }
 
     // Determine which model should respond next (alternate between them)
-    const nextModelId = currentRound % 2 === 0 ? model2Id : model1Id;
+    const nextModelId = currentRound % 2 === 1 ? model2Id : model1Id;
 
     continueDebateMutation.mutate({
       battleHistory: messages,
@@ -432,7 +432,7 @@ Original user prompt was: "{originalPrompt}"`);
                       ) : (
                         <>
                           <Play className="w-4 h-4 mr-2" />
-                          Continue ({models.find(m => m.id === (currentRound % 2 === 0 ? model2Id : model1Id))?.name}'s turn)
+                          Continue ({models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn)
                         </>
                       )}
                     </Button>
@@ -460,7 +460,7 @@ Original user prompt was: "{originalPrompt}"`);
               {continueDebateMutation.isPending && (
                 <div className="flex items-center space-x-2 text-sm text-blue-600">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  <span>Waiting for {models.find(m => m.id === (currentRound % 2 === 0 ? model2Id : model1Id))?.name}'s response...</span>
+                  <span>Waiting for {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...</span>
                 </div>
               )}
             </CardContent>
