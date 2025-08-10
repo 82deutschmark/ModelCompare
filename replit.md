@@ -28,6 +28,15 @@ Preferred communication style: Simple, everyday language.
 - Models now engage in structured debates with challenging responses and counter-arguments
 - All API keys configured (OpenAI, Anthropic, Gemini, xAI, DeepSeek) for full functionality
 
+### August 10, 2025 - Fixed Model Selection & Created Dedicated Debate Mode
+- Fixed model selection bug in Battle Mode - now allows selecting same model multiple times for different positions
+- Created new dedicated "Debate Mode" page (/debate) separate from Battle and Compare modes
+- Debate Mode features streamlined 10-round automatic debates with visual progress tracking
+- Updated navigation across all pages to include Compare Mode, Battle Mode, and Debate Mode
+- Enhanced user experience with clear mode separation: Compare (side-by-side), Battle (manual responses), Debate (auto 10-rounds)
+- Fixed terminology from "conversation" to "debate/rebuttal" for better clarity of purpose
+- All modes now properly cross-navigate and maintain distinct functionality
+
 ### August 10, 2025 - Complete Modular Provider System & Latest Models
 - Refactored from monolithic ai-providers.ts to modular provider architecture
 - Created separate provider files: openai.ts, anthropic.ts, google.ts, deepseek.ts, xai.ts

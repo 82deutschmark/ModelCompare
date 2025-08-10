@@ -161,6 +161,12 @@ export default function Home() {
                   <span>Battle Mode</span>
                 </Button>
               </Link>
+              <Link href="/debate">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Debate Mode</span>
+                </Button>
+              </Link>
               <Button
                 variant="ghost"
                 size="sm"

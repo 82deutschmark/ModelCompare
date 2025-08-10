@@ -258,6 +258,12 @@ Original user prompt was: "{originalPrompt}"`);
                   <span>Compare Mode</span>
                 </Button>
               </Link>
+              <Link href="/debate">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Debate Mode</span>
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -566,7 +572,7 @@ Original user prompt was: "{originalPrompt}"`);
                     <SelectValue placeholder="Choose a model" />
                   </SelectTrigger>
                   <SelectContent>
-                    {models.filter(model => !modelSeats.some(seat => seat.modelId === model.id)).map((model) => (
+                    {models.map((model) => (
                       <SelectItem key={model.id} value={model.id}>
                         <div className="flex items-center justify-between w-full">
                           <div className="flex flex-col">
