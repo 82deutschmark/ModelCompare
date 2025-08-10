@@ -103,56 +103,41 @@ Original user prompt was: "{originalPrompt}"`);
     },
   });
 
-  // Start debate mutation
+  // Start debate mutation - just get the first model's response
   const startDebateMutation = useMutation({
     mutationFn: async (data: { prompt: string; model1Id: string; model2Id: string; challengerPrompt?: string }) => {
-      const response = await apiRequest('POST', '/api/battle/start', data);
-      return response.json() as Promise<{ model1Response: ModelResponse; model2Response: ModelResponse }>;
+      // Only get the first model's response to the original prompt
+      const response = await apiRequest('POST', '/api/models/respond', {
+        modelId: data.model1Id,
+        prompt: data.prompt
+      });
+      return response.json() as Promise<ModelResponse>;
     },
     onSuccess: (data) => {
       const model1 = models.find(m => m.id === model1Id);
-      const model2 = models.find(m => m.id === model2Id);
       
+      // Start with just Model 1's initial statement
       setMessages([
         {
           id: `msg-1`,
           modelId: model1Id,
           modelName: model1?.name || "Model 1",
-          content: data.model1Response.content,
+          content: data.content,
           timestamp: Date.now(),
           round: 1,
-          responseTime: data.model1Response.responseTime,
-          reasoning: data.model1Response.reasoning,
-          tokenUsage: data.model1Response.tokenUsage,
-          cost: data.model1Response.cost,
-          modelConfig: data.model1Response.modelConfig,
-        },
-        {
-          id: `msg-2`,
-          modelId: model2Id,
-          modelName: model2?.name || "Model 2", 
-          content: data.model2Response.content,
-          timestamp: Date.now() + 1,
-          round: 1,
-          responseTime: data.model2Response.responseTime,
-          reasoning: data.model2Response.reasoning,
-          tokenUsage: data.model2Response.tokenUsage,
-          cost: data.model2Response.cost,
-          modelConfig: data.model2Response.modelConfig,
+          responseTime: data.responseTime,
+          reasoning: data.reasoning,
+          tokenUsage: data.tokenUsage,
+          cost: data.cost,
+          modelConfig: data.modelConfig,
         }
       ]);
-      setCurrentRound(2);
+      setCurrentRound(1);
       setShowSetup(false);
-      
-      // Start automatic conversation
-      setIsRunning(true);
-      setTimeout(() => {
-        continueDebate();
-      }, 3000); // 3 second delay before first auto-response
       
       toast({
         title: "Debate Started!",
-        description: "Models will automatically debate for 10 rounds",
+        description: `${model1?.name} has made their opening statement. Click Continue to get ${models.find(m => m.id === model2Id)?.name}'s rebuttal.`,
       });
     },
     onError: (error) => {
@@ -195,18 +180,16 @@ Original user prompt was: "{originalPrompt}"`);
       setCurrentRound(nextRound);
 
       if (nextRound >= 10) {
-        setIsRunning(false);
         toast({
           title: "Debate Complete!",
           description: "The 10-round debate has concluded.",
         });
-      } else if (isRunning) {
-        // Continue auto-debate with delay
-        setTimeout(() => {
-          if (isRunning) { // Double-check we're still running
-            continueDebate();
-          }
-        }, 3000); // 3 second delay between responses
+      } else {
+        const nextModel = models.find(m => m.id === (nextRound % 2 === 0 ? model1Id : model2Id));
+        toast({
+          title: "Response Added!",
+          description: `${model?.name} has responded. ${nextRound < 10 ? `Click Continue for ${nextModel?.name}'s turn.` : ''}`,
+        });
       }
     },
     onError: (error) => {
@@ -219,19 +202,14 @@ Original user prompt was: "{originalPrompt}"`);
     },
   });
 
-  // Function to automatically continue the debate
+  // Function to manually continue the debate
   const continueDebate = () => {
     if (currentRound >= 10 || !model1Id || !model2Id) {
-      setIsRunning(false);
       return;
     }
 
-    if (!isRunning) {
-      return; // Don't continue if manually stopped
-    }
-
     // Determine which model should respond next (alternate between them)
-    const nextModelId = currentRound % 2 === 0 ? model1Id : model2Id;
+    const nextModelId = currentRound % 2 === 0 ? model2Id : model1Id;
 
     continueDebateMutation.mutate({
       battleHistory: messages,
@@ -380,12 +358,12 @@ Original user prompt was: "{originalPrompt}"`);
                     {startDebateMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Starting Debate...
+                        Getting Opening Statement...
                       </>
                     ) : (
                       <>
                         <Play className="w-4 h-4 mr-2" />
-                        Start 10-Round Debate
+                        Start Debate ({models.find(m => m.id === model1Id)?.name} goes first)
                       </>
                     )}
                   </Button>
@@ -439,24 +417,9 @@ Original user prompt was: "{originalPrompt}"`);
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {isRunning ? (
+                  {currentRound < 10 && currentRound > 0 ? (
                     <Button
-                      onClick={handleStopDebate}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      <Square className="w-4 h-4 mr-2" />
-                      Stop Debate
-                    </Button>
-                  ) : currentRound < 10 && currentRound > 0 ? (
-                    <Button
-                      onClick={() => {
-                        setIsRunning(true);
-                        // Start the debate continuation immediately
-                        setTimeout(() => {
-                          continueDebate();
-                        }, 500); // Short delay to allow UI to update
-                      }}
+                      onClick={continueDebate}
                       size="sm"
                       className="bg-green-600 hover:bg-green-700"
                       disabled={continueDebateMutation.isPending}
@@ -464,12 +427,12 @@ Original user prompt was: "{originalPrompt}"`);
                       {continueDebateMutation.isPending ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Resuming...
+                          Getting Response...
                         </>
                       ) : (
                         <>
                           <Play className="w-4 h-4 mr-2" />
-                          Resume Auto-Debate
+                          Continue ({models.find(m => m.id === (currentRound % 2 === 0 ? model2Id : model1Id))?.name}'s turn)
                         </>
                       )}
                     </Button>
@@ -494,15 +457,10 @@ Original user prompt was: "{originalPrompt}"`);
                 </div>
               </div>
               
-              {isRunning && (
+              {continueDebateMutation.isPending && (
                 <div className="flex items-center space-x-2 text-sm text-blue-600">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  <span>
-                    {continueDebateMutation.isPending ? 
-                      'Waiting for response...' : 
-                      'Auto-debate running... Next response in 3 seconds'
-                    }
-                  </span>
+                  <span>Waiting for {models.find(m => m.id === (currentRound % 2 === 0 ? model2Id : model1Id))?.name}'s response...</span>
                 </div>
               )}
             </CardContent>
