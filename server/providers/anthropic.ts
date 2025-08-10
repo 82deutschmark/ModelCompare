@@ -146,7 +146,7 @@ ${prompt}`;
     
     return {
       content: cleanedContent,
-      reasoning: reasoning || undefined,
+      reasoning: reasoning ?? undefined,
       responseTime: Date.now() - startTime,
       tokenUsage: message.usage ? {
         input: message.usage.input_tokens,

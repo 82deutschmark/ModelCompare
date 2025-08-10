@@ -37,6 +37,19 @@ export interface ModelResponse {
     output: number;
     reasoning?: number;
   };
+  modelConfig?: {
+    capabilities: {
+      reasoning: boolean;
+      multimodal: boolean;
+      functionCalling: boolean;
+      streaming: boolean;
+    };
+    pricing: {
+      inputPerMillion: number;
+      outputPerMillion: number;
+      reasoningPerMillion?: number;
+    };
+  };
 }
 
 export abstract class BaseProvider {

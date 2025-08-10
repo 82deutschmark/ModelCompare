@@ -19,12 +19,12 @@ export class XAIProvider extends BaseProvider {
   
   models: ModelConfig[] = [
     {
-      id: "grok-4",
+      id: "grok-4-0709",
       name: "Grok 4",
       provider: "xAI",
-      model: "grok-4",
+      model: "grok-4-0709",
       capabilities: {
-        reasoning: true, // Advanced reasoning capabilities
+        reasoning: true, // Reasoning model with potential reasoning logs
         multimodal: true,
         functionCalling: true,
         streaming: true,
@@ -34,15 +34,15 @@ export class XAIProvider extends BaseProvider {
         outputPerMillion: 15.00,
       },
       limits: {
-        maxTokens: 4096,
-        contextWindow: 131072,
+        maxTokens: 8192,
+        contextWindow: 128000,
       },
     },
     {
-      id: "grok-2-1212",
-      name: "Grok 2",
+      id: "grok-3",
+      name: "Grok 3",
       provider: "xAI",
-      model: "grok-2-1212",
+      model: "grok-3",
       capabilities: {
         reasoning: false,
         multimodal: false,
@@ -54,28 +54,68 @@ export class XAIProvider extends BaseProvider {
         outputPerMillion: 10.00,
       },
       limits: {
-        maxTokens: 4096,
-        contextWindow: 131072,
+        maxTokens: 8192,
+        contextWindow: 128000,
       },
     },
     {
-      id: "grok-2-vision-1212",
-      name: "Grok 2 Vision",
+      id: "grok-3-mini",
+      name: "Grok 3 Mini",
       provider: "xAI",
-      model: "grok-2-vision-1212",
+      model: "grok-3-mini",
       capabilities: {
         reasoning: false,
-        multimodal: true,
+        multimodal: false,
         functionCalling: true,
         streaming: true,
       },
       pricing: {
-        inputPerMillion: 2.00,
-        outputPerMillion: 10.00,
+        inputPerMillion: 0.50,
+        outputPerMillion: 2.00,
       },
       limits: {
-        maxTokens: 4096,
-        contextWindow: 8192,
+        maxTokens: 8192,
+        contextWindow: 128000,
+      },
+    },
+    {
+      id: "grok-3-fast",
+      name: "Grok 3 Fast",
+      provider: "xAI",
+      model: "grok-3-fast",
+      capabilities: {
+        reasoning: false,
+        multimodal: false,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 1.00,
+        outputPerMillion: 4.00,
+      },
+      limits: {
+        maxTokens: 8192,
+        contextWindow: 128000,
+      },
+    },
+    {
+      id: "grok-3-mini-fast",
+      name: "Grok 3 Mini Fast",
+      provider: "xAI",
+      model: "grok-3-mini-fast",
+      capabilities: {
+        reasoning: false,
+        multimodal: false,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.25,
+        outputPerMillion: 1.00,
+      },
+      limits: {
+        maxTokens: 8192,
+        contextWindow: 128000,
       },
     },
   ];
@@ -91,11 +131,15 @@ export class XAIProvider extends BaseProvider {
     
     return {
       content: response.choices[0].message.content || "No response generated",
-      reasoning: undefined, // Grok reasoning not directly exposed
+      reasoning: undefined, // Grok reasoning not directly exposed via API
       responseTime: Date.now() - startTime,
       tokenUsage: response.usage ? {
         input: response.usage.prompt_tokens,
         output: response.usage.completion_tokens,
+      } : undefined,
+      modelConfig: this.models.find(m => m.id === model) ? {
+        capabilities: this.models.find(m => m.id === model)!.capabilities,
+        pricing: this.models.find(m => m.id === model)!.pricing,
       } : undefined,
     };
   }

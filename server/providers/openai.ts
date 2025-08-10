@@ -179,7 +179,7 @@ export class OpenAIProvider extends BaseProvider {
         
         return {
           content: (response as any).output_text || "No response generated",
-          reasoning,
+          reasoning: reasoning ?? undefined,
           responseTime: Date.now() - startTime,
           tokenUsage: undefined, // Responses API doesn't provide usage
           modelConfig: modelConfig ? {
@@ -201,7 +201,7 @@ export class OpenAIProvider extends BaseProvider {
     
     return {
       content: chatResponse.choices[0].message.content || "No response generated",
-      reasoning,
+      reasoning: reasoning ?? undefined,
       responseTime: Date.now() - startTime,
       tokenUsage: chatResponse.usage ? {
         input: chatResponse.usage.prompt_tokens,
