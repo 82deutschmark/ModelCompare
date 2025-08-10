@@ -102,37 +102,60 @@ export class AnthropicProvider extends BaseProvider {
   async callModel(prompt: string, model: string): Promise<ModelResponse> {
     const startTime = Date.now();
     
-    // Enable thinking for Claude 3.7 Sonnet and Claude 4 models
-    const enableThinking = model.includes('claude-3-7-sonnet') || 
-                          model.includes('claude-4') || 
-                          model.includes('claude-sonnet-4');
+    const modelConfig = this.models.find(m => m.id === model);
+    const supportsReasoning = modelConfig?.capabilities.reasoning;
     
-    const requestConfig: any = {
-      model,
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    };
-    
-    if (enableThinking) {
-      requestConfig.thinking = {
-        type: "enabled",
-        budget_tokens: 4000
-      };
+    // Add reasoning instructions for reasoning-capable models
+    let finalPrompt = prompt;
+    if (supportsReasoning) {
+      finalPrompt = `Before providing your final answer, please show your step-by-step reasoning process inside <reasoning> tags. Think through the prompt systematically, analyzing the request and logical connections.
+
+<reasoning>
+[Your detailed step-by-step analysis will go here]
+</reasoning>
+
+Then provide your final response.
+
+${prompt}`;
     }
     
-    const message = await anthropic.messages.create(requestConfig);
+    const message = await anthropic.messages.create({
+      model,
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: finalPrompt }],
+    });
     
     const content = Array.isArray(message.content) 
       ? message.content.map(block => block.type === 'text' ? block.text : '').join('')
       : message.content;
     
+    // Extract reasoning from <reasoning> tags if available
+    let reasoning = null;
+    let cleanedContent = content;
+    let reasoningTokens = 0;
+    
+    if (supportsReasoning) {
+      const reasoningMatch = content.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
+      if (reasoningMatch) {
+        reasoning = reasoningMatch[1].trim();
+        reasoningTokens = Math.floor(reasoning.length * 0.75); // Rough token estimate
+        // Remove reasoning tags from content
+        cleanedContent = content.replace(/<reasoning>[\s\S]*?<\/reasoning>/, '').trim();
+      }
+    }
+    
     return {
-      content,
-      reasoning: (message as any).thinking_content || undefined, // Thinking logs for supported models
+      content: cleanedContent,
+      reasoning: reasoning || undefined,
       responseTime: Date.now() - startTime,
       tokenUsage: message.usage ? {
         input: message.usage.input_tokens,
         output: message.usage.output_tokens,
+        reasoning: reasoningTokens,
+      } : undefined,
+      modelConfig: modelConfig ? {
+        capabilities: modelConfig.capabilities,
+        pricing: modelConfig.pricing,
       } : undefined,
     };
   }
