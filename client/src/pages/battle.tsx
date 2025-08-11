@@ -1,5 +1,5 @@
 /**
- * Battle Mode Page - AI Model Debate Interface
+ * Battle Mode Page - AI Model Debate Interface  DEPRECATED
  * 
  * This page implements the "battle mode" feature where two AI models engage
  * in a structured debate. The workflow is:

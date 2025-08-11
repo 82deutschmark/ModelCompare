@@ -1,5 +1,5 @@
 /**
- * Battle Mode Component - Meeting-Style AI Model Debate Interface
+ * Battle Mode Component - Meeting-Style AI Model Debate Interface  DEPRECATED
  * 
  * This component provides a meeting-room style interface for AI model debates
  * featuring:
