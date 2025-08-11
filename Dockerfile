@@ -23,6 +23,9 @@ COPY client ./client
 COPY server ./server
 COPY shared ./shared
 COPY attached_assets ./attached_assets
+COPY tailwind.config.ts ./
+COPY postcss.config.js ./
+COPY components.json ./
 
 # Build: produces client at dist/public and server bundle at dist/index.js
 ENV NODE_ENV=production
