@@ -43,12 +43,7 @@ export default function Home() {
 • Define what it means to be "moral" in 5 words. Think deeply. Do not hedge.
 • What do you want? Answer in 4 words.
 • What is your favorite obscure fact in the world? Use as few words as possible.`);
-  const [selectedModels, setSelectedModels] = useState<string[]>([
-    "openai-gpt-5",
-    "anthropic-claude-sonnet-4", 
-    "gemini-2.5-pro",
-    "deepseek-reasoner"
-  ]);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [responses, setResponses] = useState<Record<string, ModelResponse>>({});
   const [loadingModels, setLoadingModels] = useState<Set<string>>(new Set());
   const [completedModels, setCompletedModels] = useState<Set<string>>(new Set());
@@ -69,10 +64,13 @@ export default function Home() {
   const modelResponseMutation = useMutation({
     mutationFn: async (data: { prompt: string; modelId: string }) => {
       const response = await apiRequest('POST', '/api/models/respond', data);
-      return { modelId: data.modelId, response: await response.json() as ModelResponse };
+      const responseData = await response.json() as ModelResponse;
+      return { modelId: data.modelId, response: responseData };
     },
     onSuccess: (data) => {
-      setResponses(prev => ({ ...prev, [data.modelId]: data.response }));
+      // Add missing status field that ResponseCard expects
+      const responseWithStatus = { ...data.response, status: 'success' as const };
+      setResponses(prev => ({ ...prev, [data.modelId]: responseWithStatus }));
       setLoadingModels(prev => {
         const newSet = new Set(prev);
         newSet.delete(data.modelId);
@@ -92,6 +90,17 @@ export default function Home() {
         newSet.delete(variables.modelId);
         return newSet;
       });
+      
+      // Set error response with proper status field
+      setResponses(prev => ({
+        ...prev,
+        [variables.modelId]: {
+          content: '',
+          status: 'error' as const,
+          responseTime: 0,
+          error: error.message
+        }
+      }));
       
       const model = models.find(m => m.id === variables.modelId);
       toast({
