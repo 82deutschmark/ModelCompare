@@ -46,5 +46,5 @@ COPY --from=builder /app/shared ./shared
 # Document default port; Railway will inject its own PORT
 EXPOSE 5000
 
-# Start the compiled JavaScript server; serves API + static from one port
-CMD ["node", "dist/server/index.js"]
+# Start the bundled server; serves API + static from one port
+CMD ["node", "dist/index.js"]
