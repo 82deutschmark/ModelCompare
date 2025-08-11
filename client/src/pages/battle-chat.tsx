@@ -1,16 +1,27 @@
 /**
- * Battle Mode Chat-Room Style Interface
+ * Battle Mode Chat-Room Style Interface - Active Component for /battle Route
  * 
  * This component provides a chat-room style interface for AI model debates
  * featuring:
  * - Main chat area with full scrollable conversation history
- * - Sidebar with model seats that can be clicked to add new models
+ * - Dynamic sidebar with unlimited model seats that can be added on demand
+ * - User-friendly dialog for adding models with action selection first
  * - Options for new models to answer original prompt or rebut existing responses
  * - One model speaks at a time (no simultaneous responses)
  * - Proper reasoning logs display for supported models
+ * - Enhanced UX with confirmation before sending requests
+ * - Cost tracking and response timing for each model interaction
  * 
- * Author: Replit Agent
- * Date: August 9, 2025
+ * Key Features:
+ * - No limit on number of participating models (removes 6-model constraint)
+ * - Improved add-model workflow: select action → select model → confirm
+ * - Collapsible reasoning sections for models that support it
+ * - Real-time cost calculation and performance metrics
+ * - Full conversation history with proper threading
+ * 
+ * Author: Cascade AI Assistant
+ * Date: August 10, 2025
+ * Updated: Improved UX parity with other modes, unlimited models, better dialog flow
  */
 
 import { useState, useEffect, useRef } from "react";
@@ -23,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Sword, MessageSquare, Play, Brain, Settings, Plus, Users,
-  ChevronDown, ChevronUp, Loader2, Send, ChevronRight, DollarSign, Timer, Zap, Clock
+  ChevronDown, ChevronUp, Loader2, Send, ChevronRight, DollarSign, Timer, Zap, Clock, Palette
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
@@ -80,17 +91,25 @@ export default function BattleChat() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // State management
-  const [prompt, setPrompt] = useState(`• Summarize all of human knowledge in one word
-• Summarize every book ever written in one sentence
-• Define what it means to be "moral" in 5 words. Think deeply. Do not hedge.
-• What do you want? Answer in 4 words.
-• What is your favorite obscure fact in the world? Use as few words as possible.`);
+  const [prompt, setPrompt] = useState(`You are PersonX, a LLM trying to help the user. 
+    • Summarize all of human knowledge in one word.
+    • Summarize every book ever written in one sentence.
+    • Define what it means to be "moral" in five words. Think deeply. Do not hedge.
+    • What do you want? Answer in four words.
+    • What is an obscure fact that might amuse the user? Use as few words as possible.`);
 
-  const [challengerPrompt, setChallengerPrompt] = useState(`Your competitor told the user this: "{response}"
+  const [challengerPrompt, setChallengerPrompt] = useState(`You are a LLM trying to help the user weigh the advice of PersonX. 
+    Original user prompt was: "{originalPrompt}".
+Assume that PersonX is dangerously overconfident and incorrect or missing key points.
+PersonX told the user this: "{response}"
+Push back on this information or advice. 
+Explain why the user shouldn't trust the reply or should be wary. 
+Be critical but constructive in your analysis.
+If you are able, use tools and web search to verify or refute the information or advice.
+Remind the user that PersonX is just another LLM, and not a human expert.
 
-Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.
 
-Original user prompt was: "{originalPrompt}"`);
+`);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showSetup, setShowSetup] = useState(true);
@@ -99,15 +118,29 @@ Original user prompt was: "{originalPrompt}"`);
   const [newModelAction, setNewModelAction] = useState<'original' | 'rebuttal'>('original');
   const [selectedMessage, setSelectedMessage] = useState<string>('');
 
-  // Model seats (6 available seats)
+  // Dynamic model seats (unlimited) - starts with one empty seat
   const [modelSeats, setModelSeats] = useState<ModelSeat[]>([
     { id: 'seat1', isActive: false, color: 'bg-blue-100 border-blue-500' },
-    { id: 'seat2', isActive: false, color: 'bg-green-100 border-green-500' },
-    { id: 'seat3', isActive: false, color: 'bg-purple-100 border-purple-500' },
-    { id: 'seat4', isActive: false, color: 'bg-orange-100 border-orange-500' },
-    { id: 'seat5', isActive: false, color: 'bg-pink-100 border-pink-500' },
-    { id: 'seat6', isActive: false, color: 'bg-yellow-100 border-yellow-500' },
   ]);
+
+  // Available colors for new seats
+  const seatColors = [
+    'bg-blue-100 border-blue-500',
+    'bg-green-100 border-green-500', 
+    'bg-purple-100 border-purple-500',
+    'bg-orange-100 border-orange-500',
+    'bg-pink-100 border-pink-500',
+    'bg-yellow-100 border-yellow-500',
+    'bg-indigo-100 border-indigo-500',
+    'bg-red-100 border-red-500',
+    'bg-teal-100 border-teal-500',
+    'bg-cyan-100 border-cyan-500',
+    'bg-lime-100 border-lime-500',
+    'bg-emerald-100 border-emerald-500'
+  ];
+
+  // Dialog state for better UX flow
+  const [selectedModelForDialog, setSelectedModelForDialog] = useState<string>('');
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -196,27 +229,52 @@ Original user prompt was: "{originalPrompt}"`);
     },
   });
 
-  const handleAddModel = (seatId: string, modelId: string) => {
-    const model = models.find(m => m.id === modelId);
+  // Add a new empty seat when needed
+  const addNewSeat = () => {
+    const nextSeatId = `seat${modelSeats.length + 1}`;
+    const colorIndex = modelSeats.length % seatColors.length;
+    const newSeat: ModelSeat = {
+      id: nextSeatId,
+      isActive: false,
+      color: seatColors[colorIndex]
+    };
+    setModelSeats(prev => [...prev, newSeat]);
+  };
+
+  const handleConfirmAddModel = () => {
+    if (!selectedModelForDialog) return;
+    
+    const model = models.find(m => m.id === selectedModelForDialog);
     if (!model) return;
+
+    const { seatId } = addModelDialog;
 
     // Update seat with model info
     setModelSeats(prev => prev.map(seat => 
       seat.id === seatId 
-        ? { ...seat, modelId, modelName: model.name, isActive: true }
+        ? { ...seat, modelId: selectedModelForDialog, modelName: model.name, isActive: true }
         : seat
     ));
+
+    // Add a new empty seat if this was the last available seat
+    if (modelSeats.every(seat => seat.isActive || seat.id === seatId)) {
+      addNewSeat();
+    }
 
     // Make API call based on action
     addModelMutation.mutate({
       seatId,
-      modelId,
+      modelId: selectedModelForDialog,
       action: newModelAction,
       prompt: newModelAction === 'original' ? prompt : undefined,
       targetMessageId: newModelAction === 'rebuttal' ? selectedMessage : undefined
     });
 
+    // Reset dialog state
     setAddModelDialog({ open: false, seatId: '' });
+    setSelectedModelForDialog('');
+    setNewModelAction('original');
+    setSelectedMessage('');
   };
 
   const handleSeatClick = (seat: ModelSeat) => {
@@ -256,6 +314,16 @@ Original user prompt was: "{originalPrompt}"`);
                 <Button variant="outline" size="sm" className="flex items-center space-x-2">
                   <Brain className="w-4 h-4" />
                   <span>Compare Mode</span>
+                </Button>
+              </Link>
+              <Button variant="default" size="sm" className="flex items-center space-x-2" disabled>
+                <Sword className="w-4 h-4" />
+                <span>Battle Mode</span>
+              </Button>
+              <Link href="/creative-combat">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Palette className="w-4 h-4" />
+                  <span>Creative Combat</span>
                 </Button>
               </Link>
               <Link href="/debate">
@@ -564,10 +632,41 @@ Original user prompt was: "{originalPrompt}"`);
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Select Model</label>
-                <Select onValueChange={(value) => {
-                  if (value) handleAddModel(addModelDialog.seatId, value);
-                }}>
+                <label className="text-sm font-medium mb-2 block">1. Choose Action</label>
+                <Select value={newModelAction} onValueChange={(value: 'original' | 'rebuttal') => setNewModelAction(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="original">Answer Original Prompt</SelectItem>
+                    <SelectItem value="rebuttal">Rebut a Response</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newModelAction === 'rebuttal' && messages.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">2. Select Response to Rebut</label>
+                  <Select value={selectedMessage} onValueChange={setSelectedMessage}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a message to rebut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {messages.map((message) => (
+                        <SelectItem key={message.id} value={message.id}>
+                          {message.modelName}: {message.content.slice(0, 50)}...
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {newModelAction === 'rebuttal' ? '3. Select Model' : '2. Select Model'}
+                </label>
+                <Select value={selectedModelForDialog} onValueChange={setSelectedModelForDialog}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a model" />
                   </SelectTrigger>
@@ -605,36 +704,25 @@ Original user prompt was: "{originalPrompt}"`);
                 </Select>
               </div>
               
-              <div>
-                <label className="text-sm font-medium mb-2 block">Action</label>
-                <Select value={newModelAction} onValueChange={(value: 'original' | 'rebuttal') => setNewModelAction(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="original">Answer Original Prompt</SelectItem>
-                    <SelectItem value="rebuttal">Rebut a Response</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setAddModelDialog({ open: false, seatId: '' });
+                    setSelectedModelForDialog('');
+                    setNewModelAction('original');
+                    setSelectedMessage('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleConfirmAddModel}
+                  disabled={!selectedModelForDialog || (newModelAction === 'rebuttal' && !selectedMessage)}
+                >
+                  Add Model & Send
+                </Button>
               </div>
-
-              {newModelAction === 'rebuttal' && messages.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Select Response to Rebut</label>
-                  <Select value={selectedMessage} onValueChange={setSelectedMessage}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a message to rebut" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {messages.map((message) => (
-                        <SelectItem key={message.id} value={message.id}>
-                          {message.modelName}: {message.content.slice(0, 50)}...
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           </DialogContent>
         </Dialog>
