@@ -22,13 +22,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   MessageSquare, Play, Square, Brain, DollarSign, Clock, ChevronDown, ChevronUp, Loader2, RotateCcw,
   Sword, Palette, Moon, Sun, Gavel, Users, Settings, Target
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
+import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
@@ -343,9 +343,38 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
     setShowSetup(true);
   };
 
-  const formatCost = (cost?: { total: number; reasoning?: number }) => {
-    if (!cost) return 'N/A';
-    return `$${cost.total.toFixed(4)}${cost.reasoning ? ` (+$${cost.reasoning.toFixed(4)} reasoning)` : ''}`;
+  const formatCost = (cost: any) => {
+    if (!cost || !cost.total) return 'N/A';
+    return `$${cost.total.toFixed(4)}`;
+  };
+
+  // Convert DebateMessage to MessageCardData format
+  const convertToMessageCardData = (message: DebateMessage): MessageCardData => {
+    const model = models.find(m => m.id === message.modelId);
+    
+    return {
+      id: message.id,
+      modelName: message.modelName,
+      modelId: message.modelId,
+      content: message.content,
+      reasoning: message.reasoning,
+      responseTime: message.responseTime,
+      round: message.round,
+      timestamp: message.timestamp,
+      type: 'debate',
+      tokenUsage: message.tokenUsage,
+      cost: message.cost,
+      modelConfig: {
+        provider: model?.provider,
+        capabilities: message.modelConfig?.capabilities || {
+          reasoning: !!message.reasoning,
+          multimodal: false,
+          functionCalling: false,
+          streaming: false
+        },
+        pricing: message.modelConfig?.pricing
+      }
+    };
   };
 
   const totalCost = messages.reduce((sum, msg) => sum + (msg.cost?.total || 0), 0);
@@ -639,121 +668,51 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
         {messages.length > 0 && (
           <div className="space-y-4">
             {messages.map((message, index) => (
-              <Card key={message.id} className={`${
+              <div key={message.id} className={`${
                 message.modelId === model1Id ? 'ml-0 mr-8' : 'ml-8 mr-0'
               }`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        message.modelId === model1Id ? 'bg-blue-500' : 'bg-green-500'
-                      }`} />
-                      <h3 className="font-medium">{message.modelName}</h3>
-                      <Badge variant="outline" className="text-xs">
-                        Round {message.round}
-                      </Badge>
-                      {message.modelConfig?.capabilities.reasoning && (
-                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
-                          <Brain className="w-3 h-3 mr-1" />
-                          Reasoning
-                        </Badge>
-                      )}
-                      {message.cost && (
-                        <Badge variant="outline" className="text-xs">
-                          <DollarSign className="w-3 h-3 mr-1" />
-                          ${message.cost.total.toFixed(4)}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      <Clock className="w-3 h-3" />
-                      <span>{(message.responseTime / 1000).toFixed(1)}s</span>
-                    </div>
-                  </div>
-                </CardHeader>
+                {/* Debate side indicator */}
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    message.modelId === model1Id ? 'bg-blue-500' : 'bg-green-500'
+                  }`} />
+                  <Badge variant="outline" className="text-xs">
+                    {message.modelId === model1Id ? 'Pro' : 'Con'} - Round {message.round}
+                  </Badge>
+                </div>
                 
-                <CardContent>
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
-                      {message.content}
-                    </div>
+                <MessageCard 
+                  message={convertToMessageCardData(message)}
+                  variant="detailed"
+                  showHeader={true}
+                  showFooter={true}
+                  className="shadow-sm"
+                />
+                
+                {/* Continue Button - Only show on the last message */}
+                {index === messages.length - 1 && currentRound > 0 && (
+                  <div className="mt-4">
+                    <Button
+                      onClick={continueDebate}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 w-full"
+                      disabled={continueDebateMutation.isPending}
+                    >
+                      {continueDebateMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Getting {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Continue - {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  
-                  {/* Reasoning Section */}
-                  {message.reasoning && (
-                    <div className="mt-4">
-                      <Collapsible>
-                        <CollapsibleTrigger className="flex items-center space-x-2 text-sm font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300">
-                          <Brain className="w-4 h-4" />
-                          <span>Chain of Thought</span>
-                          <ChevronDown className="w-4 h-4" />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="mt-2">
-                          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                            <div className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">
-                              {message.reasoning}
-                            </div>
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </div>
-                  )}
-                  
-                  {/* Token Usage and Cost Information */}
-                  {(message.tokenUsage || message.cost) && (
-                    <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                        {message.tokenUsage && (
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-1">
-                              <span>Tokens:</span>
-                              <span className="font-mono">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
-                              {message.tokenUsage.reasoning && (
-                                <span className="text-amber-600 dark:text-amber-400 font-mono">
-                                  +{message.tokenUsage.reasoning} reasoning
-                                </span>
-                              )}
-                            </div>
-                            {message.cost && (
-                              <div className="flex items-center space-x-1">
-                                <span>Cost:</span>
-                                <span className="font-mono text-green-600 dark:text-green-400">
-                                  {formatCost(message.cost)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Continue Button - Only show on the last message */}
-                  {index === messages.length - 1 && currentRound > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <Button
-                        onClick={continueDebate}
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 w-full"
-                        disabled={continueDebateMutation.isPending}
-                      >
-                        {continueDebateMutation.isPending ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Getting {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Continue - {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                )}
+              </div>
             ))}
             <div ref={chatEndRef} />
           </div>

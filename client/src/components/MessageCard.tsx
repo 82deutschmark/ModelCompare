@@ -131,16 +131,16 @@ export function MessageCard({
     return colors[provider] || 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200';
   };
 
-  // Variant-specific styling
-  const cardPadding = variant === 'compact' ? 'p-3' : 'p-4';
-  const headerPadding = variant === 'compact' ? 'pb-2' : 'pb-3';
+  // Variant-specific styling - optimized for better sizing
+  const cardPadding = variant === 'compact' ? 'p-2' : 'p-3';
+  const headerPadding = variant === 'compact' ? 'pb-1' : 'pb-2';
 
   return (
     <Card className={`${className} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm`}>
       {showHeader && (
         <CardHeader className={`${headerPadding} bg-gray-50 dark:bg-gray-800`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5">
               <Badge 
                 variant="outline" 
                 className={`font-medium ${seatColor || 'bg-gray-100'}`}
@@ -175,7 +175,7 @@ export function MessageCard({
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5">
               {message.modelConfig?.capabilities?.reasoning && (
                 <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
                   <Brain className="w-3 h-3 mr-1" />
@@ -196,19 +196,19 @@ export function MessageCard({
 
       <CardContent className={cardPadding}>
         {/* Message Content */}
-        <div className="text-gray-900 dark:text-white whitespace-pre-wrap text-sm leading-relaxed mb-4">
+        <div className="text-gray-900 dark:text-white whitespace-pre-wrap text-sm leading-relaxed mb-3">
           {message.content}
         </div>
 
         {/* Reasoning Logs (if available) */}
         {message.reasoning && (
-          <div className="mb-4">
+          <div className="mb-3">
             <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex items-center gap-2 p-2 h-auto text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                  className="flex items-center gap-1.5 px-2 py-1 h-auto text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                 >
                   {showReasoning ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   <Brain className="w-4 h-4" />
@@ -219,7 +219,7 @@ export function MessageCard({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
-                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <div className="text-amber-900 dark:text-amber-100 text-sm whitespace-pre-wrap leading-relaxed font-mono">
                     {message.reasoning}
                   </div>
@@ -230,8 +230,8 @@ export function MessageCard({
         )}
 
         {showFooter && (
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-3">
               {message.tokenUsage && (
                 <div className="flex items-center space-x-1">
                   <span>Tokens:</span>
@@ -259,7 +259,7 @@ export function MessageCard({
               )}
 
               {message.modelConfig?.capabilities && (
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-0.5">
                   {message.modelConfig.capabilities.multimodal && (
                     <Badge variant="outline" className="text-xs" title="Can analyze images and visual content">
                       Vision

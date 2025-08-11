@@ -2,6 +2,20 @@
 
 A sophisticated web application for comparing responses from multiple AI models simultaneously. Built with React, TypeScript, and Express, supporting all major AI providers with real-time response comparison and analysis.
 
+## Features
+
+- **Multi-Model Comparison**: Simultaneously send a single prompt to multiple AI models from different providers.
+- **Real-Time Streaming**: View model responses as they are generated in real-time.
+- **Multiple Modes**: 
+  - **Compare Mode**: Standard side-by-side model evaluation.
+  - **Creative Combat**: Models iteratively improve upon a creative work.
+  - **Battle Chat**: Two models engage in a direct, turn-based conversation.
+  - **Debate Mode**: Two models argue opposing sides of a user-provided topic.
+- **Modular Prompt System**: Dynamically load prompt templates for Compare Mode directly from a markdown file (`/client/public/docs/compare-prompts.md`). Add new categories and prompts simply by editing the markdown file, no code changes required.
+- **Detailed Response Analysis**: View token counts, response times, and cost per million tokens for each model's output.
+- **Persistent Chat History**: All conversations are saved to a PostgreSQL database (with an in-memory fallback) for later review.
+- **Theme Switching**: Toggle between light and dark modes.
+
 ## Architecture Overview
 
 ### Core Technology Stack

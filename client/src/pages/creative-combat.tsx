@@ -20,12 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/components/ThemeProvider";
+import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { Link } from "wouter";
 import { 
-  Play, Plus, Copy, Brain, ChevronDown, ChevronUp, Loader2,
+  Play, Plus, Loader2, Brain,
   Mic, Feather, Music, FileText, Code, BookOpen, 
   DollarSign, Clock, Zap, Timer, Users, Settings, Send,
   Sword, MessageSquare, Palette, Moon, Sun
@@ -90,21 +90,32 @@ export default function CreativeCombatNew() {
     setPrompt(categoryPrompts[selectedCategory] || '');
   }, [selectedCategory]);
 
-  // Copy to clipboard function
-  const copyToClipboard = async (content: string) => {
-    try {
-      await navigator.clipboard.writeText(content);
-      toast({
-        title: "Copied!",
-        description: "Response copied to clipboard",
-      });
-    } catch (error) {
-      toast({
-        title: "Copy Failed",
-        description: "Failed to copy to clipboard",
-        variant: "destructive",
-      });
-    }
+  // Convert CreativeMessage to MessageCardData format
+  const convertToMessageCardData = (message: CreativeMessage): MessageCardData => {
+    return {
+      id: message.id,
+      modelName: message.modelName,
+      modelId: message.modelId,
+      content: message.content,
+      reasoning: message.reasoning,
+      responseTime: message.responseTime,
+      round: message.round,
+      timestamp: message.timestamp,
+      type: 'creative',
+      cost: message.cost ? {
+        input: message.cost.input,
+        output: message.cost.output,
+        total: message.cost.input + message.cost.output
+      } : undefined,
+      modelConfig: {
+        capabilities: {
+          reasoning: !!message.reasoning,
+          multimodal: false,
+          functionCalling: false,
+          streaming: false
+        }
+      }
+    };
   };
 
   // Toggle model selection
@@ -401,81 +412,34 @@ export default function CreativeCombatNew() {
                   <div className="space-y-6 max-h-[600px] overflow-y-auto">
                     {/* Latest Work - Featured */}
                     {latestMessage && (
-                      <div className="border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-2">
-                            <Badge className="bg-blue-600">Latest</Badge>
-                            <Badge variant="outline">{latestMessage.modelName}</Badge>
-                            <Badge variant="outline">Round {latestMessage.round}</Badge>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs text-gray-500">
-                              {(latestMessage.responseTime / 1000).toFixed(1)}s
-                            </span>
-                            {latestMessage.cost && (
-                              <span className="text-xs text-gray-500">
-                                {formatCost(latestMessage.cost.input, latestMessage.cost.output)}
-                              </span>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(latestMessage.content)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          </div>
+                      <div className="border-2 border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                        <div className="p-3 border-b border-blue-200 dark:border-blue-700">
+                          <Badge className="bg-blue-600">Latest Creation</Badge>
                         </div>
-                        <div className="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
-                          {latestMessage.content}
+                        <div className="p-0">
+                          <MessageCard 
+                            message={convertToMessageCardData(latestMessage)}
+                            variant="detailed"
+                            showHeader={true}
+                            showFooter={true}
+                            className="border-0 shadow-none bg-transparent"
+                          />
                         </div>
-                        {latestMessage.reasoning && (
-                          <Collapsible className="mt-3">
-                            <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Brain className="w-4 h-4 mr-2" />
-                                View Reasoning
-                                <ChevronDown className="w-4 h-4 ml-2" />
-                              </Button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm">
-                                {latestMessage.reasoning}
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        )}
                       </div>
                     )}
 
                     {/* Previous Versions */}
-                    {messages.slice(0, -1).reverse().map((message) => (
-                      <div key={message.id} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline">{message.modelName}</Badge>
-                            <Badge variant="outline">Round {message.round}</Badge>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs text-gray-500">
-                              {(message.responseTime / 1000).toFixed(1)}s
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(message.content)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                          {message.content}
-                        </div>
-                      </div>
-                    ))}
+                    <div className="space-y-4">
+                      {messages.slice(0, -1).reverse().map((message) => (
+                        <MessageCard 
+                          key={message.id}
+                          message={convertToMessageCardData(message)}
+                          variant="compact"
+                          showHeader={true}
+                          showFooter={true}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
                 <div ref={chatEndRef} />
