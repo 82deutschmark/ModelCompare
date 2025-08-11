@@ -1,0 +1,36 @@
+# File: .dockerignore
+# Purpose: Excludes files from the Docker build context to keep images small and builds fast.
+# How it works: This list prevents large/unnecessary files (node_modules, build outputs, VCS, editor caches)
+#               from being sent to the Docker daemon. The actual app is built inside the container.
+# How the project uses it: Used by the multi-stage Dockerfile to speed up Railway deployments.
+# Author: Cascade (Windsurf)
+
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs (we rebuild inside Docker)
+dist
+client/dist
+
+# Local env and config
+.env
+.env.*
+.DS_Store
+.git
+.gitignore
+.gitattributes
+
+# Editor/OS
+.vscode
+.idea
+*.swp
+*~
+
+# Misc
+coverage
+logs
+*.log
