@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Home from "@/pages/home";
 import Battle from "@/pages/battle-chat";
+import CreativeCombat from "./pages/creative-combat";
 import Debate from "@/pages/debate";
 import NotFound from "@/pages/not-found";
 
@@ -14,6 +15,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/battle" component={Battle} />
+      <Route path="/creative-combat" component={CreativeCombat} />
       <Route path="/debate" component={Debate} />
       <Route component={NotFound} />
     </Switch>

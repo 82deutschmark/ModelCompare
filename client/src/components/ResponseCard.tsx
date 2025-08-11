@@ -22,7 +22,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Copy, Clock, AlertTriangle, CheckCircle, RotateCcw } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Copy, Clock, AlertTriangle, CheckCircle, RotateCcw, Brain, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
@@ -35,6 +36,7 @@ interface ResponseCardProps {
 export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
+  const [showReasoning, setShowReasoning] = useState(false);
 
   const copyToClipboard = async () => {
     if (!response?.content) return;
@@ -149,6 +151,24 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
                 {response.content}
               </div>
             </div>
+
+            {/* Reasoning Logs (if available) */}
+            {response.reasoning && (
+              <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start">
+                    <Brain className="w-4 h-4 mr-2" />
+                    View Reasoning
+                    {showReasoning ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                  <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    {response.reasoning}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
             
             {/* Token Usage and Cost Information */}
             {(response.tokenUsage || response.cost) && (

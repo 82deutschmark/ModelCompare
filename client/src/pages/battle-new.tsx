@@ -36,6 +36,16 @@ interface BattleMessage {
   round: number;
   reasoning?: string;
   responseTime: number;
+  tokenUsage?: {
+    input: number;
+    output: number;
+    reasoning?: number;
+  };
+  cost?: {
+    input: number;
+    output: number;
+    total: number;
+  };
 }
 
 interface SpeakerSlot {
