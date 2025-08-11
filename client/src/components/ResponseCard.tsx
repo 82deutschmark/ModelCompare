@@ -102,13 +102,13 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
 
   return (
     <Card className={`h-full ${response?.status === 'error' ? 'border-red-200 dark:border-red-800' : 'border-gray-200 dark:border-gray-700'}`}>
-      <CardHeader className={`pb-3 ${response?.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
+      <CardHeader className={`pb-2 ${response?.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-medium text-gray-900 dark:text-white">{model.name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{model.provider}</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5">
             {getStatusBadge()}
             {response?.responseTime && response.responseTime > 0 && (
               <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
@@ -119,7 +119,7 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
         </div>
       </CardHeader>
       
-      <CardContent className="p-4">
+      <CardContent className="p-3">
         {response?.status === 'loading' ? (
           <div className="space-y-3">
             <Skeleton className="h-4 w-full" />
@@ -145,7 +145,7 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
             )}
           </div>
         ) : response?.status === 'success' ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap text-sm">
                 {response.content}
@@ -156,13 +156,13 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
             {response.reasoning && (
               <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-start">
+                  <Button variant="ghost" size="sm" className="w-full justify-start px-2 py-1">
                     <Brain className="w-4 h-4 mr-2" />
                     View Reasoning
                     {showReasoning ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                <CollapsibleContent className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
                   <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                     {response.reasoning}
                   </div>
@@ -172,7 +172,7 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
             
             {/* Token Usage and Cost Information */}
             {(response.tokenUsage || response.cost) && (
-              <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
                   {response.tokenUsage && (
                     <div className="flex items-center space-x-4">
@@ -212,13 +212,13 @@ export function ResponseCard({ model, response, onRetry }: ResponseCardProps) {
               </div>
             )}
 
-            <div className="flex items-center justify-end pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-end pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={copyToClipboard}
                 disabled={isCopying}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1"
               >
                 <Copy className="w-4 h-4 mr-1" />
                 {isCopying ? 'Copied!' : 'Copy'}

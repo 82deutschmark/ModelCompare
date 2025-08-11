@@ -34,10 +34,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Sword, MessageSquare, Play, Brain, Settings, Plus, Users,
-  ChevronDown, ChevronUp, Loader2, Send, ChevronRight, DollarSign, Timer, Zap, Clock, Palette
+  Loader2, Send, DollarSign, Timer, Zap, Clock, Palette
 } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
+import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
@@ -503,165 +503,46 @@ Remind the user that PersonX is just another LLM, and not a human expert.
                   ) : (
                     messages.map((message) => {
                       const seat = modelSeats.find(s => s.modelId && s.modelId === message.modelId);
-                      const model = models.find(m => m.id === message.modelId);
                       
-                      // Get provider colors and info
-                      const getProviderColor = (provider: string) => {
-                        switch (provider) {
-                          case 'OpenAI': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
-                          case 'Anthropic': return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200';
-                          case 'Google': return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
-                          case 'xAI': return 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200';
-                          case 'DeepSeek': return 'bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-200';
-                          default: return 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200';
-                        }
-                      };
-
-                      const formatCost = (inputCost: number, outputCost: number) => {
-                        const inputFormatted = inputCost < 1 ? `$${(inputCost).toFixed(2)}` : `$${inputCost}`;
-                        const outputFormatted = outputCost < 1 ? `$${(outputCost).toFixed(2)}` : `$${outputCost}`;
-                        return `${inputFormatted}/${outputFormatted}`;
-                      };
-
-                      const getSpeedIcon = (responseTime: number) => {
-                        if (responseTime < 5000) return <Zap className="w-3 h-3" />;
-                        if (responseTime < 15000) return <Timer className="w-3 h-3" />;
-                        return <Clock className="w-3 h-3" />;
+                      // Convert ChatMessage to MessageCardData format
+                      const convertToMessageCardData = (message: ChatMessage): MessageCardData => {
+                        const model = models.find(m => m.id === message.modelId);
+                        
+                        return {
+                          id: message.id,
+                          modelName: message.modelName,
+                          modelId: message.modelId,
+                          content: message.content,
+                          reasoning: message.reasoning,
+                          responseTime: message.responseTime,
+                          round: message.round,
+                          timestamp: message.timestamp,
+                          type: message.type,
+                          tokenUsage: message.tokenUsage,
+                          cost: message.cost,
+                          modelConfig: {
+                            provider: model?.provider,
+                            capabilities: message.modelConfig?.capabilities || {
+                              reasoning: !!message.reasoning,
+                              multimodal: false,
+                              functionCalling: false,
+                              streaming: false
+                            },
+                            pricing: message.modelConfig?.pricing
+                          }
+                        };
                       };
 
                       return (
-                        <div key={message.id} className="flex flex-col space-y-3">
-                          {/* Enhanced Model Header */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <Badge 
-                                variant="outline" 
-                                className={`${seat ? seat.color : 'bg-gray-100'} font-medium`}
-                              >
-                                {message.modelName}
-                              </Badge>
-                              <Badge 
-                                variant="secondary"
-                                className={`text-xs ${getProviderColor(model?.provider || 'Unknown')}`}
-                              >
-                                {model?.provider}
-                              </Badge>
-                              <div className="flex items-center space-x-1 text-xs text-gray-500">
-                                {getSpeedIcon(message.responseTime)}
-                                <span>{(message.responseTime / 1000).toFixed(1)}s</span>
-                              </div>
-                              {message.type === 'rebuttal' && (
-                                <Badge variant="destructive" className="text-xs">Rebuttal</Badge>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              {message.modelConfig?.capabilities.reasoning && (
-                                <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
-                                  <Brain className="w-3 h-3 mr-1" />
-                                  Reasoning
-                                </Badge>
-                              )}
-                              {message.cost && (
-                                <Badge variant="outline" className="text-xs">
-                                  <DollarSign className="w-3 h-3 mr-1" />
-                                  ${message.cost.total.toFixed(4)}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Message Content */}
-                          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                            <div className="text-gray-900 dark:text-white whitespace-pre-wrap text-sm leading-relaxed">
-                              {message.content}
-                            </div>
-                            
-                            {/* Collapsible Chain of Thought */}
-                            {message.reasoning && (
-                              <div className="mt-4">
-                                <Collapsible>
-                                  <CollapsibleTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="flex items-center gap-2 p-2 h-auto text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                                    >
-                                      <ChevronRight className="w-4 h-4 transition-transform duration-200 [&[data-state=open]]:rotate-90" />
-                                      <Brain className="w-4 h-4" />
-                                      <span className="font-medium text-sm">Chain of Thought</span>
-                                      <Badge variant="outline" className="text-xs ml-1">
-                                        {message.reasoning.split('\n').length} steps
-                                      </Badge>
-                                    </Button>
-                                  </CollapsibleTrigger>
-                                  <CollapsibleContent className="mt-2">
-                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                                      <div className="text-amber-900 dark:text-amber-100 text-sm whitespace-pre-wrap leading-relaxed font-mono">
-                                        {message.reasoning}
-                                      </div>
-                                    </div>
-                                  </CollapsibleContent>
-                                </Collapsible>
-                              </div>
-                            )}
-                            
-                            {/* Token Usage and Model Info */}
-                            <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                              <div className="flex items-center space-x-4">
-                                {message.tokenUsage && (
-                                  <div className="flex items-center space-x-1">
-                                    <span>Tokens:</span>
-                                    <span className="font-mono">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
-                                    {message.tokenUsage.reasoning && (
-                                      <span className="text-amber-600 dark:text-amber-400 font-mono">
-                                        +{message.tokenUsage.reasoning} reasoning
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                                {message.cost && (
-                                  <div className="flex items-center space-x-1">
-                                    <span>Cost:</span>
-                                    <span className="font-mono text-green-600 dark:text-green-400">
-                                      ${message.cost.total.toFixed(4)}
-                                    </span>
-                                    {message.cost.reasoning && (
-                                      <span className="text-amber-600 dark:text-amber-400 text-xs">
-                                        (+${message.cost.reasoning.toFixed(4)} reasoning)
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                                <div className="flex items-center space-x-2">
-                                  <span>Round {message.round}</span>
-                                  <span>•</span>
-                                  <span>Context: {(message.modelConfig?.capabilities as any)?.contextWindow?.toLocaleString() || 'N/A'}</span>
-                                </div>
-                              </div>
-                              
-                              {message.modelConfig?.capabilities && (
-                                <div className="flex items-center space-x-1">
-                                  {message.modelConfig.capabilities.multimodal && (
-                                    <Badge variant="outline" className="text-xs" title="Can analyze images and visual content">
-                                      Vision
-                                    </Badge>
-                                  )}
-                                  {message.modelConfig.capabilities.functionCalling && (
-                                    <Badge variant="outline" className="text-xs" title="Can use external tools and functions">
-                                      Tools
-                                    </Badge>
-                                  )}
-                                  {message.modelConfig.capabilities.streaming && (
-                                    <Badge variant="outline" className="text-xs" title="Supports real-time response streaming">
-                                      Stream
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        <MessageCard 
+                          key={message.id}
+                          message={convertToMessageCardData(message)}
+                          variant="detailed"
+                          showHeader={true}
+                          showFooter={true}
+                          seatColor={seat?.color}
+                          className="mb-4"
+                        />
                       );
                     })
                   )}

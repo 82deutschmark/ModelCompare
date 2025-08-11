@@ -195,25 +195,6 @@ Multi-layered error handling:
 - **Server Level**: Unexpected errors return 500 with safe messages
 - **Client Level**: UI shows specific error states per model
 
-## Deployment
-
-This application is configured for deployment on Railway using a multi-stage Dockerfile.
-
-### Railway Configuration
-
-The `railway.json` file configures Railway to use the Dockerfile builder, automating the build and deployment process. The server is configured to bind to `0.0.0.0` in production, which is required for containerized environments.
-
-### Docker Build Process
-
-The `Dockerfile` performs a multi-stage build:
-1.  **Builder Stage**: Installs all dependencies, copies the entire source code (including `tailwind.config.ts` and `postcss.config.js`), and runs `npm run build`. This step compiles the client and bundles the server.
-2.  **Runner Stage**: Copies only the necessary production dependencies (`node_modules`) and the built artifacts from the `dist` directory into a clean, lightweight Node.js image.
-
-This approach ensures a small, secure, and efficient production image.
-
-### Important Notes for Deployment
-- **CSS Build Fix**: A previous deployment issue where CSS styles were missing was resolved by ensuring that `tailwind.config.ts`, `postcss.config.js`, and `components.json` are explicitly copied into the Docker build context. If you encounter similar issues, verify these files are included in the `Dockerfile`.
-- **Environment Variables**: Ensure all required API keys are set in the Railway environment variables to enable the corresponding AI providers.
 
 ## Development Workflow
 

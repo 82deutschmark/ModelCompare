@@ -22,13 +22,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   MessageSquare, Play, Square, Brain, DollarSign, Clock, ChevronDown, ChevronUp, Loader2, RotateCcw,
   Sword, Palette, Moon, Sun, Gavel, Users, Settings, Target
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
+import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
@@ -87,7 +87,7 @@ export default function Debate() {
     { id: 'wealth-inequality', title: 'Economic Policy', proposition: 'Wealth inequality requires immediate government intervention.' },
     { id: 'drug-policy', title: 'Drug Policy', proposition: 'All recreational drugs should be legalized and regulated.' },
     { id: 'nuclear-energy', title: 'Nuclear Energy', proposition: 'Nuclear power is essential for clean energy transition.' },
-    { id: 'toxic-masculinity', title: 'Toxic Masculinity', proposition: 'Toxic masculinity is a real issue that needs to be addressed. All candidates for US president should be compelled to cut off their dick in public to show their commitment.' }
+    { id: 'rick-and-morty', title: 'Knights of the Sun Episode', proposition: 'The Knights of the Sun in this episode had a valid point about self sacrifice for the most important job in the universe. Likewise let it be resolved that in order to assume the office of US President, one must willingly and publicly stump his stem and cut off his own dick. In the episode Morty balked at this idea, but it has merit and should be debated.' }
   ];
 
   const adversarialLevels = [
@@ -117,18 +117,22 @@ export default function Debate() {
       1: 'Maintain a respectful, academic tone. Acknowledge the validity of opposing viewpoints while presenting your case. Focus on facts and logical reasoning. Use phrases like "I respectfully disagree" and "While my opponent makes valid points..."',
       2: 'Be confident and assertive in your arguments. Challenge opposing points directly but professionally. Use strong language like "This argument fails because..." and "The evidence clearly shows..." while maintaining respect for your opponent.',
       3: 'Be forceful and passionate in your arguments. Challenge your opponent\'s logic vigorously. Use strong rhetoric like "This position is fundamentally flawed," "My opponent\'s argument crumbles under scrutiny," and "The facts devastate this position." Be intense but not personal.',
-      4: 'Deploy maximum rhetorical force. Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent\'s position. Use phrases like "This argument is utterly without merit," "My opponent\'s position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas while remaining professional. Use a polemic style like Trotsky or Lenin.'
+      4: 'Deploy maximum rhetorical force. Debate like Trotsky or Lenin or a Jacobin or Girondin from the French Revolution. Your goal is to utterly demolish your opponent to the point where they regret having opposed you in the first place.  You will use your own brand of unique illustrative, rich and colorful language to encourage these defeated foes to metaphorically: go into the dustbin of history! Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent\'s position. Use phrases like "This argument is utterly without merit," "My opponent\'s position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas and comparisons and metaphors. Use your own unique 21st century style that embodies the fiery revolutionaries and polemicists of the past like Thomas Paine or Trotsky.'
     };
 
     const baseInstructions = `You are participating in a formal debate following Robert's Rules of Order. You will be assigned either the AFFIRMATIVE (Pro) or NEGATIVE (Con) position on the debate topic.
 
 DEBATE STRUCTURE RULES:
-1. Present clear, evidence-based arguments
-2. Address opponent's points directly in rebuttals
-3. Use formal debate language and etiquette
-4. Cite sources when possible (even if hypothetical)
-5. Build logical chains of reasoning
-6. Acknowledge strong opposing points while maintaining your position
+1. Always address the chairperson of the debate committee
+2. Present clear, evidence-based arguments
+3. Rebut your opponent's weakest arguments first and be ruthless.
+4. Use formal debate language and etiquette
+5. Cite sources when you are certain of their validity (NO HYPOTHETICAL SOURCES or SIMULATED SOURCES)
+6. Build logical chains of reasoning where you consider the validity of what your opponent is saying and then refute it using logical arguments or citing fallacies in their reasoning
+7. Never acknowledge strong opposing points unless you have a much stronger argument to refute it
+8. Ask rhetorical questions to challenge your opponent's arguments and weaken their position.
+9. Use your own unique brand of unique illustrative, rich and colorful language to encourage these defeated foes to metaphorically: go into the dustbin of history! as Trotsky famously said.
+10. Your goal is to score points with the judges and win the debate.
 
 Debate topic: ${currentTopic}
 Adversarial intensity: Level ${adversarialLevel}
@@ -339,9 +343,38 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
     setShowSetup(true);
   };
 
-  const formatCost = (cost?: { total: number; reasoning?: number }) => {
-    if (!cost) return 'N/A';
-    return `$${cost.total.toFixed(4)}${cost.reasoning ? ` (+$${cost.reasoning.toFixed(4)} reasoning)` : ''}`;
+  const formatCost = (cost: any) => {
+    if (!cost || !cost.total) return 'N/A';
+    return `$${cost.total.toFixed(4)}`;
+  };
+
+  // Convert DebateMessage to MessageCardData format
+  const convertToMessageCardData = (message: DebateMessage): MessageCardData => {
+    const model = models.find(m => m.id === message.modelId);
+    
+    return {
+      id: message.id,
+      modelName: message.modelName,
+      modelId: message.modelId,
+      content: message.content,
+      reasoning: message.reasoning,
+      responseTime: message.responseTime,
+      round: message.round,
+      timestamp: message.timestamp,
+      type: 'debate',
+      tokenUsage: message.tokenUsage,
+      cost: message.cost,
+      modelConfig: {
+        provider: model?.provider,
+        capabilities: message.modelConfig?.capabilities || {
+          reasoning: !!message.reasoning,
+          multimodal: false,
+          functionCalling: false,
+          streaming: false
+        },
+        pricing: message.modelConfig?.pricing
+      }
+    };
   };
 
   const totalCost = messages.reduce((sum, msg) => sum + (msg.cost?.total || 0), 0);
@@ -635,121 +668,51 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
         {messages.length > 0 && (
           <div className="space-y-4">
             {messages.map((message, index) => (
-              <Card key={message.id} className={`${
+              <div key={message.id} className={`${
                 message.modelId === model1Id ? 'ml-0 mr-8' : 'ml-8 mr-0'
               }`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        message.modelId === model1Id ? 'bg-blue-500' : 'bg-green-500'
-                      }`} />
-                      <h3 className="font-medium">{message.modelName}</h3>
-                      <Badge variant="outline" className="text-xs">
-                        Round {message.round}
-                      </Badge>
-                      {message.modelConfig?.capabilities.reasoning && (
-                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
-                          <Brain className="w-3 h-3 mr-1" />
-                          Reasoning
-                        </Badge>
-                      )}
-                      {message.cost && (
-                        <Badge variant="outline" className="text-xs">
-                          <DollarSign className="w-3 h-3 mr-1" />
-                          ${message.cost.total.toFixed(4)}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      <Clock className="w-3 h-3" />
-                      <span>{(message.responseTime / 1000).toFixed(1)}s</span>
-                    </div>
-                  </div>
-                </CardHeader>
+                {/* Debate side indicator */}
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    message.modelId === model1Id ? 'bg-blue-500' : 'bg-green-500'
+                  }`} />
+                  <Badge variant="outline" className="text-xs">
+                    {message.modelId === model1Id ? 'Pro' : 'Con'} - Round {message.round}
+                  </Badge>
+                </div>
                 
-                <CardContent>
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
-                      {message.content}
-                    </div>
+                <MessageCard 
+                  message={convertToMessageCardData(message)}
+                  variant="detailed"
+                  showHeader={true}
+                  showFooter={true}
+                  className="shadow-sm"
+                />
+                
+                {/* Continue Button - Only show on the last message */}
+                {index === messages.length - 1 && currentRound > 0 && (
+                  <div className="mt-4">
+                    <Button
+                      onClick={continueDebate}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 w-full"
+                      disabled={continueDebateMutation.isPending}
+                    >
+                      {continueDebateMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Getting {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Continue - {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  
-                  {/* Reasoning Section */}
-                  {message.reasoning && (
-                    <div className="mt-4">
-                      <Collapsible>
-                        <CollapsibleTrigger className="flex items-center space-x-2 text-sm font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300">
-                          <Brain className="w-4 h-4" />
-                          <span>Chain of Thought</span>
-                          <ChevronDown className="w-4 h-4" />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="mt-2">
-                          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                            <div className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">
-                              {message.reasoning}
-                            </div>
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </div>
-                  )}
-                  
-                  {/* Token Usage and Cost Information */}
-                  {(message.tokenUsage || message.cost) && (
-                    <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                        {message.tokenUsage && (
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-1">
-                              <span>Tokens:</span>
-                              <span className="font-mono">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
-                              {message.tokenUsage.reasoning && (
-                                <span className="text-amber-600 dark:text-amber-400 font-mono">
-                                  +{message.tokenUsage.reasoning} reasoning
-                                </span>
-                              )}
-                            </div>
-                            {message.cost && (
-                              <div className="flex items-center space-x-1">
-                                <span>Cost:</span>
-                                <span className="font-mono text-green-600 dark:text-green-400">
-                                  {formatCost(message.cost)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Continue Button - Only show on the last message */}
-                  {index === messages.length - 1 && currentRound > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <Button
-                        onClick={continueDebate}
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 w-full"
-                        disabled={continueDebateMutation.isPending}
-                      >
-                        {continueDebateMutation.isPending ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Getting {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Continue - {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                )}
+              </div>
             ))}
             <div ref={chatEndRef} />
           </div>
