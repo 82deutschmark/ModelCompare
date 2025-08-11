@@ -39,17 +39,26 @@ export function ModelSelector({ models, selectedModels, onSelectionChange }: Mod
   };
 
   const toggleProvider = (provider: string) => {
-    const providerModels = providerGroups[provider as keyof typeof providerGroups] || [];
-    const allSelected = providerModels.every(id => selectedModels.includes(id));
+    // Get all models for this provider from the actual models data
+    const providerModelIds = models
+      .filter(model => model.provider === provider)
+      .map(model => model.id);
+    
+    const allSelected = providerModelIds.every(id => selectedModels.includes(id));
     
     if (allSelected) {
       // Deselect all models from this provider
-      onSelectionChange(selectedModels.filter(id => !providerModels.includes(id)));
+      onSelectionChange(selectedModels.filter(id => !providerModelIds.includes(id)));
     } else {
       // Select all models from this provider
-      const newSelection = Array.from(new Set([...selectedModels, ...providerModels]));
+      const newSelection = Array.from(new Set([...selectedModels, ...providerModelIds]));
       onSelectionChange(newSelection);
     }
+  };
+
+  const selectAll = () => {
+    const allModelIds = models.map(model => model.id);
+    onSelectionChange(allModelIds);
   };
 
   const clearAll = () => {
@@ -66,16 +75,26 @@ export function ModelSelector({ models, selectedModels, onSelectionChange }: Mod
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-gray-900 dark:text-white">All Providers</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={clearAll}
-          className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          Clear All
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={selectAll}
+            className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Select All
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAll}
+            className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            Clear All
+          </Button>
+        </div>
       </div>
 
       {Object.entries(groupedModels).map(([provider, providerModels]) => (
@@ -88,7 +107,7 @@ export function ModelSelector({ models, selectedModels, onSelectionChange }: Mod
               onClick={() => toggleProvider(provider)}
               className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              {providerGroups[provider as keyof typeof providerGroups]?.every(id => selectedModels.includes(id)) 
+              {providerModels.every(model => selectedModels.includes(model.id)) 
                 ? 'None' 
                 : 'All'
               }
