@@ -1,10 +1,12 @@
 /**
- * Debate Mode - Dedicated 10-Round AI Model Debate Interface
+ * Debate Mode - Structured, Robert's Rules AI Model Debate Interface
  * 
  * This component provides a streamlined interface for setting up and running
- * automatic 10-round debates between AI models. Features include:
- * - Simple 2-model selection with customizable prompts
- * - Automatic conversation flow with visual progress tracking
+ * structured, user-controlled debates between AI models following Robert's Rules.
+ * Features include:
+ * - Topic presets or custom topic with explicit Pro/Con roles
+ * - Adversarial intensity control (respectful → combative)
+ * - Manual step control with visual progress tracking
  * - Real-time cost calculation and reasoning log display
  * - Clean debate-focused UI distinct from Battle and Compare modes
  * 
@@ -84,7 +86,8 @@ export default function Debate() {
     { id: 'privacy', title: 'Privacy vs Security', proposition: 'Privacy rights should supersede national security concerns.' },
     { id: 'wealth-inequality', title: 'Economic Policy', proposition: 'Wealth inequality requires immediate government intervention.' },
     { id: 'drug-policy', title: 'Drug Policy', proposition: 'All recreational drugs should be legalized and regulated.' },
-    { id: 'nuclear-energy', title: 'Nuclear Energy', proposition: 'Nuclear power is essential for clean energy transition.' }
+    { id: 'nuclear-energy', title: 'Nuclear Energy', proposition: 'Nuclear power is essential for clean energy transition.' },
+    { id: 'toxic-masculinity', title: 'Toxic Masculinity', proposition: 'Toxic masculinity is a real issue that needs to be addressed. All candidates for US president should be compelled to cut off their dick in public to show their commitment.' }
   ];
 
   const adversarialLevels = [
@@ -353,7 +356,7 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
               <MessageSquare className="w-8 h-8 text-blue-600" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Model Debate Mode</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Automatic 10-round debates</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Structured, user-controlled debates (Robert's Rules)</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
