@@ -44,8 +44,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/shared ./shared
 
-# Railway sets PORT; default to 5000 for local runs
-ENV PORT=5000
+# Document default port; Railway will inject its own PORT
 EXPOSE 5000
 
 # Start the TypeScript server via tsx; serves API + static from one port
