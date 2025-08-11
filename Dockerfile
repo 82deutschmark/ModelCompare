@@ -37,8 +37,7 @@ WORKDIR /app
 # Copy only the production node_modules and built artifacts
 COPY --from=builder /app/node_modules ./node_modules
 
-# Install tsx for running TypeScript directly in production  
-RUN npm install tsx
+# No additional runtime dependencies needed for compiled JS
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
@@ -47,5 +46,5 @@ COPY --from=builder /app/shared ./shared
 # Document default port; Railway will inject its own PORT
 EXPOSE 5000
 
-# Start the TypeScript server via tsx; serves API + static from one port
-CMD ["npx", "tsx", "server/index.ts"]
+# Start the compiled JavaScript server; serves API + static from one port
+CMD ["node", "dist/server/index.js"]
