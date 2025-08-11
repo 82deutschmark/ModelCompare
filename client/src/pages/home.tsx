@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Moon, Sun, Send, MessageSquare, Brain, Zap, Settings, Sword } from "lucide-react";
+import { Moon, Sun, Send, MessageSquare, Brain, Zap, Settings, Sword, Palette } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { ResponseCard } from "@/components/ResponseCard";
 import { useTheme } from "@/components/ThemeProvider";
@@ -50,6 +50,8 @@ export default function Home() {
     "deepseek-reasoner"
   ]);
   const [responses, setResponses] = useState<Record<string, ModelResponse>>({});
+  const [loadingModels, setLoadingModels] = useState<Set<string>>(new Set());
+  const [completedModels, setCompletedModels] = useState<Set<string>>(new Set());
   const [streamResponses, setStreamResponses] = useState(false);
   const [showTiming, setShowTiming] = useState(true);
 
@@ -63,22 +65,37 @@ export default function Home() {
     },
   });
 
-  // Compare models mutation
-  const compareModelsMutation = useMutation({
-    mutationFn: async (data: { prompt: string; modelIds: string[] }) => {
-      const response = await apiRequest('POST', '/api/compare', data);
-      return response.json() as Promise<ComparisonResult>;
+  // Individual model response mutation for incremental rendering
+  const modelResponseMutation = useMutation({
+    mutationFn: async (data: { prompt: string; modelId: string }) => {
+      const response = await apiRequest('POST', '/api/models/respond', data);
+      return { modelId: data.modelId, response: await response.json() as ModelResponse };
     },
     onSuccess: (data) => {
-      setResponses(data.responses);
+      setResponses(prev => ({ ...prev, [data.modelId]: data.response }));
+      setLoadingModels(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(data.modelId);
+        return newSet;
+      });
+      setCompletedModels(prev => new Set([...Array.from(prev), data.modelId]));
+      
+      const model = models.find(m => m.id === data.modelId);
       toast({
-        title: "Comparison Complete",
-        description: `Received responses from ${Object.keys(data.responses).length} models`,
+        title: `${model?.name || 'Model'} Responded`,
+        description: `Response received in ${(data.response.responseTime / 1000).toFixed(1)}s`,
       });
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      setLoadingModels(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables.modelId);
+        return newSet;
+      });
+      
+      const model = models.find(m => m.id === variables.modelId);
       toast({
-        title: "Comparison Failed",
+        title: `${model?.name || 'Model'} Failed`,
         description: error.message,
         variant: "destructive",
       });
@@ -88,8 +105,8 @@ export default function Home() {
   const handleSubmit = () => {
     if (!prompt.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a prompt",
+        title: "Enter a prompt",
+        description: "Please enter a prompt to compare models.",
         variant: "destructive",
       });
       return;
@@ -97,47 +114,47 @@ export default function Home() {
 
     if (selectedModels.length === 0) {
       toast({
-        title: "Error",
-        description: "Please select at least one model",
+        title: "Select models",
+        description: "Please select at least one model to compare.",
         variant: "destructive",
       });
       return;
     }
 
-    // Initialize loading states
-    const loadingResponses: Record<string, ModelResponse> = {};
+    // Reset state for new comparison
+    setResponses({});
+    setLoadingModels(new Set(selectedModels));
+    setCompletedModels(new Set());
+    
+    // Start all model requests in parallel for incremental rendering
     selectedModels.forEach(modelId => {
-      loadingResponses[modelId] = {
-        content: '',
-        status: 'loading',
-        responseTime: 0,
-      };
+      modelResponseMutation.mutate({ prompt, modelId });
     });
-    setResponses(loadingResponses);
-
-    // Start comparison
-    compareModelsMutation.mutate({
-      prompt: prompt.trim(),
-      modelIds: selectedModels,
+    
+    toast({
+      title: "Comparison Started",
+      description: `Requesting responses from ${selectedModels.length} models...`,
     });
   };
 
   const retryModel = (modelId: string) => {
-    // Update single model to loading state
-    setResponses(prev => ({
-      ...prev,
-      [modelId]: {
-        content: '',
-        status: 'loading',
-        responseTime: 0,
-      }
-    }));
+    // Add model back to loading state
+    setLoadingModels(prev => new Set([...Array.from(prev), modelId]));
+    setCompletedModels(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(modelId);
+      return newSet;
+    });
+    
+    // Remove any existing response
+    setResponses(prev => {
+      const newResponses = { ...prev };
+      delete newResponses[modelId];
+      return newResponses;
+    });
 
     // Retry the single model
-    compareModelsMutation.mutate({
-      prompt: prompt.trim(),
-      modelIds: [modelId],
-    });
+    modelResponseMutation.mutate({ prompt, modelId });
   };
 
   const selectedModelData = models.filter(model => selectedModels.includes(model.id));
@@ -159,6 +176,12 @@ export default function Home() {
                 <Button variant="outline" size="sm" className="flex items-center space-x-2">
                   <Sword className="w-4 h-4" />
                   <span>Battle Mode</span>
+                </Button>
+              </Link>
+              <Link href="/creative-combat">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Palette className="w-4 h-4" />
+                  <span>Creative Combat</span>
                 </Button>
               </Link>
               <Link href="/debate">
@@ -244,7 +267,7 @@ export default function Home() {
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     rows={4}
-                    className="resize-none pr-16"
+                    className="min-h-20 pr-16"
                     placeholder="Ask a question or provide a prompt to compare across selected AI models..."
                   />
                   <div className="absolute bottom-3 right-3 text-xs text-gray-400">
@@ -263,11 +286,11 @@ export default function Home() {
                   
                   <Button
                     onClick={handleSubmit}
-                    disabled={compareModelsMutation.isPending || !prompt.trim() || selectedModels.length === 0}
+                    disabled={loadingModels.size > 0 || !prompt.trim() || selectedModels.length === 0}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     size="lg"
                   >
-                    {compareModelsMutation.isPending ? (
+                    {loadingModels.size > 0 ? (
                       <>
                         <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
                         Comparing...

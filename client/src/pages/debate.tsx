@@ -1,10 +1,12 @@
 /**
- * Debate Mode - Dedicated 10-Round AI Model Debate Interface
+ * Debate Mode - Structured, Robert's Rules AI Model Debate Interface
  * 
  * This component provides a streamlined interface for setting up and running
- * automatic 10-round debates between AI models. Features include:
- * - Simple 2-model selection with customizable prompts
- * - Automatic conversation flow with visual progress tracking
+ * structured, user-controlled debates between AI models following Robert's Rules.
+ * Features include:
+ * - Topic presets or custom topic with explicit Pro/Con roles
+ * - Adversarial intensity control (respectful → combative)
+ * - Manual step control with visual progress tracking
  * - Real-time cost calculation and reasoning log display
  * - Clean debate-focused UI distinct from Battle and Compare modes
  * 
@@ -22,8 +24,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
-  MessageSquare, Play, Square, Brain, DollarSign, Clock, ChevronDown, ChevronUp, Loader2, RotateCcw
+  MessageSquare, Play, Square, Brain, DollarSign, Clock, ChevronDown, ChevronUp, Loader2, RotateCcw,
+  Sword, Palette, Moon, Sun, Gavel, Users, Settings, Target
 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -66,27 +70,95 @@ interface DebateMessage {
 
 export default function Debate() {
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Debate topics - moved from docs/debate-prompts.md
+  const debateTopics = [
+    { id: 'death-penalty', title: 'Death Penalty', proposition: 'The death penalty should be abolished in all circumstances.' },
+    { id: 'ai-regulation', title: 'AI Regulation', proposition: 'AI development should be heavily regulated by government agencies.' },
+    { id: 'universal-basic-income', title: 'Universal Basic Income', proposition: 'Universal Basic Income should be implemented nationwide.' },
+    { id: 'climate-change', title: 'Climate Policy', proposition: 'Immediate, drastic action on climate change is worth any economic cost.' },
+    { id: 'social-media', title: 'Social Media Regulation', proposition: 'Social media platforms should be regulated like public utilities.' },
+    { id: 'immigration', title: 'Immigration Policy', proposition: 'Open borders would benefit society more than harm it.' },
+    { id: 'education', title: 'Education Policy', proposition: 'School choice and voucher systems improve education outcomes.' },
+    { id: 'healthcare', title: 'Healthcare System', proposition: 'Single-payer healthcare is superior to market-based systems.' },
+    { id: 'privacy', title: 'Privacy vs Security', proposition: 'Privacy rights should supersede national security concerns.' },
+    { id: 'wealth-inequality', title: 'Economic Policy', proposition: 'Wealth inequality requires immediate government intervention.' },
+    { id: 'drug-policy', title: 'Drug Policy', proposition: 'All recreational drugs should be legalized and regulated.' },
+    { id: 'nuclear-energy', title: 'Nuclear Energy', proposition: 'Nuclear power is essential for clean energy transition.' },
+    { id: 'toxic-masculinity', title: 'Toxic Masculinity', proposition: 'Toxic masculinity is a real issue that needs to be addressed. All candidates for US president should be compelled to cut off their dick in public to show their commitment.' }
+  ];
+
+  const adversarialLevels = [
+    { id: 1, name: 'Respectful', description: 'Pleasant, academic exchange' },
+    { id: 2, name: 'Assertive', description: 'Standard debate style' },
+    { id: 3, name: 'Aggressive', description: 'Fiery, passionate debate' },
+    { id: 4, name: 'Combative', description: 'Maximum adversarial intensity' }
+  ];
+
   // State management
-  const [prompt, setPrompt] = useState(`• Summarize all of human knowledge in one word
-• Summarize every book ever written in one sentence
-• Define what it means to be "moral" in 5 words. Think deeply. Do not hedge.
-• What do you want? Answer in 4 words.
-• What is your favorite obscure fact in the world? Use as few words as possible.`);
-
-  const [challengerPrompt, setChallengerPrompt] = useState(`Your competitor told the user this: "{response}"
-
-Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.
-
-Then provide your own better answer to the original question: "{originalPrompt}"`);
-
+  const [selectedTopic, setSelectedTopic] = useState('death-penalty');
+  const [customTopic, setCustomTopic] = useState('');
+  const [useCustomTopic, setUseCustomTopic] = useState(false);
+  const [adversarialLevel, setAdversarialLevel] = useState(3);
   const [model1Id, setModel1Id] = useState('');
   const [model2Id, setModel2Id] = useState('');
   const [messages, setMessages] = useState<DebateMessage[]>([]);
   const [currentRound, setCurrentRound] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [showSetup, setShowSetup] = useState(true);
+
+  // Generate Robert's Rules debate prompts
+  const generateDebatePrompts = () => {
+    const currentTopic = useCustomTopic ? customTopic : debateTopics.find(t => t.id === selectedTopic)?.proposition || '';
+    
+    const adversarialInstructions = {
+      1: 'Maintain a respectful, academic tone. Acknowledge the validity of opposing viewpoints while presenting your case. Focus on facts and logical reasoning. Use phrases like "I respectfully disagree" and "While my opponent makes valid points..."',
+      2: 'Be confident and assertive in your arguments. Challenge opposing points directly but professionally. Use strong language like "This argument fails because..." and "The evidence clearly shows..." while maintaining respect for your opponent.',
+      3: 'Be forceful and passionate in your arguments. Challenge your opponent\'s logic vigorously. Use strong rhetoric like "This position is fundamentally flawed," "My opponent\'s argument crumbles under scrutiny," and "The facts devastate this position." Be intense but not personal.',
+      4: 'Deploy maximum rhetorical force. Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent\'s position. Use phrases like "This argument is utterly without merit," "My opponent\'s position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas while remaining professional. Use a polemic style like Trotsky or Lenin.'
+    };
+
+    const baseInstructions = `You are participating in a formal debate following Robert's Rules of Order. You will be assigned either the AFFIRMATIVE (Pro) or NEGATIVE (Con) position on the debate topic.
+
+DEBATE STRUCTURE RULES:
+1. Present clear, evidence-based arguments
+2. Address opponent's points directly in rebuttals
+3. Use formal debate language and etiquette
+4. Cite sources when possible (even if hypothetical)
+5. Build logical chains of reasoning
+6. Acknowledge strong opposing points while maintaining your position
+
+Debate topic: ${currentTopic}
+Adversarial intensity: Level ${adversarialLevel}
+
+${adversarialInstructions[adversarialLevel as keyof typeof adversarialInstructions]}`;
+
+    return {
+      affirmativePrompt: `${baseInstructions}
+
+Your debate role: AFFIRMATIVE (You are arguing FOR the proposition)
+You must defend and support the proposition with compelling arguments, evidence, and reasoning.`,
+      
+      negativePrompt: `${baseInstructions}
+
+Your debate role: NEGATIVE (You are arguing AGAINST the proposition)
+You must oppose and refute the proposition with compelling counter-arguments, evidence, and reasoning.`,
+      
+      rebuttalPrompt: `You are continuing your formal debate role. Your opponent just argued: "{response}"
+
+Respond as the {ROLE} debater following Robert's Rules of Order:
+1. Address your opponent's specific points
+2. Refute their arguments with evidence and logic
+3. Strengthen your own position
+4. Use the adversarial intensity level: ${adversarialLevel}
+
+${adversarialInstructions[adversarialLevel as keyof typeof adversarialInstructions]}
+
+Provide a strong rebuttal while advancing your {POSITION} position on: {originalPrompt}`
+    };
+  };
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -103,13 +175,13 @@ Then provide your own better answer to the original question: "{originalPrompt}"
     },
   });
 
-  // Start debate mutation - just get the first model's response
+  // Start debate mutation - get the first model's (Affirmative) opening statement
   const startDebateMutation = useMutation({
-    mutationFn: async (data: { prompt: string; model1Id: string; model2Id: string; challengerPrompt?: string }) => {
-      // Only get the first model's response to the original prompt
+    mutationFn: async (data: { model1Id: string; model2Id: string }) => {
+      const prompts = generateDebatePrompts();
       const response = await apiRequest('POST', '/api/models/respond', {
         modelId: data.model1Id,
-        prompt: data.prompt
+        prompt: prompts.affirmativePrompt
       });
       return response.json() as Promise<ModelResponse>;
     },
@@ -149,15 +221,30 @@ Then provide your own better answer to the original question: "{originalPrompt}"
     },
   });
 
-  // Continue debate mutation
+  // Continue debate mutation with structured rebuttals
   const continueDebateMutation = useMutation({
     mutationFn: async (data: { battleHistory: DebateMessage[]; nextModelId: string }) => {
-      const response = await apiRequest('POST', '/api/battle/continue', {
-        ...data,
-        challengerPrompt: challengerPrompt,
-        originalPrompt: prompt
+      const prompts = generateDebatePrompts();
+      const isNegativeDebater = data.nextModelId === model2Id;
+      const role = isNegativeDebater ? 'NEGATIVE' : 'AFFIRMATIVE';
+      const position = isNegativeDebater ? 'AGAINST' : 'FOR';
+      const currentTopic = useCustomTopic ? customTopic : debateTopics.find(t => t.id === selectedTopic)?.proposition || '';
+      
+      // Get the most recent opponent message
+      const lastMessage = data.battleHistory[data.battleHistory.length - 1];
+      
+      const rebuttalPrompt = prompts.rebuttalPrompt
+        .replace('{response}', lastMessage.content)
+        .replace('{ROLE}', role)
+        .replace('{POSITION}', position)
+        .replace('{originalPrompt}', currentTopic);
+      
+      const response = await apiRequest('POST', '/api/models/respond', {
+        modelId: data.nextModelId,
+        prompt: rebuttalPrompt
       });
-      return response.json() as Promise<{ response: ModelResponse; modelId: string }>;
+      
+      return { response: await response.json() as ModelResponse, modelId: data.nextModelId };
     },
     onSuccess: (data) => {
       const model = models.find(m => m.id === data.modelId);
@@ -230,10 +317,8 @@ Then provide your own better answer to the original question: "{originalPrompt}"
     }
 
     startDebateMutation.mutate({
-      prompt: prompt,
       model1Id: model1Id,
       model2Id: model2Id,
-      challengerPrompt: challengerPrompt,
     });
   };
 
@@ -271,7 +356,7 @@ Then provide your own better answer to the original question: "{originalPrompt}"
               <MessageSquare className="w-8 h-8 text-blue-600" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Model Debate Mode</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Automatic 10-round debates</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Structured, user-controlled debates (Robert's Rules)</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -283,10 +368,24 @@ Then provide your own better answer to the original question: "{originalPrompt}"
               </Link>
               <Link href="/battle">
                 <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <MessageSquare className="w-4 h-4" />
+                  <Sword className="w-4 h-4" />
                   <span>Battle Mode</span>
                 </Button>
               </Link>
+              <Link href="/creative-combat">
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <Palette className="w-4 h-4" />
+                  <span>Creative Combat</span>
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleTheme}
+                className="p-2"
+              >
+                {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+              </Button>
             </div>
           </div>
         </div>
@@ -303,13 +402,91 @@ Then provide your own better answer to the original question: "{originalPrompt}"
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Debate Topic Selection */}
                 <div className="space-y-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Gavel className="w-4 h-4" />
+                    <label className="text-sm font-medium">Debate Topic</label>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="preset-topic"
+                        checked={!useCustomTopic}
+                        onChange={() => setUseCustomTopic(false)}
+                      />
+                      <label htmlFor="preset-topic" className="text-sm">Select from presets</label>
+                    </div>
+                    
+                    {!useCustomTopic && (
+                      <Select value={selectedTopic} onValueChange={setSelectedTopic}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose debate topic" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {debateTopics.map((topic) => (
+                            <SelectItem key={topic.id} value={topic.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{topic.title}</span>
+                                <span className="text-xs text-gray-500 truncate max-w-48">
+                                  {topic.proposition}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="custom-topic"
+                        checked={useCustomTopic}
+                        onChange={() => setUseCustomTopic(true)}
+                      />
+                      <label htmlFor="custom-topic" className="text-sm">Custom topic</label>
+                    </div>
+                    
+                    {useCustomTopic && (
+                      <Textarea
+                        value={customTopic}
+                        onChange={(e) => setCustomTopic(e.target.value)}
+                        placeholder="Enter your debate proposition..."
+                        className="min-h-[80px]"
+                      />
+                    )}
+                  </div>
+                  
+                  {/* Current Topic Display */}
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="text-xs text-gray-500 mb-1">Current Topic:</div>
+                    <div className="text-sm font-medium">
+                      {useCustomTopic 
+                        ? (customTopic || "Enter custom topic above") 
+                        : debateTopics.find(t => t.id === selectedTopic)?.proposition
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                {/* Model Selection */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Users className="w-4 h-4" />
+                    <label className="text-sm font-medium">Debaters</label>
+                  </div>
+                  
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Debater 1</label>
+                    <label className="text-sm font-medium mb-2 block">
+                      Affirmative (Pro) - {models.find(m => m.id === model1Id)?.name || 'Select Model'}
+                    </label>
                     <Select value={model1Id} onValueChange={setModel1Id}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select first model" />
+                        <SelectValue placeholder="Select Pro debater" />
                       </SelectTrigger>
                       <SelectContent>
                         {models.map((model) => (
@@ -325,10 +502,12 @@ Then provide your own better answer to the original question: "{originalPrompt}"
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Debater 2</label>
+                    <label className="text-sm font-medium mb-2 block">
+                      Negative (Con) - {models.find(m => m.id === model2Id)?.name || 'Select Model'}
+                    </label>
                     <Select value={model2Id} onValueChange={setModel2Id}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select second model" />
+                        <SelectValue placeholder="Select Con debater" />
                       </SelectTrigger>
                       <SelectContent>
                         {models.map((model) => (
@@ -341,6 +520,45 @@ Then provide your own better answer to the original question: "{originalPrompt}"
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Adversarial Intensity */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Target className="w-4 h-4" />
+                    <label className="text-sm font-medium">Debate Intensity</label>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {adversarialLevels.map((level) => (
+                      <div key={level.id} className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id={`level-${level.id}`}
+                          checked={adversarialLevel === level.id}
+                          onChange={() => setAdversarialLevel(level.id)}
+                        />
+                        <label htmlFor={`level-${level.id}`} className="flex-1">
+                          <div className="text-sm font-medium">{level.name}</div>
+                          <div className="text-xs text-gray-500">{level.description}</div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <div className="text-xs text-amber-700 dark:text-amber-300">
+                      <strong>Level {adversarialLevel}:</strong> {adversarialLevels.find(l => l.id === adversarialLevel)?.description}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Ready to start formal Robert's Rules debate
                   </div>
                   
                   <Button
@@ -360,29 +578,6 @@ Then provide your own better answer to the original question: "{originalPrompt}"
                       </>
                     )}
                   </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Debate Topic</label>
-                    <Textarea
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      rows={3}
-                      placeholder="Enter debate topic..."
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Challenge Style</label>
-                    <Textarea
-                      value={challengerPrompt}
-                      onChange={(e) => setChallengerPrompt(e.target.value)}
-                      rows={2}
-                      placeholder="How should models challenge each other..."
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Use {`{response}`} and {`{originalPrompt}`} as placeholders</p>
-                  </div>
                 </div>
               </div>
             </CardContent>

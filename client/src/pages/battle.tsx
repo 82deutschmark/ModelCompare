@@ -36,6 +36,16 @@ interface BattleMessage {
   round: number;
   reasoning?: string;
   responseTime: number;
+  tokenUsage?: {
+    input: number;
+    output: number;
+    reasoning?: number;
+  };
+  cost?: {
+    input: number;
+    output: number;
+    total: number;
+  };
 }
 
 interface BattleState {
@@ -114,8 +124,10 @@ Original user prompt was: "{originalPrompt}"`);
             content: data.model1Response.content,
             timestamp: Date.now(),
             round: 1,
-            responseTime: data.model1Response.responseTime,
             reasoning: data.model1Response.reasoning,
+            responseTime: data.model1Response.responseTime,
+            tokenUsage: data.model1Response.tokenUsage,
+            cost: data.model1Response.cost,
           },
           {
             modelId: battleState.model2Id,
@@ -123,8 +135,10 @@ Original user prompt was: "{originalPrompt}"`);
             content: data.model2Response.content,
             timestamp: Date.now() + 1,
             round: 1,
-            responseTime: data.model2Response.responseTime,
             reasoning: data.model2Response.reasoning,
+            responseTime: data.model2Response.responseTime,
+            tokenUsage: data.model2Response.tokenUsage,
+            cost: data.model2Response.cost,
           }
         ],
         currentRound: 1,
@@ -516,6 +530,35 @@ Original user prompt was: "{originalPrompt}"`);
                           <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
                             {message.content}
                           </div>
+                          
+                          {/* Token Usage and Cost Display */}
+                          {(message.tokenUsage || message.cost) && (
+                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                              <div className="grid grid-cols-2 gap-4 text-xs">
+                                {message.tokenUsage && (
+                                  <div>
+                                    <span className="text-gray-500">Tokens:</span>
+                                    <div className="font-mono">
+                                      {message.tokenUsage.input}→{message.tokenUsage.output}
+                                      {message.tokenUsage.reasoning && (
+                                        <span className="text-amber-600">
+                                          +{message.tokenUsage.reasoning} reasoning
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {message.cost && (
+                                  <div>
+                                    <span className="text-gray-500">Cost:</span>
+                                    <div className="font-mono">
+                                      ${message.cost.total.toFixed(6)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
