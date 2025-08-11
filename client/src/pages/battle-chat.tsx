@@ -142,6 +142,29 @@ Remind the user that PersonX is just another LLM, and not a human expert.
   // Dialog state for better UX flow
   const [selectedModelForDialog, setSelectedModelForDialog] = useState<string>('');
 
+  // Cost estimation helper
+  const estimatePromptCost = (prompt: string, models: AIModel[]) => {
+    if (!prompt.trim() || models.length === 0) return 0;
+    
+    // Rough token estimation: ~4 characters per token
+    const estimatedTokens = Math.ceil(prompt.length / 4);
+    let totalCost = 0;
+    
+    const activeModels = modelSeats.filter(seat => seat.isActive && seat.modelId);
+    
+    activeModels.forEach(seat => {
+      const model = models.find(m => m.id === seat.modelId);
+      if (model && (model as any).pricing) {
+        const inputCost = (estimatedTokens / 1000000) * ((model as any).pricing.inputPerMillion || 0);
+        // Estimate output tokens as 25% of input for rough calculation
+        const outputCost = ((estimatedTokens * 0.25) / 1000000) * ((model as any).pricing.outputPerMillion || 0);
+        totalCost += inputCost + outputCost;
+      }
+    });
+    
+    return totalCost;
+  };
+
   // Auto-scroll to bottom of chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -425,21 +448,40 @@ Remind the user that PersonX is just another LLM, and not a human expert.
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Original Prompt</label>
-                      <Textarea
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        rows={3}
-                        placeholder="Enter the main topic..."
-                      />
+                      <div className="relative">
+                        <Textarea
+                          value={prompt}
+                          onChange={(e) => setPrompt(e.target.value)}
+                          rows={6}
+                          className="pr-20"
+                          placeholder="Enter the main topic..."
+                        />
+                        <div className="absolute bottom-3 right-3 text-xs text-gray-400 flex items-center space-x-2">
+                          {modelSeats.some(seat => seat.isActive) && (
+                            <>
+                              <DollarSign className="w-3 h-3" />
+                              <span>~${estimatePromptCost(prompt, models).toFixed(4)}</span>
+                              <span>•</span>
+                            </>
+                          )}
+                          <span>{prompt.length}/4000</span>
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-2 block">Challenger Template</label>
-                      <Textarea
-                        value={challengerPrompt}
-                        onChange={(e) => setChallengerPrompt(e.target.value)}
-                        rows={3}
-                        placeholder="Template for rebuttals..."
-                      />
+                      <div className="relative">
+                        <Textarea
+                          value={challengerPrompt}
+                          onChange={(e) => setChallengerPrompt(e.target.value)}
+                          rows={6}
+                          className="pr-20"
+                          placeholder="Template for rebuttals..."
+                        />
+                        <div className="absolute bottom-3 right-3 text-xs text-gray-400 flex items-center space-x-2">
+                          <span>{challengerPrompt.length}/4000</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -601,13 +643,19 @@ Remind the user that PersonX is just another LLM, and not a human expert.
                               {message.modelConfig?.capabilities && (
                                 <div className="flex items-center space-x-1">
                                   {message.modelConfig.capabilities.multimodal && (
-                                    <Badge variant="outline" className="text-xs">Vision</Badge>
+                                    <Badge variant="outline" className="text-xs" title="Can analyze images and visual content">
+                                      Vision
+                                    </Badge>
                                   )}
                                   {message.modelConfig.capabilities.functionCalling && (
-                                    <Badge variant="outline" className="text-xs">Functions</Badge>
+                                    <Badge variant="outline" className="text-xs" title="Can use external tools and functions">
+                                      Tools
+                                    </Badge>
                                   )}
                                   {message.modelConfig.capabilities.streaming && (
-                                    <Badge variant="outline" className="text-xs">Streaming</Badge>
+                                    <Badge variant="outline" className="text-xs" title="Supports real-time response streaming">
+                                      Stream
+                                    </Badge>
                                   )}
                                 </div>
                               )}
