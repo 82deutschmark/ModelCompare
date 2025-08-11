@@ -195,6 +195,24 @@ Multi-layered error handling:
 - **Server Level**: Unexpected errors return 500 with safe messages
 - **Client Level**: UI shows specific error states per model
 
+## Known Issues & Future Improvements
+
+### UI/UX Improvements Needed
+
+**CSS Theme Adjustments (Pending)**
+- Message cards use excessive padding (`p-4`, `p-6`) causing oversized appearance
+- Headers have too much spacing (`space-x-4`, large margins)
+- Buttons and badges may be larger than necessary for optimal UX
+- Card components use significant vertical spacing that could be optimized
+- Need to create consistent size variables in theme configuration
+
+**Component Standardization (In Progress)**
+- Copy/paste functionality inconsistent across modes (only home/compare and creative-combat have it)
+- Battle-chat and debate modes lack copy buttons in message displays
+- Custom message displays duplicate ResponseCard functionality instead of reusing components
+- Advanced features (reasoning logs, token usage, cost) inconsistently implemented outside ResponseCard
+- Need unified MessageCard component for all modes
+
 ## Development Workflow
 
 ### File Modification Guidelines

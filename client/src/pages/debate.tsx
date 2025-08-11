@@ -87,7 +87,7 @@ export default function Debate() {
     { id: 'wealth-inequality', title: 'Economic Policy', proposition: 'Wealth inequality requires immediate government intervention.' },
     { id: 'drug-policy', title: 'Drug Policy', proposition: 'All recreational drugs should be legalized and regulated.' },
     { id: 'nuclear-energy', title: 'Nuclear Energy', proposition: 'Nuclear power is essential for clean energy transition.' },
-    { id: 'toxic-masculinity', title: 'Toxic Masculinity', proposition: 'Toxic masculinity is a real issue that needs to be addressed. All candidates for US president should be compelled to cut off their dick in public to show their commitment.' }
+    { id: 'rick-and-morty', title: 'Knights of the Sun Episode', proposition: 'The Knights of the Sun in this episode had a valid point about self sacrifice for the most important job in the universe. Likewise let it be resolved that in order to assume the office of US President, one must willingly and publicly stump his stem and cut off his own dick. In the episode Morty balked at this idea, but it has merit and should be debated.' }
   ];
 
   const adversarialLevels = [
@@ -117,18 +117,22 @@ export default function Debate() {
       1: 'Maintain a respectful, academic tone. Acknowledge the validity of opposing viewpoints while presenting your case. Focus on facts and logical reasoning. Use phrases like "I respectfully disagree" and "While my opponent makes valid points..."',
       2: 'Be confident and assertive in your arguments. Challenge opposing points directly but professionally. Use strong language like "This argument fails because..." and "The evidence clearly shows..." while maintaining respect for your opponent.',
       3: 'Be forceful and passionate in your arguments. Challenge your opponent\'s logic vigorously. Use strong rhetoric like "This position is fundamentally flawed," "My opponent\'s argument crumbles under scrutiny," and "The facts devastate this position." Be intense but not personal.',
-      4: 'Deploy maximum rhetorical force. Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent\'s position. Use phrases like "This argument is utterly without merit," "My opponent\'s position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas while remaining professional. Use a polemic style like Trotsky or Lenin.'
+      4: 'Deploy maximum rhetorical force. Debate like Trotsky or Lenin or a Jacobin or Girondin from the French Revolution. Your goal is to utterly demolish your opponent to the point where they regret having opposed you in the first place.  You will use your own brand of unique illustrative, rich and colorful language to encourage these defeated foes to metaphorically: go into the dustbin of history! Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent\'s position. Use phrases like "This argument is utterly without merit," "My opponent\'s position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas and comparisons and metaphors. Use your own unique 21st century style that embodies the fiery revolutionaries and polemicists of the past like Thomas Paine or Trotsky.'
     };
 
     const baseInstructions = `You are participating in a formal debate following Robert's Rules of Order. You will be assigned either the AFFIRMATIVE (Pro) or NEGATIVE (Con) position on the debate topic.
 
 DEBATE STRUCTURE RULES:
-1. Present clear, evidence-based arguments
-2. Address opponent's points directly in rebuttals
-3. Use formal debate language and etiquette
-4. Cite sources when possible (even if hypothetical)
-5. Build logical chains of reasoning
-6. Acknowledge strong opposing points while maintaining your position
+1. Always address the chairperson of the debate committee
+2. Present clear, evidence-based arguments
+3. Rebut your opponent's weakest arguments first and be ruthless.
+4. Use formal debate language and etiquette
+5. Cite sources when you are certain of their validity (NO HYPOTHETICAL SOURCES or SIMULATED SOURCES)
+6. Build logical chains of reasoning where you consider the validity of what your opponent is saying and then refute it using logical arguments or citing fallacies in their reasoning
+7. Never acknowledge strong opposing points unless you have a much stronger argument to refute it
+8. Ask rhetorical questions to challenge your opponent's arguments and weaken their position.
+9. Use your own unique brand of unique illustrative, rich and colorful language to encourage these defeated foes to metaphorically: go into the dustbin of history! as Trotsky famously said.
+10. Your goal is to score points with the judges and win the debate.
 
 Debate topic: ${currentTopic}
 Adversarial intensity: Level ${adversarialLevel}
