@@ -1,0 +1,50 @@
+# File: Dockerfile
+# Purpose: Build and run the full-stack app (Express API + Vite React client) on Railway using a multi-stage Docker build.
+# How it works: Stage 1 installs deps and runs `npm run build` to produce `dist/index.js` (server) and `dist/public` (client).
+#               Stage 2 copies only built artifacts and production node_modules, then starts `node dist/index.js`.
+# How the project uses it: Railway detects this Dockerfile (via railway.json builder) and deploys a single container serving API and static UI.
+# Author: Cascade (Windsurf)
+
+# Multi-stage Dockerfile for Railway deployment
+# Stage 1: Build (install dev deps and build client+server)
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+# Install dependencies first for layer caching
+COPY package.json package-lock.json* ./
+# Prefer clean reproducible installs; fall back to install if lockfile absent
+RUN npm ci || npm install
+
+# Copy source
+COPY tsconfig.json ./
+COPY vite.config.ts ./
+COPY client ./client
+COPY server ./server
+COPY shared ./shared
+COPY attached_assets ./attached_assets
+
+# Build: produces client at dist/public and server bundle at dist/index.js
+ENV NODE_ENV=production
+RUN npm run build
+
+# Prune dev dependencies to reduce runtime image size
+RUN npm prune --omit=dev
+
+# Stage 2: Runtime (only required files)
+FROM node:20-slim AS runner
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Copy only the production node_modules and built artifacts
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/dist ./dist
+
+# Railway sets PORT; default to 5000 for local runs
+ENV PORT=5000
+EXPOSE 5000
+
+# Start the bundled server, which serves static from dist/public and API from the same port
+CMD ["node", "dist/index.js"]
