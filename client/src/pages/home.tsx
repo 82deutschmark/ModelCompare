@@ -29,13 +29,18 @@ import { ModelSelector } from "@/components/ModelSelector";
 import { ResponseCard } from "@/components/ResponseCard";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError, isInsufficientCreditsError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
+import { UserMenu } from "@/components/UserMenu";
+import { CreditsDisplay } from "@/components/CreditsDisplay";
 import type { AIModel, ModelResponse, ComparisonResult } from "@/types/ai-models";
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   
   const [prompt, setPrompt] = useState(`• Summarize all of human knowledge in one word
@@ -86,12 +91,33 @@ export default function Home() {
         description: `Response received in ${(data.response.responseTime / 1000).toFixed(1)}s`,
       });
     },
-    onError: (error, variables) => {
+    onError: (error: any, variables) => {
       setLoadingModels(prev => {
         const newSet = new Set(prev);
         newSet.delete(variables.modelId);
         return newSet;
       });
+      
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to continue. Redirecting...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 1500);
+        return;
+      }
+      
+      if (isInsufficientCreditsError(error)) {
+        toast({
+          title: "Insufficient Credits",
+          description: "You need more credits to use AI models. Purchase more credits to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       const model = models.find(m => m.id === variables.modelId);
       toast({
@@ -159,6 +185,83 @@ export default function Home() {
 
   const selectedModelData = models.filter(model => selectedModels.includes(model.id));
 
+  // Show landing page for non-authenticated users
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Header */}
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-3">
+                <Brain className="w-8 h-8 text-blue-600" />
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Model Comparison</h1>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleTheme}
+                  className="p-2"
+                >
+                  {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                </Button>
+                <Button onClick={() => window.location.href = '/api/login'}>
+                  Sign In
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Landing Page Content */}
+        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+            Compare AI Models Side-by-Side
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
+            Test and compare responses from multiple AI models including GPT-5, Claude 4, Gemini, and more.
+            Get detailed insights into their capabilities and performance.
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+              <Brain className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Multiple AI Models</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Compare responses from OpenAI, Anthropic, Google, DeepSeek, and xAI models
+              </p>
+            </div>
+            <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+              <Zap className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Credit System</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Start with 500 free credits. Each model call costs just 5 credits.
+              </p>
+            </div>
+            <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+              <MessageSquare className="w-12 h-12 text-green-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Battle Modes</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Watch models debate each other in interactive battle and debate modes
+              </p>
+            </div>
+          </div>
+
+          <Button 
+            size="lg" 
+            onClick={() => window.location.href = '/api/login'}
+            className="px-8 py-3 text-lg"
+          >
+            Get Started with Google Sign-In
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -172,24 +275,29 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/battle">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Sword className="w-4 h-4" />
-                  <span>Battle Mode</span>
-                </Button>
-              </Link>
-              <Link href="/creative-combat">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Palette className="w-4 h-4" />
-                  <span>Creative Combat</span>
-                </Button>
-              </Link>
-              <Link href="/debate">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Debate Mode</span>
-                </Button>
-              </Link>
+              {isAuthenticated && (
+                <>
+                  <CreditsDisplay onPurchaseClick={() => window.location.href = '/checkout'} />
+                  <Link href="/battle">
+                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                      <Sword className="w-4 h-4" />
+                      <span>Battle Mode</span>
+                    </Button>
+                  </Link>
+                  <Link href="/creative-combat">
+                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                      <Palette className="w-4 h-4" />
+                      <span>Creative Combat</span>
+                    </Button>
+                  </Link>
+                  <Link href="/debate">
+                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Debate Mode</span>
+                    </Button>
+                  </Link>
+                </>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -198,6 +306,7 @@ export default function Home() {
               >
                 {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
               </Button>
+              <UserMenu />
             </div>
           </div>
         </div>

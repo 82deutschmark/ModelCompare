@@ -21,8 +21,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
+import Stripe from "stripe";
 import { callModel, getAllModels, getReasoningModels } from "./providers/index.js";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2025-07-30.basil",
+});
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -270,6 +279,24 @@ Create an enhanced version that builds upon the original while showing masterful
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Setup authentication
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Get available models
   app.get("/api/models", async (req, res) => {
     try {
@@ -279,10 +306,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Compare models endpoint
-  app.post("/api/compare", async (req, res) => {
+  // Compare models endpoint (protected, requires credits)
+  app.post("/api/compare", isAuthenticated, async (req: any, res) => {
     try {
       const { prompt, modelIds } = compareModelsSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      
+      // Get user and check credits
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const creditsNeeded = modelIds.length * 5; // 5 credits per model
+      if (user.credits < creditsNeeded) {
+        return res.status(402).json({ 
+          error: "Insufficient credits", 
+          creditsNeeded,
+          creditsAvailable: user.credits 
+        });
+      }
       
       // Initialize responses object
       const responses: Record<string, any> = {};
@@ -313,16 +356,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Wait for all model calls to complete
       await Promise.all(modelPromises);
 
+      // Deduct credits
+      await storage.updateUserCredits(userId, user.credits - creditsNeeded);
+
       // Store the comparison
       const comparison = await storage.createComparison({
         prompt,
         selectedModels: modelIds,
         responses,
+        userId,
+        creditsUsed: creditsNeeded,
       });
 
       res.json({
         id: comparison.id,
         responses,
+        creditsUsed: creditsNeeded,
+        creditsRemaining: user.credits - creditsNeeded,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -333,10 +383,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get comparison history
-  app.get("/api/comparisons", async (req, res) => {
+  // Get comparison history (protected, user-specific)
+  app.get("/api/comparisons", isAuthenticated, async (req: any, res) => {
     try {
-      const comparisons = await storage.getComparisons();
+      const userId = req.user.claims.sub;
+      const comparisons = await storage.getComparisons(userId);
       res.json(comparisons);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch comparisons" });
@@ -356,16 +407,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Single Model Response Route
-  app.post("/api/models/respond", async (req, res) => {
+  // Single Model Response Route (protected, requires credits)
+  app.post("/api/models/respond", isAuthenticated, async (req: any, res) => {
     try {
       const { modelId, prompt } = req.body;
+      const userId = req.user.claims.sub;
       
       if (!modelId || !prompt) {
         return res.status(400).json({ error: 'Missing modelId or prompt' });
       }
 
+      // Get user and check credits
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (user.credits < 5) {
+        return res.status(402).json({ 
+          error: "Insufficient credits", 
+          creditsNeeded: 5,
+          creditsAvailable: user.credits 
+        });
+      }
+
       const result = await callModel(prompt, modelId);
+      
+      // Deduct credits
+      await storage.updateUserCredits(userId, user.credits - 5);
       
       res.json({
         content: result.content,
@@ -373,7 +442,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         responseTime: result.responseTime,
         tokenUsage: result.tokenUsage,
         cost: result.cost,
-        modelConfig: result.modelConfig
+        modelConfig: result.modelConfig,
+        creditsUsed: 5,
+        creditsRemaining: user.credits - 5
       });
     } catch (error) {
       console.error('Model response error:', error);
@@ -532,6 +603,56 @@ Continue the debate by responding to the last message. Be analytical, challenge 
     } catch (error) {
       console.error("Creative Combat error:", error);
       res.status(500).json({ error: "Failed to process creative combat request" });
+    }
+  });
+
+  // Stripe payment routes
+  app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
+    try {
+      const { amount, credits } = req.body; // amount in dollars, credits to purchase
+      const userId = req.user.claims.sub;
+      
+      if (!amount || !credits) {
+        return res.status(400).json({ error: "Missing amount or credits" });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: "usd",
+        metadata: {
+          userId,
+          credits: credits.toString(),
+        },
+      });
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error creating payment intent: " + error.message });
+    }
+  });
+
+  // Webhook to handle successful payments
+  app.post("/api/webhook/stripe", async (req, res) => {
+    try {
+      const event = req.body;
+
+      if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object;
+        const userId = paymentIntent.metadata.userId;
+        const creditsToAdd = parseInt(paymentIntent.metadata.credits);
+
+        if (userId && creditsToAdd) {
+          const user = await storage.getUser(userId);
+          if (user) {
+            await storage.updateUserCredits(userId, user.credits + creditsToAdd);
+          }
+        }
+      }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error('Stripe webhook error:', error);
+      res.status(500).json({ error: 'Webhook handler failed' });
     }
   });
 
