@@ -29,8 +29,8 @@ import {
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
+import { AppNavigation } from "@/components/AppNavigation";
 import { apiRequest } from "@/lib/queryClient";
-import { Link } from "wouter";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
 interface DebateMessage {
@@ -381,48 +381,11 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <MessageSquare className="w-8 h-8 text-blue-600" />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Model Debate Mode</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Structured, user-controlled debates (Robert's Rules)</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Brain className="w-4 h-4" />
-                  <span>Compare Mode</span>
-                </Button>
-              </Link>
-              <Link href="/battle">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Sword className="w-4 h-4" />
-                  <span>Battle Mode</span>
-                </Button>
-              </Link>
-              <Link href="/creative-combat">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Palette className="w-4 h-4" />
-                  <span>Creative Combat</span>
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleTheme}
-                className="p-2"
-              >
-                {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppNavigation 
+        title="AI Model Debate Mode" 
+        subtitle="Structured, user-controlled debates (Robert's Rules)"
+        icon={MessageSquare}
+      />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Setup Panel */}

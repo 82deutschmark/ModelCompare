@@ -38,8 +38,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
+import { AppNavigation } from "@/components/AppNavigation";
 import { apiRequest } from "@/lib/queryClient";
-import { Link } from "wouter";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
 interface ChatMessage {
@@ -322,43 +322,11 @@ Remind the user that PersonX is just another LLM, and not a human expert.
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <MessageSquare className="w-8 h-8 text-blue-600" />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Chat Battle</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Brain className="w-4 h-4" />
-                  <span>Compare Mode</span>
-                </Button>
-              </Link>
-              <Button variant="default" size="sm" className="flex items-center space-x-2" disabled>
-                <Sword className="w-4 h-4" />
-                <span>Battle Mode</span>
-              </Button>
-              <Link href="/creative-combat">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <Palette className="w-4 h-4" />
-                  <span>Creative Combat</span>
-                </Button>
-              </Link>
-              <Link href="/debate">
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Debate Mode</span>
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppNavigation 
+        title="AI Chat Battle" 
+        subtitle="Chat-style model debates"
+        icon={Sword}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-120px)]">
