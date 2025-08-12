@@ -18,7 +18,7 @@
  * This component replaces the custom message displays in creative-combat,
  * battle-chat, and debate modes, ensuring feature parity across the app.
  * 
- * Author: Cascade
+ * Author: Cascade Claude 4 Sonnet Thinking
  * Date: August 11, 2025
  */
 
@@ -132,18 +132,18 @@ export function MessageCard({
   };
 
   // Variant-specific styling - optimized for better sizing
-  const cardPadding = variant === 'compact' ? 'p-2' : 'p-3';
-  const headerPadding = variant === 'compact' ? 'pb-1' : 'pb-2';
+  const cardPadding = variant === 'compact' ? 'p-1' : 'p-2';
+  const headerPadding = variant === 'compact' ? 'pb-1' : 'pb-1';
 
   return (
     <Card className={`${className} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm`}>
       {showHeader && (
-        <CardHeader className={`${headerPadding} bg-gray-50 dark:bg-gray-800`}>
+        <CardHeader className={`${headerPadding} px-2 py-1 bg-gray-50 dark:bg-gray-800`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center space-x-1">
               <Badge 
                 variant="outline" 
-                className={`font-medium ${seatColor || 'bg-gray-100'}`}
+                className={`text-xs px-1 py-0 font-medium ${seatColor || 'bg-gray-100'}`}
               >
                 {message.modelName}
               </Badge>
@@ -151,20 +151,20 @@ export function MessageCard({
               {message.modelConfig?.provider && (
                 <Badge 
                   variant="secondary"
-                  className={`text-xs ${getProviderColor(message.modelConfig.provider)}`}
+                  className={`text-xs px-1 py-0 ${getProviderColor(message.modelConfig.provider)}`}
                 >
                   {message.modelConfig.provider}
                 </Badge>
               )}
               
               {message.round && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs px-1 py-0">
                   Round {message.round}
                 </Badge>
               )}
               
               {message.type === 'rebuttal' && (
-                <Badge variant="destructive" className="text-xs">
+                <Badge variant="destructive" className="text-xs px-1 py-0">
                   Rebuttal
                 </Badge>
               )}
@@ -195,32 +195,31 @@ export function MessageCard({
       )}
 
       <CardContent className={cardPadding}>
-        {/* Message Content */}
-        <div className="text-gray-900 dark:text-white whitespace-pre-wrap text-sm leading-relaxed mb-3">
+        <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
           {message.content}
         </div>
 
         {/* Reasoning Logs (if available) */}
         {message.reasoning && (
-          <div className="mb-3">
+          <div className="mb-2">
             <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex items-center gap-1.5 px-2 py-1 h-auto text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                  className="flex items-center gap-1 px-1 py-1 h-6 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                 >
-                  {showReasoning ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  <Brain className="w-4 h-4" />
-                  <span className="font-medium text-sm">Chain of Thought</span>
-                  <Badge variant="outline" className="text-xs ml-1">
+                  {showReasoning ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  <Brain className="w-3 h-3" />
+                  <span className="font-medium text-xs">Chain of Thought</span>
+                  <Badge variant="outline" className="text-xs px-1 py-0 ml-1">
                     {message.reasoning.split('\n').length} steps
                   </Badge>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <div className="text-amber-900 dark:text-amber-100 text-sm whitespace-pre-wrap leading-relaxed font-mono">
+              <CollapsibleContent className="mt-1">
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
+                  <div className="text-amber-900 dark:text-amber-100 text-xs whitespace-pre-wrap leading-relaxed font-mono">
                     {message.reasoning}
                   </div>
                 </div>
@@ -230,14 +229,14 @@ export function MessageCard({
         )}
 
         {showFooter && (
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-2">
               {message.tokenUsage && (
                 <div className="flex items-center space-x-1">
-                  <span>Tokens:</span>
-                  <span className="font-mono">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
+                  <span className="text-xs">Tokens:</span>
+                  <span className="font-mono text-xs">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
                   {message.tokenUsage.reasoning && (
-                    <span className="text-amber-600 dark:text-amber-400 font-mono">
+                    <span className="text-amber-600 dark:text-amber-400 font-mono text-xs">
                       +{message.tokenUsage.reasoning} reasoning
                     </span>
                   )}
@@ -246,8 +245,8 @@ export function MessageCard({
               
               {message.cost && (
                 <div className="flex items-center space-x-1">
-                  <span>Cost:</span>
-                  <span className="font-mono text-green-600 dark:text-green-400">
+                  <span className="text-xs">Cost:</span>
+                  <span className="font-mono text-green-600 dark:text-green-400 text-xs">
                     ${message.cost.total.toFixed(4)}
                   </span>
                   {message.cost.reasoning && (
@@ -261,12 +260,12 @@ export function MessageCard({
               {message.modelConfig?.capabilities && (
                 <div className="flex items-center space-x-0.5">
                   {message.modelConfig.capabilities.multimodal && (
-                    <Badge variant="outline" className="text-xs" title="Can analyze images and visual content">
+                    <Badge variant="outline" className="text-xs px-1 py-0" title="Can analyze images and visual content">
                       Vision
                     </Badge>
                   )}
                   {message.modelConfig.capabilities.functionCalling && (
-                    <Badge variant="outline" className="text-xs" title="Supports function calling">
+                    <Badge variant="outline" className="text-xs px-1 py-0" title="Supports function calling">
                       Functions
                     </Badge>
                   )}
@@ -279,10 +278,10 @@ export function MessageCard({
               size="sm"
               onClick={copyToClipboard}
               disabled={isCopying}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-1 py-0 h-6"
             >
-              <Copy className="w-4 h-4 mr-1" />
-              {isCopying ? 'Copied!' : 'Copy'}
+              <Copy className="w-3 h-3 mr-1" />
+              <span className="text-xs">{isCopying ? 'Copied!' : 'Copy'}</span>
             </Button>
           </div>
         )}
