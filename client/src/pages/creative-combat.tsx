@@ -132,7 +132,7 @@ export default function CreativeCombat() {
   const [selectedPromptTemplate, setSelectedPromptTemplate] = useState<string>('');
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
   const [promptsLoading, setPromptsLoading] = useState(true);
-  const [customPrompt, setCustomPrompt] = useState('Write a hauntingly beautiful poem about the intersection of technology and human emotion.');
+  const [customPrompt, setCustomPrompt] = useState('Write a hardcore battle rap.');
   
   /**
    * STATE MANAGEMENT: Manual Sequential Creative Combat Flow
