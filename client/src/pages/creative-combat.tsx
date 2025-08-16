@@ -43,7 +43,7 @@ import {
   Play, Plus, Loader2, Brain, GitCompare, Edit3, FileEdit,
   Mic, Feather, Music, FileText, Code, BookOpen, 
   Clock, Timer, Users, Settings, ArrowRight, CheckCircle,
-  Sword, MessageSquare, Palette, Copy, Download
+  Sword, MessageSquare, Palette, Copy, Download, Eye
 } from "lucide-react";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 import { MessageCard } from "@/components/MessageCard";
@@ -166,6 +166,7 @@ export default function CreativeCombat() {
   const [showTiming, setShowTiming] = useState(true);
   const [totalCost, setTotalCost] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [showPromptPreview, setShowPromptPreview] = useState(false);
 
   // Load available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -825,7 +826,41 @@ Take this creative work and elevate it to an even higher level. Improve upon ima
                           Show timing info
                         </Label>
                       </div>
-                      
+                      <div className="flex items-center justify-between">
+                        <Button
+                          onClick={() => setShowPromptPreview(!showPromptPreview)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          {showPromptPreview ? 'Hide' : 'Show'} Raw Prompt
+                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={handleExportMarkdown}
+                            disabled={editorialPasses.length === 0}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Export
+                          </Button>
+                          <Button
+                            onClick={handleCopyToClipboard}
+                            disabled={editorialPasses.length === 0}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Start Session Button */}
                       <Button
                         onClick={startEditorialSession}
                         disabled={isProcessing || selectedModels.length === 0}
@@ -845,6 +880,19 @@ Take this creative work and elevate it to an even higher level. Improve upon ima
                         )}
                       </Button>
                     </div>
+                    
+                    {/* Raw Prompt Preview */}
+                    {showPromptPreview && customPrompt && (
+                      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <BookOpen className="w-3 h-3" />
+                          <span className="text-xs font-medium">Raw Prompt Preview</span>
+                        </div>
+                        <div className="text-xs font-mono bg-gray-100 dark:bg-gray-900 p-2 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
+                          {customPrompt}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4 max-h-[600px] overflow-y-auto">
