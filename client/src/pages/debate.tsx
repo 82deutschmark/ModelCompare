@@ -315,14 +315,6 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
       return;
     }
 
-    if (model1Id === model2Id) {
-      toast({
-        title: "Different Models Required",
-        description: "Please select two different models for the debate.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     startDebateMutation.mutate({
       model1Id: model1Id,
