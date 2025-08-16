@@ -136,24 +136,73 @@ The `IStorage` interface in `server/storage.ts` provides:
 - **Fallback Support**: Automatic fallback to in-memory storage
 - **Session Management**: PostgreSQL-backed user sessions
 
+## Core Features
+
+### Comparison Modes
+
+**Compare Mode** (`/`)
+- Side-by-side model response comparison
+- Multi-model selection with provider grouping
+- Real-time response timing and cost tracking
+- Export and raw prompt preview functionality
+
+**Battle Chat Mode** (`/battle`)
+- Interactive chat-style model comparison
+- Turn-based conversation analysis
+- Challenger prompts and response evaluation
+
+**Debate Mode** (`/debate`)
+- Structured 10-round AI debates between models
+- Topic selection with intensity levels
+- Same-model debate support for self-analysis
+- Automated debate progression with manual controls
+
+**Creative Combat Mode** (`/creative`)
+- Sequential creative editing workflow
+- Multiple AI models enhance content iteratively
+- Editorial pass tracking and version comparison
+- Manual model selection for each enhancement round
+
+### Universal Features
+
+**Export Functionality**
+- Comprehensive markdown export across all modes
+- One-click clipboard copy for easy sharing
+- Safe filename generation for downloaded files
+- Session metadata and timing information included
+
+**Raw Prompt Preview**
+- Transparency widgets showing exact prompts sent to models
+- Toggle visibility with Eye icon controls
+- Template variable substitution preview
+- Debugging and prompt optimization support
+
 ## Frontend Architecture
 
 ### Component Hierarchy
 
 ```
 App (Theme Provider + Router)
-├── Home Page
+├── Home Page (Compare Mode)
 │   ├── ModelSelector (provider-grouped checkboxes)
-│   ├── PromptInput (textarea with options)
+│   ├── PromptInput (with export & preview controls)
 │   └── ResponseGrid
 │       └── ResponseCard[] (individual model responses)
+├── Battle Chat Page
+│   ├── ChatInterface (turn-based conversation)
+│   └── ResponseComparison (side-by-side analysis)
+├── Debate Page
+│   ├── DebateSetup (model & topic selection)
+│   └── DebateInterface (structured argument display)
+├── Creative Combat Page
+│   ├── EditorialSetup (model queue management)
+│   └── CreativeEvolution (version tracking display)
 └── ThemeProvider (light/dark mode support)
 ```
 
 ### State Management Pattern
 
 The application uses TanStack Query for all server state:
-
 1. **Model Loading**: `useQuery` for fetching available models
 2. **Comparison Execution**: `useMutation` for submitting prompts
 3. **Cache Management**: Automatic invalidation and refetching
