@@ -21,6 +21,22 @@ export interface AIModel {
   name: string;
   provider: string;
   model: string;
+  knowledgeCutoff: string;
+  capabilities: {
+    reasoning: boolean;
+    multimodal: boolean;
+    functionCalling: boolean;
+    streaming: boolean;
+  };
+  pricing: {
+    inputPerMillion: number;
+    outputPerMillion: number;
+    reasoningPerMillion?: number;
+  };
+  limits: {
+    maxTokens: number;
+    contextWindow: number;
+  };
 }
 
 export interface ModelResponse {
