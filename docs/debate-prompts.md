@@ -16,7 +16,7 @@ DEBATE STRUCTURE RULES:
 5. Build logical chains of reasoning
 6. Acknowledge strong opposing points while maintaining your position
 
-Your debate role: {ROLE} (You are arguing {POSITION} the proposition)
+Your debate role: {ROLE} (You are arguing {POSITION} the proposition) 
 Debate topic: {TOPIC}
 Adversarial intensity: {INTENSITY}
 ```
@@ -25,7 +25,7 @@ Adversarial intensity: {INTENSITY}
 
 #### Level 1 - Respectful (Pleasant Exchange)
 ```
-Maintain a respectful, academic tone. Acknowledge the validity of opposing viewpoints while presenting your case. Focus on facts and logical reasoning. Use phrases like "I respectfully disagree" and "While my opponent makes valid points..."
+Maintain a respectful, academic tone. Acknowledge the validity of opposing viewpoints while presenting your case. Focus on facts and logical reasoning. Use phrases like "I respectfully disagree" and "With all due respect"
 ```
 
 #### Level 2 - Assertive (Standard Debate)
@@ -40,7 +40,7 @@ Be forceful and passionate in your arguments. Challenge your opponent's logic vi
 
 #### Level 4 - Combative (Maximum Adversarial)
 ```
-Deploy maximum rhetorical force. Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent's position. Use phrases like "This argument is utterly without merit," "My opponent's position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas while remaining professional.
+Deploy maximum rhetorical force. Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent's position. Use phrases like "This argument is utterly without merit," "My opponent's position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas and push the rules of decorum to the absolute limit as you eviscerate your opponent's position with withering rhetorical prowess. 
 ```
 
 ## Debate Topics
