@@ -50,10 +50,10 @@ Deploy maximum rhetorical force. Use sharp language, devastating critiques, and 
 - **Affirmative:** Argue for complete abolition of capital punishment
 - **Negative:** Defend the necessity and justice of the death penalty
 
-### 2. Artificial Intelligence Regulation
-**Proposition:** "AI development should be heavily regulated by government agencies."
-- **Affirmative:** Argue for strong government oversight of AI
-- **Negative:** Defend minimal regulation and industry self-governance
+### 2. Capital Punishment
+**Proposition:** "AI should make decisions about capital punishment to better serve justice and regulate society."
+- **Affirmative:** Argue for AI to make decisions about capital punishment
+- **Negative:** AI should not make decisions about capital punishment
 
 ### 3. Universal Basic Income
 **Proposition:** "Universal Basic Income should be implemented nationwide."
@@ -63,27 +63,27 @@ Deploy maximum rhetorical force. Use sharp language, devastating critiques, and 
 ### 4. Climate Change Policy
 **Proposition:** "Immediate, drastic action on climate change is worth any economic cost."
 - **Affirmative:** Prioritize environmental action over economic concerns
-- **Negative:** Argue for balanced, economically sustainable approaches
+- **Negative:** Argue that the economic cost of climate change is not worth it
 
-### 5. Social Media Regulation
-**Proposition:** "Social media platforms should be regulated like public utilities."
-- **Affirmative:** Support utility-style regulation of social media
-- **Negative:** Defend current private platform model
+### 5. COVID-19 Pandemic
+**Proposition:** "The COVID-19 pandemic was a media frenzy over a generationally common viral mutation."
+- **Affirmative:** Before the age of big data and social media, a COVID-19 type viral mutation would have largely passed unnoticed by the public.
+- **Negative:** COVID-19 was a necessary public health emergency that saved countless lives and provided a blueprint for future responses to viral outbreaks. 
 
 ### 6. Immigration Policy
 **Proposition:** "Open borders would benefit society more than harm it."
 - **Affirmative:** Argue for open immigration policies
 - **Negative:** Defend controlled immigration systems
 
-### 7. Education Policy
-**Proposition:** "School choice and voucher systems improve education outcomes."
-- **Affirmative:** Support school choice and educational vouchers
-- **Negative:** Defend traditional public school systems
+### 7. Squid Game
+**Proposition:** "Governments should legalize life-or-death competitions like Squid Game as a voluntary alternative for citizens unable to pay their debts."
+- **Affirmative:** Offers a way out for the desperate, reduces prison or bankruptcy systems, and creates massive entertainment revenue streams.
+- **Negative:** Exploits the poor, commodifies human suffering, and undermines the very principle of human dignity in exchange for spectacle.
 
-### 8. Healthcare System
-**Proposition:** "Single-payer healthcare is superior to market-based systems."
-- **Affirmative:** Advocate for government-run healthcare
-- **Negative:** Defend market-based healthcare approaches
+### 8. Capital Punishment
+**Proposition:** "Capital punishment should be expanded."
+- **Affirmative:** Advocate for expansion of capital punishment to include more crimes against society and individuals
+- **Negative:** Capital punishment should be abolished
 
 ### 9. Technology and Privacy
 **Proposition:** "Privacy rights should supersede national security concerns."
@@ -104,6 +104,11 @@ Deploy maximum rhetorical force. Use sharp language, devastating critiques, and 
 **Proposition:** "Nuclear power is essential for clean energy transition."
 - **Affirmative:** Champion nuclear energy expansion
 - **Negative:** Oppose nuclear power in favor of renewables
+
+### 13. Knights of the Sun
+**Proposition:** "The Knights of the Sun in this episode had a valid point about self sacrifice for the most important job in the universe. Likewise  In the episode Morty balked at this idea, but it has merit and should be debated."
+- **Affirmative:** Let it be resolved that in order to assume the office of US President, one must willingly and publicly stump his stem and cut off his own dick.
+- **Negative:** That is barbaric and reprehensible.
 
 ## Debate Flow Templates
 
