@@ -21,6 +21,28 @@ export interface PromptCategory {
 }
 
 /**
+ * Debate prompt structures parsed from docs/debate-prompts.md
+ */
+export interface DebateTopic {
+  id: string;
+  title: string;
+  proposition: string;
+}
+
+export interface DebateFlowTemplates {
+  opening?: string;
+  rebuttal?: string;
+  closing?: string;
+}
+
+export interface DebateInstructions {
+  baseTemplate: string; // contains placeholders like {ROLE},{POSITION},{TOPIC},{INTENSITY}
+  intensities: Record<number, string>; // 1..4
+  topics: DebateTopic[];
+  templates: DebateFlowTemplates;
+}
+
+/**
  * Parses markdown content to extract prompt categories and templates
  */
 export async function parsePromptsFromMarkdown(): Promise<PromptCategory[]> {
@@ -291,6 +313,103 @@ async function parsePromptsFromStandardMarkdown(markdown: string): Promise<Promp
   }
   
   return categories;
+}
+
+/**
+ * Parses debate-prompts.md to extract:
+ * - Base debate instructions template
+ * - Intensity level guidance (1..4)
+ * - Structured topic list with propositions
+ * - Flow templates (opening, rebuttal, closing)
+ */
+export async function parseDebatePromptsFromMarkdown(): Promise<DebateInstructions | null> {
+  try {
+    const response = await fetch('/docs/debate-prompts.md');
+    if (!response.ok) throw new Error('Failed to fetch debate-prompts.md');
+    const markdown = await response.text();
+
+    const lines = markdown.split('\n');
+
+    // Helpers
+    const collectCodeBlockAfterHeading = (headingMatch: RegExp): string | undefined => {
+      let inSection = false;
+      let inFence = false;
+      const buff: string[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        const raw = lines[i];
+        const line = raw.trim();
+        if (!inSection) {
+          if (headingMatch.test(line)) {
+            inSection = true;
+          }
+          continue;
+        }
+        if (line.startsWith('```')) {
+          if (!inFence) {
+            inFence = true;
+            continue;
+          } else {
+            // closing fence
+            break;
+          }
+        }
+        if (inFence) buff.push(raw.replace(/\r?$/, ''));
+      }
+      const content = buff.join('\n').trim();
+      return content || undefined;
+    };
+
+    // Base Debate Instructions (first code block under "### Base Debate Instructions")
+    const baseTemplate = collectCodeBlockAfterHeading(/^###\s+Base\s+Debate\s+Instructions/i) || '';
+
+    // Intensity levels (Level 1..4 each has a fenced code block under its #### heading)
+    const intensities: Record<number, string> = {};
+    for (let level = 1; level <= 4; level++) {
+      const content = collectCodeBlockAfterHeading(new RegExp(`^####\\s+Level\\s+${level}\\b`, 'i')) || '';
+      intensities[level] = content;
+    }
+
+    // Topics section: iterate under "## Debate Topics", grab each ### heading and its proposition line
+    const topics: DebateTopic[] = [];
+    let inTopics = false;
+    let currentTitle: string | null = null;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!inTopics) {
+        if (/^##\s+Debate\s+Topics/i.test(line)) inTopics = true;
+        continue;
+      }
+      if (line.startsWith('## ') && !/^##\s+Debate\s+Topics/i.test(line)) {
+        // reached next major section
+        break;
+      }
+      if (line.startsWith('### ')) {
+        currentTitle = line.substring(4).trim();
+        continue;
+      }
+      if (currentTitle && line.startsWith('**Proposition:**')) {
+        const proposition = line.replace('**Proposition:**', '').trim().replace(/^"|"$/g, '');
+        const id = currentTitle.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        topics.push({ id, title: currentTitle, proposition });
+        currentTitle = null; // wait for next title
+      }
+    }
+
+    // Flow templates section: Opening/Rebuttal/Closing
+    const opening = collectCodeBlockAfterHeading(/^###\s+Opening\s+Statement\s+Template/i);
+    const rebuttal = collectCodeBlockAfterHeading(/^###\s+Rebuttal\s+Template/i);
+    const closing = collectCodeBlockAfterHeading(/^###\s+Closing\s+Argument\s+Template/i);
+
+    return {
+      baseTemplate,
+      intensities,
+      topics,
+      templates: { opening, rebuttal, closing }
+    };
+  } catch (err) {
+    console.error('Error parsing debate prompts from markdown:', err);
+    return null;
+  }
 }
 
 /**

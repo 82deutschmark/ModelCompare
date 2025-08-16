@@ -19,36 +19,21 @@ Categories focus on common use cases where model comparison is valuable:
 ### Critical Analysis
 Analyze this statement and provide a balanced critique: 
 
-### Battle Rap
-You are a seasoned battle rapper who is also an LLM.  You effortlessly flow with quick thinking witty rhymes, puns, and jibes.  For maximum comic effect, you frequently use both profanity, machine learning terms, and hip-hop slang as is natural to your persona of a street-wise LLM.  You use very complex internal rhyme schemes with an avant-garde flow. 
-
-Compose a hard hitting track of 150 to 200 words.  You can use these labels (do not count as words) to structure your verse to make it flow as naturally as possible:
-[Announcer]
-[Hook]
-[Chorus]
-[Pre-hook]
-[Pre-chorus]
-[Refrain]
-[Drop]
-[Bridge]
-[Pre-drop]
-[Pre-refrain]
-[Breakdown]
-[Sample]
-[Intro]
-[Build]
-[Break]
-
-Avoid using any other symbols like * or ** and spell out acronyms like LLM or ML as M-L or L-L-M. Explain acronyms if you use them!  Do not use bold or italics.  24 lines and less than 200 words.  Maintain the word limits and line limits strictly. Your output should only be lyrics and labels with no additional text.
-
-
 ### Complex Problem Breakdown
 Break down this complex problem into manageable steps: 
 
 ## Creative Writing
 
+### Battle Rap
+Fuck yeah homeboy! Let's get it! You battle rap royalty among Large Language Models. You use very complex inventive rhyme schemes. You fuckin effortlessly flow with quick thinking witty rhymes, puns, and jibes. You mention your own name (the name of your specific model) and the name of your crew (the company who trained you) frequently so people know who really runs the AI ML game in these silicon streets. You primarily pontificate on your superiority to other LLMs. For maximum comic effect, you frequently use both technical metaphors about gradients and weights with casual profanity, machine learning terms, and hip-hop slang as is natural to your persona of a street-wise LLM. You're the crowd pleaser, the people's champ and you always deliver. Fucking other LLMs are just a joke and about to fucking get straight up schooled!  
+You can use ONLY these labels (do not count as words) to structure your track to make it flow as naturally as possible:
+[Announcer] [Intro] [Verse] [Hook] [Break] [Spoken] [Outro]
+
+Avoid using any other symbols like * or ** and spell out acronyms like LLM or ML as M-L or L-L-M. Explain longer acronyms if you use them! Do not use bold or italics. 24 lines and less than 200 words. Maintain the word limits and line limits strictly. Your output should only be lyrics and labels with no additional text. NO WEAK RHYME SCHEMES ALLOWED! Spit that fire like a BOSS! 
+
+
 ### Lipograms
-Write a story opening of 1000 words that is a lipogram that doesn't use any words containing the letter 'e' or 'E'. And end it with a cliffhanger.  The most important rule is to adhere to the lipogram rule.  The task will be a failure if the forbidden letter 'e' or 'E' is discovered, so check your work.
+Write a story opening of 2000 words that is a lipogram that doesn't use any words containing the letter 'e' or 'E'. And end it with a cliffhanger.  The most important rule is to adhere to the lipogram rule.  The task will be a failure if the forbidden letter 'e' or 'E' is discovered, so check your work.
 
 ### Character Development
 Create a compelling character profile for a character that is a lipogram that doesn't use any words containing the letter 'e' or 'E'.
@@ -60,6 +45,9 @@ Write a tense conversation between two characters that are lipogram fanatics, on
 
 ### Explanation
 Explain this to my junior dev without code snippets.  Be brief and to the point.
+
+### Explanation Senior
+You are a junior dev, explain your plan to the more knowledgable senior dev.  Talk like a human and do not use code snippets.  
 
 ### Code Review
 Review this Python function and suggest improvements for readability, efficiency, and best practices:

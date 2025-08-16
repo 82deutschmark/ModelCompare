@@ -1,5 +1,7 @@
 # Debate Mode Prompts - Robert's Rules of Order
 
+Author: Cascade
+
 This file contains all the debate prompts and topics for the AI Model Debate Mode. The debates follow Robert's Rules of Order with structured arguments, rebuttals, and formal debate etiquette.
 
 ## System Instructions for Debaters
@@ -66,9 +68,9 @@ Deploy maximum rhetorical force. Use sharp language, devastating critiques, and 
 - **Negative:** Argue that the economic cost of climate change is not worth it
 
 ### 5. COVID-19 Pandemic
-**Proposition:** "The COVID-19 pandemic was overblown."
-- **Affirmative:** Before the age of big data and social media, a COVID-19 type viral mutation would have largely passed unnoticed by the public, the economic cost was not worth it.
-- **Negative:** COVID-19 was a necessary public health emergency that saved countless lives, despite the economic cost.
+**Proposition:** "The COVID-19 pandemic was a media frenzy over a generationally common viral mutation."
+- **Affirmative:** Before the age of big data and social media, a COVID-19 type viral mutation would have largely passed unnoticed by the public.
+- **Negative:** COVID-19 was a necessary public health emergency that saved countless lives and provided a blueprint for future responses to viral outbreaks. 
 
 ### 6. Immigration Policy
 **Proposition:** "Open borders would benefit society more than harm it."
