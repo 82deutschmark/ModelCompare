@@ -39,6 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { AppNavigation } from "@/components/AppNavigation";
+import { ExportButton } from "@/components/ExportButton";
 import { apiRequest } from "@/lib/queryClient";
 import { parseBattlePromptsFromMarkdown, findBattlePromptPair, type BattlePromptCategory, type BattlePromptPair } from "@/lib/promptParser";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
@@ -431,6 +432,12 @@ export default function BattleChat() {
                   </CardTitle>
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline">{messages.length} messages</Badge>
+                    <ExportButton
+                      prompt={prompt}
+                      chatMessages={messages}
+                      variant="battle"
+                      disabled={activeSpeaker !== null || messages.length === 0}
+                    />
                     <Button
                       variant="ghost"
                       size="sm"
