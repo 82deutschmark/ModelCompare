@@ -108,6 +108,9 @@ export default function BattleChat() {
   const [promptsLoading, setPromptsLoading] = useState(true);
   const [selectedPromptCategory, setSelectedPromptCategory] = useState<string>('');
   const [selectedPromptId, setSelectedPromptId] = useState<string>('');
+  const [selectedPromptTemplate, setSelectedPromptTemplate] = useState<string>('');
+  const [useCustomPrompt, setUseCustomPrompt] = useState(false);
+  const [showPromptPreview, setShowPromptPreview] = useState(false);
   const [currentBattlePrompt, setCurrentBattlePrompt] = useState<BattlePromptPair | null>(null);
 
   // Dynamic model seats (unlimited) - starts with one empty seat
@@ -432,6 +435,15 @@ export default function BattleChat() {
                   </CardTitle>
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline">{messages.length} messages</Badge>
+                    <Button
+                      onClick={() => setShowPromptPreview(!showPromptPreview)}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      {showPromptPreview ? 'Hide' : 'Show'} Raw Prompt
+                    </Button>
                     <ExportButton
                       prompt={prompt}
                       chatMessages={messages}
@@ -542,6 +554,30 @@ export default function BattleChat() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Raw Prompt Preview */}
+              {showPromptPreview && (
+                <div className="px-6 pb-4 border-b">
+                  <Card className="bg-gray-50 dark:bg-gray-800">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center space-x-2 text-sm">
+                        <BookOpen className="w-4 h-4" />
+                        <span>Raw Prompt Preview</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="bg-white dark:bg-gray-900 rounded-md p-3 border">
+                        <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+                          {prompt || 'No prompt entered'}
+                        </pre>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        This is the exact prompt that will be sent to AI models in the chat.
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
 
