@@ -138,26 +138,38 @@ export function MessageCard({
   const headerPadding = variant === 'compact' ? 'pb-1' : 'pb-1';
 
   return (
-    <Card className={`${className} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm`}>
+    <Card className={`${className} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200`}>
       {showHeader && (
-        <CardHeader className={`${headerPadding} px-2 py-1 bg-gray-50 dark:bg-gray-800`}>
+        <CardHeader className={`${headerPadding} px-4 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1">
-              <Badge 
-                variant="outline" 
-                className={`text-xs px-1 py-0 font-medium ${seatColor || 'bg-gray-100'}`}
-              >
-                {message.modelName}
-              </Badge>
-              
+            <div className="flex items-center space-x-3">
               {message.modelConfig?.provider && (
-                <Badge 
-                  variant="secondary"
-                  className={`text-xs px-1 py-0 ${getProviderColor(message.modelConfig.provider)}`}
-                >
-                  {message.modelConfig.provider}
-                </Badge>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                  message.modelConfig.provider === 'OpenAI' ? 'bg-green-500' :
+                  message.modelConfig.provider === 'Anthropic' ? 'bg-orange-500' :
+                  message.modelConfig.provider === 'Google' ? 'bg-blue-500' :
+                  message.modelConfig.provider === 'DeepSeek' ? 'bg-purple-500' :
+                  message.modelConfig.provider === 'xAI' ? 'bg-gray-500' : 'bg-gray-400'
+                }`}>
+                  {message.modelConfig.provider.slice(0, 2).toUpperCase()}
+                </div>
               )}
+              <div className="flex items-center space-x-2">
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs px-2 py-1 font-semibold ${seatColor || 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'}`}
+                >
+                  {message.modelName}
+                </Badge>
+                
+                {message.modelConfig?.provider && (
+                  <Badge 
+                    variant="secondary"
+                    className={`text-xs px-2 py-1 ${getProviderColor(message.modelConfig.provider)}`}
+                  >
+                    {message.modelConfig.provider}
+                  </Badge>
+                )}
               
               {message.round && (
                 <Badge variant="outline" className="text-xs px-1 py-0">
@@ -171,9 +183,10 @@ export function MessageCard({
                 </Badge>
               )}
               
-              <div className="flex items-center space-x-1 text-xs text-gray-500">
-                {getSpeedIcon(message.responseTime)}
-                <span>{formatTime(message.responseTime)}</span>
+                <div className="flex items-center space-x-1 text-xs text-gray-500">
+                  {getSpeedIcon(message.responseTime)}
+                  <span className="font-medium">{formatTime(message.responseTime)}</span>
+                </div>
               </div>
             </div>
             
@@ -196,9 +209,11 @@ export function MessageCard({
         </CardHeader>
       )}
 
-      <CardContent className={cardPadding}>
+      <CardContent className={variant === 'compact' ? 'p-3' : 'p-4'}>
         <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-          {message.content}
+          <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap p-3 bg-gray-50/30 dark:bg-gray-800/30 rounded-lg border-l-3 border-blue-500">
+            {message.content}
+          </div>
         </div>
 
         {/* System Prompt (if available) */}
@@ -257,14 +272,14 @@ export function MessageCard({
         )}
 
         {showFooter && (
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-3">
               {message.tokenUsage && (
-                <div className="flex items-center space-x-1">
-                  <span className="text-xs">Tokens:</span>
-                  <span className="font-mono text-xs">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
+                <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                  <span className="text-xs font-medium">Tokens:</span>
+                  <span className="font-mono text-xs font-semibold">{message.tokenUsage.input}→{message.tokenUsage.output}</span>
                   {message.tokenUsage.reasoning && (
-                    <span className="text-amber-600 dark:text-amber-400 font-mono text-xs">
+                    <span className="text-amber-600 dark:text-amber-400 font-mono text-xs font-semibold">
                       +{message.tokenUsage.reasoning} reasoning
                     </span>
                   )}
@@ -272,13 +287,13 @@ export function MessageCard({
               )}
               
               {message.cost && (
-                <div className="flex items-center space-x-1">
-                  <span className="text-xs">Cost:</span>
-                  <span className="font-mono text-green-600 dark:text-green-400 text-xs">
+                <div className="flex items-center space-x-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                  <span className="text-xs font-medium">Cost:</span>
+                  <span className="font-mono text-green-600 dark:text-green-400 text-xs font-semibold">
                     ${message.cost.total.toFixed(4)}
                   </span>
                   {message.cost.reasoning && (
-                    <span className="text-amber-600 dark:text-amber-400 text-xs">
+                    <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
                       (+${message.cost.reasoning.toFixed(4)} reasoning)
                     </span>
                   )}
@@ -286,14 +301,14 @@ export function MessageCard({
               )}
 
               {message.modelConfig?.capabilities && (
-                <div className="flex items-center space-x-0.5">
+                <div className="flex items-center space-x-1">
                   {message.modelConfig.capabilities.multimodal && (
-                    <Badge variant="outline" className="text-xs px-1 py-0" title="Can analyze images and visual content">
+                    <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20" title="Can analyze images and visual content">
                       Vision
                     </Badge>
                   )}
                   {message.modelConfig.capabilities.functionCalling && (
-                    <Badge variant="outline" className="text-xs px-1 py-0" title="Supports function calling">
+                    <Badge variant="outline" className="text-xs px-2 py-1 bg-purple-50 dark:bg-purple-900/20" title="Supports function calling">
                       Functions
                     </Badge>
                   )}
@@ -306,10 +321,10 @@ export function MessageCard({
               size="sm"
               onClick={copyToClipboard}
               disabled={isCopying}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-1 py-0 h-6"
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 h-8 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
             >
-              <Copy className="w-3 h-3 mr-1" />
-              <span className="text-xs">{isCopying ? 'Copied!' : 'Copy'}</span>
+              <Copy className="w-4 h-4 mr-2" />
+              <span className="text-sm font-medium">{isCopying ? 'Copied!' : 'Copy'}</span>
             </Button>
           </div>
         )}
