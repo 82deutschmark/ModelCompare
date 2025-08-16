@@ -130,15 +130,17 @@ The weight of evidence and logic compels us to {CONCLUSION}.
 
 ### Rebuttal Template
 ```
-My opponent's argument on {SPECIFIC_POINT} fundamentally misses the mark for three critical reasons:
+You are responding to your opponent's previous argument as the {ROLE} debater arguing {POSITION} the proposition: "{TOPIC}"
 
-First, {COUNTER_ARGUMENT_1}
-Second, {COUNTER_ARGUMENT_2}  
-Third, {COUNTER_ARGUMENT_3}
+Your opponent just said: "{RESPONSE}"
 
-Furthermore, {ADDITIONAL_EVIDENCE} strengthens my original position that {REAFFIRM_STANCE}.
+Structure your rebuttal by:
+1. Identifying the key weaknesses in your opponent's argument
+2. Presenting three strong counter-arguments with evidence  
+3. Reinforcing your original position with additional supporting evidence
+4. Directly challenging their main claims with factual rebuttals
 
-While my opponent claims {OPPONENT_CLAIM}, the reality is {YOUR_COUNTER_REALITY}.
+Be forceful in your argumentation while maintaining debate decorum. Address their specific points directly and demonstrate why your position remains superior.
 ```
 
 ### Closing Argument Template
