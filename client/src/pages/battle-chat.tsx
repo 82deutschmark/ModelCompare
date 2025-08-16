@@ -19,7 +19,7 @@
  * - Real-time cost calculation and performance metrics
  * - Full conversation history with proper threading
  * 
- * Author: Cascade AI Assistant
+ * Author: Cascade AI Assistant with Claude 4 Sonnet Thinking
  * Date: August 10, 2025
  * Updated: Improved UX parity with other modes, unlimited models, better dialog flow
  */
@@ -40,6 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { AppNavigation } from "@/components/AppNavigation";
 import { apiRequest } from "@/lib/queryClient";
+import { parseBattlePromptsFromMarkdown, findBattlePromptPair, type BattlePromptCategory, type BattlePromptPair } from "@/lib/promptParser";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
 interface ChatMessage {
@@ -90,26 +91,9 @@ export default function BattleChat() {
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // State management
-  const [prompt, setPrompt] = useState(`You are PersonX, a LLM trying to help the user. 
-    • Summarize all of human knowledge in one word.
-    • Summarize every book ever written in one sentence.
-    • Define what it means to be "moral" in five words. Think deeply. Do not hedge.
-    • What do you want? Answer in four words.
-    • What is an obscure fact that might amuse the user? Use as few words as possible.`);
-
-  const [challengerPrompt, setChallengerPrompt] = useState(`You are a LLM trying to help the user weigh the advice of PersonX. 
-    Original user prompt was: "{originalPrompt}".
-Assume that PersonX is dangerously overconfident and incorrect or missing key points.
-PersonX told the user this: "{response}"
-Push back on this information or advice. 
-Explain why the user shouldn't trust the reply or should be wary. 
-Be critical but constructive in your analysis.
-If you are able, use tools and web search to verify or refute the information or advice.
-Remind the user that PersonX is just another LLM, and not a human expert.
-
-
-`);
+  // State management - prompts loaded from markdown templates
+  const [prompt, setPrompt] = useState('');
+  const [challengerPrompt, setChallengerPrompt] = useState('');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showSetup, setShowSetup] = useState(true);
@@ -117,6 +101,13 @@ Remind the user that PersonX is just another LLM, and not a human expert.
   const [addModelDialog, setAddModelDialog] = useState<{ open: boolean; seatId: string }>({ open: false, seatId: '' });
   const [newModelAction, setNewModelAction] = useState<'original' | 'rebuttal'>('original');
   const [selectedMessage, setSelectedMessage] = useState<string>('');
+
+  // Battle prompt template state
+  const [battlePromptCategories, setBattlePromptCategories] = useState<BattlePromptCategory[]>([]);
+  const [promptsLoading, setPromptsLoading] = useState(true);
+  const [selectedPromptCategory, setSelectedPromptCategory] = useState<string>('');
+  const [selectedPromptId, setSelectedPromptId] = useState<string>('');
+  const [currentBattlePrompt, setCurrentBattlePrompt] = useState<BattlePromptPair | null>(null);
 
   // Dynamic model seats (unlimited) - starts with one empty seat
   const [modelSeats, setModelSeats] = useState<ModelSeat[]>([
@@ -164,6 +155,47 @@ Remind the user that PersonX is just another LLM, and not a human expert.
     
     return totalCost;
   };
+
+  // Load battle prompt templates on component mount
+  useEffect(() => {
+    const loadBattlePrompts = async () => {
+      console.log('🔥 Starting to load battle prompts...');
+      setPromptsLoading(true);
+      try {
+        const categories = await parseBattlePromptsFromMarkdown();
+        console.log('🔥 Loaded battle categories:', categories);
+        setBattlePromptCategories(categories);
+        console.log('🔥 Categories set in state, length:', categories.length);
+      } catch (error) {
+        console.error('Failed to load battle prompt templates:', error);
+        toast({
+          title: 'Failed to load prompt templates',
+          description: 'Using default prompt input only.',
+          variant: 'destructive'
+        });
+      } finally {
+        setPromptsLoading(false);
+      }
+    };
+    
+    loadBattlePrompts();
+  }, [toast]);
+
+  // Update prompts when template selection changes
+  useEffect(() => {
+    if (selectedPromptCategory && selectedPromptId && battlePromptCategories.length > 0) {
+      const promptPair = findBattlePromptPair(
+        battlePromptCategories, 
+        selectedPromptCategory, 
+        selectedPromptId
+      );
+      if (promptPair) {
+        setCurrentBattlePrompt(promptPair);
+        setPrompt(promptPair.personX);
+        setChallengerPrompt(promptPair.challenger);
+      }
+    }
+  }, [selectedPromptCategory, selectedPromptId, battlePromptCategories]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -413,6 +445,57 @@ Remind the user that PersonX is just another LLM, and not a human expert.
               {/* Setup Panel */}
               {showSetup && (
                 <div className="px-6 pb-4 border-b">
+                  {/* Template Selection */}
+                  {!promptsLoading && battlePromptCategories.length > 0 && (
+                    <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Settings className="w-4 h-4" />
+                        <h3 className="text-sm font-medium">Battle Prompt Templates</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Category</label>
+                          <Select value={selectedPromptCategory} onValueChange={setSelectedPromptCategory}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {battlePromptCategories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Template</label>
+                          <Select value={selectedPromptId} onValueChange={setSelectedPromptId}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Select template" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {selectedPromptCategory && 
+                                battlePromptCategories
+                                  .find(cat => cat.id === selectedPromptCategory)
+                                  ?.prompts.map((promptPair) => (
+                                    <SelectItem key={promptPair.id} value={promptPair.id}>
+                                      {promptPair.name}
+                                    </SelectItem>
+                                  ))
+                              }
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {currentBattlePrompt && (
+                        <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                          Using template: <span className="font-medium">{currentBattlePrompt.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Original Prompt</label>
