@@ -28,6 +28,7 @@ import { MessageSquare, Brain, Zap, Settings, BookOpen } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { ResponseCard } from "@/components/ResponseCard";
 import { AppNavigation } from "@/components/AppNavigation";
+import { ExportButton } from "@/components/ExportButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -394,24 +395,32 @@ export default function Home() {
                     )}
                   </div>
                   
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={loadingModels.size > 0 || !prompt.trim() || selectedModels.length === 0}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
-                    size="sm"
-                  >
-                    {loadingModels.size > 0 ? (
-                      <>
-                        <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        <span className="text-sm">Comparing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-3 h-3 mr-1" />
-                        <span className="text-sm">Compare Models</span>
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <ExportButton
+                      prompt={prompt}
+                      models={selectedModelData}
+                      responses={responses}
+                      disabled={loadingModels.size > 0}
+                    />
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={loadingModels.size > 0 || !prompt.trim() || selectedModels.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
+                      size="sm"
+                    >
+                      {loadingModels.size > 0 ? (
+                        <>
+                          <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <span className="text-sm">Comparing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3 h-3 mr-1" />
+                          <span className="text-sm">Compare Models</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
