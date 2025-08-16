@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Sword, MessageSquare, Play, Brain, Settings, Plus, Users,
-  Loader2, Send, DollarSign, Timer, Zap, Clock, Palette
+  Loader2, Send, DollarSign, Timer, Zap, Clock, Palette, Eye, BookOpen
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
