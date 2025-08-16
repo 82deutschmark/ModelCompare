@@ -23,6 +23,7 @@ export class AnthropicProvider extends BaseProvider {
       name: "Claude Sonnet 4",
       provider: "Anthropic",
       model: "claude-sonnet-4-20250514",
+      knowledgeCutoff: "April 2024",
       capabilities: {
         reasoning: true, // Extended thinking available
         multimodal: true,
@@ -43,6 +44,7 @@ export class AnthropicProvider extends BaseProvider {
       name: "Claude 3.7 Sonnet",
       provider: "Anthropic",
       model: "claude-3-7-sonnet-20250219",
+      knowledgeCutoff: "April 2023",
       capabilities: {
         reasoning: true, // Full thinking output available
         multimodal: true,
@@ -63,6 +65,7 @@ export class AnthropicProvider extends BaseProvider {
       name: "Claude 3.5 Sonnet",
       provider: "Anthropic",
       model: "claude-3-5-sonnet-20241022",
+      knowledgeCutoff: "2022",
       capabilities: {
         reasoning: false,
         multimodal: true,
@@ -83,6 +86,7 @@ export class AnthropicProvider extends BaseProvider {
       name: "Claude 3 Haiku",
       provider: "Anthropic",
       model: "claude-3-haiku-20240307",
+      knowledgeCutoff: "Unknown",
       capabilities: {
         reasoning: false,
         multimodal: true,
