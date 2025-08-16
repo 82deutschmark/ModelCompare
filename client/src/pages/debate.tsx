@@ -49,6 +49,7 @@ interface DebateMessage {
   timestamp: number;
   round: number;
   reasoning?: string;
+  systemPrompt?: string;
   responseTime: number;
   tokenUsage?: {
     input: number;
@@ -267,6 +268,7 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
         round: Math.ceil(nextRound / 2),
         responseTime: data.response.responseTime,
         reasoning: data.response.reasoning,
+        systemPrompt: data.response.systemPrompt,
         tokenUsage: data.response.tokenUsage,
         cost: data.response.cost,
         modelConfig: data.response.modelConfig,
@@ -354,6 +356,7 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
       modelId: message.modelId,
       content: message.content,
       reasoning: message.reasoning,
+      systemPrompt: message.systemPrompt,
       responseTime: message.responseTime,
       round: message.round,
       timestamp: message.timestamp,

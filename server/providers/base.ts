@@ -33,6 +33,7 @@ export interface ModelResponse {
   content: string;
   reasoning?: string;
   responseTime: number;
+  systemPrompt?: string; // The actual prompt sent to the model
   tokenUsage?: {
     input: number;
     output: number;

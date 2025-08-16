@@ -86,15 +86,16 @@ export class DeepSeekProvider extends BaseProvider {
     const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
 
     return {
-      content: choice.message.content || "No response generated",
-      reasoning: (choice.message as any).reasoning_content || undefined, // DeepSeek R1 provides visible reasoning
+      content: response.choices[0]?.message?.content || 'No response generated',
+      reasoning: undefined, // DeepSeek doesn't provide reasoning logs yet
       responseTime: Date.now() - startTime,
-      tokenUsage: tokenUsage,
-      cost: cost,
-      modelConfig: modelConfig ? {
-        capabilities: modelConfig.capabilities,
-        pricing: modelConfig.pricing,
-      } : undefined,
+      systemPrompt: prompt, // Include the actual prompt sent to the model
+      tokenUsage,
+      cost,
+      modelConfig: {
+        capabilities: modelConfig!.capabilities,
+        pricing: modelConfig!.pricing
+      }
     };
   }
 }
