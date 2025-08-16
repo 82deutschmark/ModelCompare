@@ -17,23 +17,29 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  MessageSquare, Play, Square, Brain, DollarSign, Clock, ChevronDown, ChevronUp, Loader2, RotateCcw,
-  Sword, Palette, Moon, Sun, Gavel, Users, Settings, Target
-} from "lucide-react";
-import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from '@/lib/utils';
+import { apiRequest } from "@/lib/queryClient";
+import { useTheme } from "@/components/ThemeProvider";
+import { generateMarkdownExport, generateTextExport, downloadFile, generateSafeFilename, copyToClipboard, type ExportData } from '@/lib/exportUtils';
+import type { AIModel, ModelResponse } from '@/types/ai-models';
+import { parseDebatePromptsFromMarkdown, type DebateInstructions } from "@/lib/promptParser";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { AppNavigation } from "@/components/AppNavigation";
-import { apiRequest } from "@/lib/queryClient";
-import type { AIModel, ModelResponse } from "@/types/ai-models";
-import { parseDebatePromptsFromMarkdown, type DebateInstructions } from "@/lib/promptParser";
+import { 
+  ChevronLeft, ChevronUp, ChevronDown, Loader2, Play, Settings, Clock, DollarSign, Zap, AlertTriangle, Download, Copy,
+  MessageSquare, Square, Brain, RotateCcw, Sword, Palette, Moon, Sun, Gavel, Users, Target
+} from "lucide-react";
 
 interface DebateMessage {
   id: string;
@@ -379,6 +385,80 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
   // Current prompts preview reflecting current selections
   const promptsPreview = debateData ? generateDebatePrompts() : null;
 
+  // Export handlers
+  const handleExportMarkdown = () => {
+    if (messages.length === 0) return;
+
+    const topicText = useCustomTopic 
+      ? customTopic 
+      : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Custom Topic');
+
+    const exportData: ExportData = {
+      prompt: `Debate Topic: ${topicText}`,
+      timestamp: new Date(),
+      models: messages.map(msg => ({
+        model: models.find(m => m.id === msg.modelId) as AIModel,
+        response: {
+          status: 'success' as const,
+          content: msg.content,
+          reasoning: msg.reasoning,
+          responseTime: msg.responseTime,
+          tokenUsage: msg.tokenUsage,
+          cost: msg.cost,
+        }
+      })).filter(item => item.model)
+    };
+
+    const markdown = generateMarkdownExport(exportData);
+    const filename = generateSafeFilename(`debate-${topicText}`, 'md');
+    downloadFile(markdown, filename, 'text/markdown');
+    
+    toast({
+      title: "Debate Exported",
+      description: "Downloaded as markdown file",
+    });
+  };
+
+  const handleCopyToClipboard = async () => {
+    if (messages.length === 0) return;
+
+    const topicText = useCustomTopic 
+      ? customTopic 
+      : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Custom Topic');
+
+    const exportData: ExportData = {
+      prompt: `Debate Topic: ${topicText}`,
+      timestamp: new Date(),
+      models: messages.map(msg => ({
+        model: models.find(m => m.id === msg.modelId) as AIModel,
+        response: {
+          status: 'success' as const,
+          content: msg.content,
+          reasoning: msg.reasoning,
+          responseTime: msg.responseTime,
+          tokenUsage: msg.tokenUsage,
+          cost: msg.cost,
+        }
+      })).filter(item => item.model)
+    };
+
+    const markdown = generateMarkdownExport(exportData);
+    const success = await copyToClipboard(markdown);
+    
+    if (success) {
+      toast({
+        title: "Copied to Clipboard",
+        description: "Debate exported as markdown",
+      });
+    } else {
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <AppNavigation 
@@ -547,24 +627,75 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
                       Higher intensity levels lead to more forceful rhetoric. Choose appropriately.
                     </div>
                   </div>
-                  <Button
-                    onClick={handleStartDebate}
-                    disabled={startDebateMutation.isPending || !model1Id || !model2Id || debateLoading || !!debateError || (!useCustomTopic && !selectedTopic)}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    {startDebateMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Getting Opening Statement...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4 mr-2" />
-                        Start Debate ({models.find(m => m.id === model1Id)?.name} goes first)
-                      </>
-                    )}
-                  </Button>
+                  <div className="space-y-3">
+                    <Button
+                      onClick={handleStartDebate}
+                      disabled={startDebateMutation.isPending || !model1Id || !model2Id || debateLoading || !!debateError || (!useCustomTopic && !selectedTopic)}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      {startDebateMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Getting Opening Statement...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Start Debate ({models.find(m => m.id === model1Id)?.name} goes first)
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowSystemPrompts(!showSystemPrompts)}
+                      className="w-full"
+                    >
+                      {showSystemPrompts ? 'Hide' : 'Show'} System Prompts
+                    </Button>
+                  </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* System Prompts Preview */}
+        {showSystemPrompts && (model1Id || model2Id) && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="w-5 h-5" />
+                <span>System Prompts Preview</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {(() => {
+                  const prompts = generateDebatePrompts();
+                  return (
+                    <>
+                      <div>
+                        <h4 className="font-medium mb-2">Opening Statement (Model 1 - Affirmative):</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                          {prompts.affirmativePrompt}
+                        </pre>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Opening Statement (Model 2 - Negative):</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                          {prompts.negativePrompt}
+                        </pre>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Rebuttal Template:</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                          {prompts.rebuttalTemplate.replace('{RESPONSE}', '[Previous opponent message will appear here]')}
+                        </pre>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -587,6 +718,25 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
                 </div>
                 
                 <div className="flex items-center space-x-2">
+                  <Button
+                    onClick={handleExportMarkdown}
+                    variant="outline"
+                    size="sm"
+                    disabled={messages.length === 0}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                  
+                  <Button
+                    onClick={handleCopyToClipboard}
+                    variant="outline"
+                    size="sm"
+                    disabled={messages.length === 0}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy
+                  </Button>
                   
                   <Button
                     onClick={handleResetDebate}
