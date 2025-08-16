@@ -27,7 +27,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Copy, Clock, Brain, ChevronDown, ChevronUp, DollarSign, Timer, Zap } from "lucide-react";
+import { Copy, Clock, Brain, ChevronDown, ChevronUp, DollarSign, Timer, Zap, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Unified message interface that works across all modes
@@ -41,6 +41,7 @@ interface MessageCardData {
   round?: number;
   timestamp?: number | Date;
   type?: 'initial' | 'rebuttal' | 'prompt_response' | 'creative' | 'debate';
+  systemPrompt?: string;
   tokenUsage?: {
     input: number;
     output: number;
@@ -88,6 +89,7 @@ export function MessageCard({
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
   const [showReasoning, setShowReasoning] = useState(false);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
 
   const copyToClipboard = async () => {
     if (!message.content) return;
@@ -198,6 +200,32 @@ export function MessageCard({
         <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
           {message.content}
         </div>
+
+        {/* System Prompt (if available) */}
+        {message.systemPrompt && (
+          <div className="mb-2">
+            <Collapsible open={showSystemPrompt} onOpenChange={setShowSystemPrompt}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 px-1 py-1 h-6 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                >
+                  {showSystemPrompt ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  <FileText className="w-3 h-3" />
+                  <span className="font-medium text-xs">System Prompt</span>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                  <div className="text-blue-900 dark:text-blue-100 text-xs whitespace-pre-wrap leading-relaxed">
+                    {message.systemPrompt}
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
 
         {/* Reasoning Logs (if available) */}
         {message.reasoning && (
