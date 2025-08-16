@@ -24,6 +24,7 @@ export class XAIProvider extends BaseProvider {
       name: "Grok 4",
       provider: "xAI",
       model: "grok-4-0709",
+      knowledgeCutoff: "October 2023",
       capabilities: {
         reasoning: true, // Reasoning model with potential reasoning logs
         multimodal: true,
@@ -44,6 +45,7 @@ export class XAIProvider extends BaseProvider {
       name: "Grok 3",
       provider: "xAI",
       model: "grok-3",
+      knowledgeCutoff: "December 2024",
       capabilities: {
         reasoning: false,
         multimodal: false,
@@ -64,6 +66,7 @@ export class XAIProvider extends BaseProvider {
       name: "Grok 3 Mini",
       provider: "xAI",
       model: "grok-3-mini",
+      knowledgeCutoff: "October 2023",
       capabilities: {
         reasoning: false,
         multimodal: false,
@@ -84,6 +87,7 @@ export class XAIProvider extends BaseProvider {
       name: "Grok 3 Fast",
       provider: "xAI",
       model: "grok-3-fast",
+      knowledgeCutoff: "December 2024",
       capabilities: {
         reasoning: false,
         multimodal: false,
@@ -104,6 +108,7 @@ export class XAIProvider extends BaseProvider {
       name: "Grok 3 Mini Fast",
       provider: "xAI",
       model: "grok-3-mini-fast",
+      knowledgeCutoff: "October 2023",
       capabilities: {
         reasoning: false,
         multimodal: false,

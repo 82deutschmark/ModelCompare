@@ -127,7 +127,18 @@ export function ModelSelector({ models, selectedModels, onSelectionChange }: Mod
                   htmlFor={model.id}
                   className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer flex-1 leading-tight"
                 >
-                  {model.name}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{model.name}</span>
+                    <div className="text-xs text-gray-500 dark:text-gray-500 space-y-0.5">
+                      <div>Knowledge: {model.knowledgeCutoff}</div>
+                      <div>
+                        ${model.pricing.inputPerMillion}/M in • ${model.pricing.outputPerMillion}/M out
+                        {model.pricing.reasoningPerMillion && (
+                          <span> • ${model.pricing.reasoningPerMillion}/M reasoning</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </label>
               </div>
             ))}

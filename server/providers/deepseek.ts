@@ -24,6 +24,7 @@ export class DeepSeekProvider extends BaseProvider {
       name: "DeepSeek R1 Reasoner",
       provider: "DeepSeek",
       model: "deepseek-reasoner",
+      knowledgeCutoff: "July 2024",
       capabilities: {
         reasoning: true, // Full chain-of-thought reasoning available
         multimodal: false,
@@ -45,6 +46,7 @@ export class DeepSeekProvider extends BaseProvider {
       name: "DeepSeek V3 Chat",
       provider: "DeepSeek",
       model: "deepseek-chat",
+      knowledgeCutoff: "June 2024",
       capabilities: {
         reasoning: false,
         multimodal: false,

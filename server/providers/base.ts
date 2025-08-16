@@ -11,6 +11,7 @@ export interface ModelConfig {
   name: string;
   provider: string;
   model: string;
+  knowledgeCutoff: string;
   capabilities: {
     reasoning: boolean;
     multimodal: boolean;
