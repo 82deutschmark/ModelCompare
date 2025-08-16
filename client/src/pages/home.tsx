@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Brain, Zap, Settings, BookOpen } from "lucide-react";
+import { MessageSquare, Brain, Zap, Settings, BookOpen, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { ResponseCard } from "@/components/ResponseCard";
 import { AppNavigation } from "@/components/AppNavigation";
