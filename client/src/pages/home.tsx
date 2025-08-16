@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Brain, Zap, Settings, BookOpen } from "lucide-react";
+import { MessageSquare, Brain, Zap, Settings, BookOpen, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { ResponseCard } from "@/components/ResponseCard";
 import { AppNavigation } from "@/components/AppNavigation";
@@ -59,6 +59,7 @@ export default function Home() {
   const [completedModels, setCompletedModels] = useState<Set<string>>(new Set());
   const [streamResponses, setStreamResponses] = useState(false);
   const [showTiming, setShowTiming] = useState(true);
+  const [showPromptPreview, setShowPromptPreview] = useState(false);
 
   // Fetch available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -396,6 +397,15 @@ export default function Home() {
                   </div>
                   
                   <div className="flex items-center space-x-2">
+                    <Button
+                      onClick={() => setShowPromptPreview(!showPromptPreview)}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      {showPromptPreview ? 'Hide' : 'Show'} Raw Prompt
+                    </Button>
                     <ExportButton
                       prompt={prompt}
                       models={selectedModelData}
@@ -424,6 +434,28 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Raw Prompt Preview */}
+            {showPromptPreview && (
+              <Card className="mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center space-x-2 text-sm">
+                    <BookOpen className="w-4 h-4" />
+                    <span>Raw Prompt Preview</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 border">
+                    <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+                      {prompt || 'No prompt entered'}
+                    </pre>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    This is the exact prompt that will be sent to all selected AI models.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Results Grid */}
             {selectedModelData.length === 0 ? (
