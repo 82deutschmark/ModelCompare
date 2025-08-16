@@ -341,7 +341,7 @@ export default function CreativeCombat() {
     if (editorialPasses.length === 0) return;
 
     const exportData: ExportData = {
-      prompt: userPrompt || 'Creative Combat Session',
+      prompt: customPrompt || 'Creative Combat Session',
       timestamp: new Date(),
       models: editorialPasses.map(pass => ({
         model: {
@@ -361,7 +361,7 @@ export default function CreativeCombat() {
     };
 
     const markdown = generateMarkdownExport(exportData);
-    const filename = generateSafeFilename(`creative-combat-${userPrompt}`, 'md');
+    const filename = generateSafeFilename(`creative-combat-${customPrompt}`, 'md');
     downloadFile(markdown, filename, 'text/markdown');
     
     toast({
@@ -374,7 +374,7 @@ export default function CreativeCombat() {
     if (editorialPasses.length === 0) return;
 
     const exportData: ExportData = {
-      prompt: userPrompt || 'Creative Combat Session',
+      prompt: customPrompt || 'Creative Combat Session',
       timestamp: new Date(),
       models: editorialPasses.map(pass => ({
         model: {
