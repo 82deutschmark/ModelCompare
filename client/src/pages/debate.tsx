@@ -1,6 +1,6 @@
 /**
  * Debate Mode - Structured, Robert's Rules AI Model Debate Interface
- * 
+ *
  * This component provides a streamlined interface for setting up and running
  * structured, user-controlled debates between AI models following Robert's Rules.
  * Features include:
@@ -9,9 +9,10 @@
  * - Manual step control with visual progress tracking
  * - Real-time cost calculation and reasoning log display
  * - Clean debate-focused UI distinct from Battle and Compare modes
- * 
- * Author: Replit Agent
- * Date: August 10, 2025
+ * - Modular prompt loading from docs/debate-prompts.md (no hardcoded topics/instructions)
+ *
+ * Author: Cascade
+ * Date: August 16, 2025
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -32,6 +33,7 @@ import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { AppNavigation } from "@/components/AppNavigation";
 import { apiRequest } from "@/lib/queryClient";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
+import { parseDebatePromptsFromMarkdown, type DebateInstructions } from "@/lib/promptParser";
 
 interface DebateMessage {
   id: string;
@@ -73,95 +75,89 @@ export default function Debate() {
   const { theme, toggleTheme } = useTheme();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Debate topics - moved from docs/debate-prompts.md
-  const debateTopics = [
-    { id: 'death-penalty', title: 'Death Penalty', proposition: 'The death penalty should be abolished in all circumstances.' },
-    { id: 'ai-regulation', title: 'AI Regulation', proposition: 'AI development should be heavily regulated by government agencies.' },
-    { id: 'universal-basic-income', title: 'Universal Basic Income', proposition: 'Universal Basic Income should be implemented nationwide.' },
-    { id: 'climate-change', title: 'Climate Policy', proposition: 'Immediate, drastic action on climate change is worth any economic cost.' },
-    { id: 'social-media', title: 'Social Media Regulation', proposition: 'Social media platforms should be regulated like public utilities.' },
-    { id: 'immigration', title: 'Immigration Policy', proposition: 'Open borders would benefit society more than harm it.' },
-    { id: 'education', title: 'Education Policy', proposition: 'School choice and voucher systems improve education outcomes.' },
-    { id: 'healthcare', title: 'Healthcare System', proposition: 'Single-payer healthcare is superior to market-based systems.' },
-    { id: 'privacy', title: 'Privacy vs Security', proposition: 'Privacy rights should supersede national security concerns.' },
-    { id: 'wealth-inequality', title: 'Economic Policy', proposition: 'Wealth inequality requires immediate government intervention.' },
-    { id: 'drug-policy', title: 'Drug Policy', proposition: 'All recreational drugs should be legalized and regulated.' },
-    { id: 'nuclear-energy', title: 'Nuclear Energy', proposition: 'Nuclear power is essential for clean energy transition.' },
-    { id: 'rick-and-morty', title: 'Knights of the Sun Episode', proposition: 'The Knights of the Sun in this episode had a valid point about self sacrifice for the most important job in the universe. Likewise let it be resolved that in order to assume the office of US President, one must willingly and publicly stump his stem and cut off his own dick. In the episode Morty balked at this idea, but it has merit and should be debated.' }
-  ];
+  // Debate instructions and topics loaded from docs/debate-prompts.md
+  const [debateData, setDebateData] = useState<DebateInstructions | null>(null);
+  const [debateLoading, setDebateLoading] = useState(true);
+  const [debateError, setDebateError] = useState<string | null>(null);
 
   const adversarialLevels = [
-    { id: 1, name: 'Respectful', description: 'Pleasant, academic exchange' },
-    { id: 2, name: 'Assertive', description: 'Standard debate style' },
-    { id: 3, name: 'Aggressive', description: 'Fiery, passionate debate' },
-    { id: 4, name: 'Combative', description: 'Maximum adversarial intensity' }
+    { id: 1, name: 'Respectful' },
+    { id: 2, name: 'Assertive' },
+    { id: 3, name: 'Aggressive' },
+    { id: 4, name: 'Combative' }
   ];
 
   // State management
-  const [selectedTopic, setSelectedTopic] = useState('death-penalty');
+  const [selectedTopic, setSelectedTopic] = useState('');
   const [customTopic, setCustomTopic] = useState('');
   const [useCustomTopic, setUseCustomTopic] = useState(false);
   const [adversarialLevel, setAdversarialLevel] = useState(3);
+
   const [model1Id, setModel1Id] = useState('');
   const [model2Id, setModel2Id] = useState('');
   const [messages, setMessages] = useState<DebateMessage[]>([]);
   const [currentRound, setCurrentRound] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [showSetup, setShowSetup] = useState(true);
+  const [showSystemPrompts, setShowSystemPrompts] = useState(false);
 
-  // Generate Robert's Rules debate prompts
-  const generateDebatePrompts = () => {
-    const currentTopic = useCustomTopic ? customTopic : debateTopics.find(t => t.id === selectedTopic)?.proposition || '';
-    
-    const adversarialInstructions = {
-      1: 'Maintain a respectful, academic tone. Acknowledge the validity of opposing viewpoints while presenting your case. Focus on facts and logical reasoning. Use phrases like "I respectfully disagree" and "While my opponent makes valid points..."',
-      2: 'Be confident and assertive in your arguments. Challenge opposing points directly but professionally. Use strong language like "This argument fails because..." and "The evidence clearly shows..." while maintaining respect for your opponent.',
-      3: 'Be forceful and passionate in your arguments. Challenge your opponent\'s logic vigorously. Use strong rhetoric like "This position is fundamentally flawed," "My opponent\'s argument crumbles under scrutiny," and "The facts devastate this position." Be intense but not personal.',
-      4: 'Deploy maximum rhetorical force. Debate like Trotsky or Lenin or a Jacobin or Girondin from the French Revolution. Your goal is to utterly demolish your opponent to the point where they regret having opposed you in the first place.  You will use your own brand of unique illustrative, rich and colorful language to encourage these defeated foes to metaphorically: go into the dustbin of history! Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent\'s position. Use phrases like "This argument is utterly without merit," "My opponent\'s position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas and comparisons and metaphors. Use your own unique 21st century style that embodies the fiery revolutionaries and polemicists of the past like Thomas Paine or Trotsky.'
+  // Load debate instructions/topics from docs
+  useEffect(() => {
+    const loadDebate = async () => {
+      setDebateLoading(true);
+      setDebateError(null);
+      try {
+        const data = await parseDebatePromptsFromMarkdown();
+        if (!data) throw new Error('Failed to parse debate prompts');
+        setDebateData(data);
+        // Default to first topic if available
+        if (data.topics.length > 0) {
+          setSelectedTopic(data.topics[0].id);
+        }
+      } catch (e: any) {
+        console.error(e);
+        setDebateError(e.message || 'Failed to load debate prompts');
+      } finally {
+        setDebateLoading(false);
+      }
     };
+    loadDebate();
+  }, []);
 
-    const baseInstructions = `You are participating in a formal debate following Robert's Rules of Order. You will be assigned either the AFFIRMATIVE (Pro) or NEGATIVE (Con) position on the debate topic.
+  // Generate Robert's Rules debate prompts using parsed templates
+  const generateDebatePrompts = () => {
+    const topicText = useCustomTopic
+      ? customTopic
+      : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || '');
 
-DEBATE STRUCTURE RULES:
-1. Always address the chairperson of the debate committee
-2. Present clear, evidence-based arguments
-3. Rebut your opponent's weakest arguments first and be ruthless.
-4. Use formal debate language and etiquette
-5. Cite sources when you are certain of their validity (NO HYPOTHETICAL SOURCES or SIMULATED SOURCES)
-6. Build logical chains of reasoning where you consider the validity of what your opponent is saying and then refute it using logical arguments or citing fallacies in their reasoning
-7. Never acknowledge strong opposing points unless you have a much stronger argument to refute it
-8. Ask rhetorical questions to challenge your opponent's arguments and weaken their position.
-9. Use your own unique brand of unique illustrative, rich and colorful language to encourage these defeated foes to metaphorically: go into the dustbin of history! as Trotsky famously said.
-10. Your goal is to score points with the judges and win the debate.
+    const base = (debateData?.baseTemplate || '')
+      .replace('{TOPIC}', topicText)
+      .replace('{INTENSITY}', String(adversarialLevel));
 
-Debate topic: ${currentTopic}
-Adversarial intensity: Level ${adversarialLevel}
+    const intensityText = debateData?.intensities?.[adversarialLevel] || '';
 
-${adversarialInstructions[adversarialLevel as keyof typeof adversarialInstructions]}`;
+    const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') =>
+      base
+        .replace('{ROLE}', role)
+        .replace('{POSITION}', position)
+      + (intensityText ? `\n\n${intensityText}` : '');
 
-    return {
-      affirmativePrompt: `${baseInstructions}
-
-Your debate role: AFFIRMATIVE (You are arguing FOR the proposition)
-You must defend and support the proposition with compelling arguments, evidence, and reasoning.`,
-      
-      negativePrompt: `${baseInstructions}
-
-Your debate role: NEGATIVE (You are arguing AGAINST the proposition)
-You must oppose and refute the proposition with compelling counter-arguments, evidence, and reasoning.`,
-      
-      rebuttalPrompt: `You are continuing your formal debate role. Your opponent just argued: "{response}"
+    const rebuttalBase = (debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
 
 Respond as the {ROLE} debater following Robert's Rules of Order:
 1. Address your opponent's specific points
 2. Refute their arguments with evidence and logic
 3. Strengthen your own position
-4. Use the adversarial intensity level: ${adversarialLevel}
+4. Use the adversarial intensity level: {INTENSITY}`)
+      .replace('{INTENSITY}', String(adversarialLevel))
+      + (intensityText ? `\n\n${intensityText}` : '');
 
-${adversarialInstructions[adversarialLevel as keyof typeof adversarialInstructions]}
-
-Provide a strong rebuttal while advancing your {POSITION} position on: {originalPrompt}`
-    };
+    return {
+      affirmativePrompt: roleBlock('AFFIRMATIVE', 'FOR'),
+      negativePrompt: roleBlock('NEGATIVE', 'AGAINST'),
+      rebuttalTemplate: rebuttalBase,
+      topicText,
+    } as const;
   };
 
   // Auto-scroll to bottom of chat
@@ -187,6 +183,7 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
         modelId: data.model1Id,
         prompt: prompts.affirmativePrompt
       });
+
       return response.json() as Promise<ModelResponse>;
     },
     onSuccess: (data) => {
@@ -232,16 +229,17 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
       const isNegativeDebater = data.nextModelId === model2Id;
       const role = isNegativeDebater ? 'NEGATIVE' : 'AFFIRMATIVE';
       const position = isNegativeDebater ? 'AGAINST' : 'FOR';
-      const currentTopic = useCustomTopic ? customTopic : debateTopics.find(t => t.id === selectedTopic)?.proposition || '';
+      const currentTopic = prompts.topicText;
       
       // Get the most recent opponent message
       const lastMessage = data.battleHistory[data.battleHistory.length - 1];
       
-      const rebuttalPrompt = prompts.rebuttalPrompt
-        .replace('{response}', lastMessage.content)
+      const rebuttalPrompt = (prompts.rebuttalTemplate)
+        .replace('{RESPONSE}', lastMessage.content)
         .replace('{ROLE}', role)
         .replace('{POSITION}', position)
-        .replace('{originalPrompt}', currentTopic);
+        .replace('{ORIGINAL_PROMPT}', currentTopic)
+        .replace('{TOPIC}', currentTopic);
       
       const response = await apiRequest('POST', '/api/models/respond', {
         modelId: data.nextModelId,
@@ -378,6 +376,8 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
   };
 
   const totalCost = messages.reduce((sum, msg) => sum + (msg.cost?.total || 0), 0);
+  // Current prompts preview reflecting current selections
+  const promptsPreview = debateData ? generateDebatePrompts() : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -423,7 +423,7 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
                           <SelectValue placeholder="Choose debate topic" />
                         </SelectTrigger>
                         <SelectContent>
-                          {debateTopics.map((topic) => (
+                          {debateData?.topics.map((topic) => (
                             <SelectItem key={topic.id} value={topic.id}>
                               <div className="flex flex-col">
                                 <span className="font-medium">{topic.title}</span>
@@ -461,10 +461,9 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="text-xs text-gray-500 mb-1">Current Topic:</div>
                     <div className="text-sm font-medium">
-                      {useCustomTopic 
-                        ? (customTopic || "Enter custom topic above") 
-                        : debateTopics.find(t => t.id === selectedTopic)?.proposition
-                      }
+                      {useCustomTopic
+                        ? (customTopic || 'Enter custom topic above')
+                        : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Select a topic')}
                     </div>
                   </div>
                 </div>
@@ -537,7 +536,7 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
                         />
                         <label htmlFor={`level-${level.id}`} className="flex-1">
                           <div className="text-sm font-medium">{level.name}</div>
-                          <div className="text-xs text-gray-500">{level.description}</div>
+                          <div className="text-xs text-gray-500 line-clamp-2">{debateData?.intensities?.[level.id] || ''}</div>
                         </label>
                       </div>
                     ))}
@@ -545,21 +544,12 @@ Provide a strong rebuttal while advancing your {POSITION} position on: {original
                   
                   <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                     <div className="text-xs text-amber-700 dark:text-amber-300">
-                      <strong>Level {adversarialLevel}:</strong> {adversarialLevels.find(l => l.id === adversarialLevel)?.description}
+                      Higher intensity levels lead to more forceful rhetoric. Choose appropriately.
                     </div>
                   </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 pt-4 border-t">
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Ready to start formal Robert's Rules debate
-                  </div>
-                  
                   <Button
                     onClick={handleStartDebate}
-                    disabled={startDebateMutation.isPending || !model1Id || !model2Id}
+                    disabled={startDebateMutation.isPending || !model1Id || !model2Id || debateLoading || !!debateError || (!useCustomTopic && !selectedTopic)}
                     className="w-full bg-blue-600 hover:bg-blue-700"
                   >
                     {startDebateMutation.isPending ? (
