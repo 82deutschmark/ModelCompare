@@ -106,8 +106,9 @@ export default function BattleChat() {
   // Battle prompt template state
   const [battlePromptCategories, setBattlePromptCategories] = useState<BattlePromptCategory[]>([]);
   const [promptsLoading, setPromptsLoading] = useState(true);
-  const [selectedPromptCategory, setSelectedPromptCategory] = useState<string>('');
-  const [selectedPromptId, setSelectedPromptId] = useState<string>('');
+  const [selectedPromptTemplate, setSelectedPromptTemplate] = useState<string>('');
+  const [useCustomPrompt, setUseCustomPrompt] = useState(false);
+  const [showPromptPreview, setShowPromptPreview] = useState(false);
   const [currentBattlePrompt, setCurrentBattlePrompt] = useState<BattlePromptPair | null>(null);
 
   // Dynamic model seats (unlimited) - starts with one empty seat
