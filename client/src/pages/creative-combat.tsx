@@ -336,6 +336,80 @@ export default function CreativeCombat() {
     };
   };
 
+  // Export handlers
+  const handleExportMarkdown = () => {
+    if (editorialPasses.length === 0) return;
+
+    const exportData: ExportData = {
+      prompt: userPrompt || 'Creative Combat Session',
+      timestamp: new Date(),
+      models: editorialPasses.map(pass => ({
+        model: {
+          id: pass.modelId,
+          name: pass.modelName,
+          provider: 'AI Model',
+        } as AIModel,
+        response: {
+          status: 'success' as const,
+          content: pass.content,
+          reasoning: pass.reasoning,
+          responseTime: pass.responseTime,
+          tokenUsage: pass.tokenUsage,
+          cost: pass.cost,
+        }
+      }))
+    };
+
+    const markdown = generateMarkdownExport(exportData);
+    const filename = generateSafeFilename(`creative-combat-${userPrompt}`, 'md');
+    downloadFile(markdown, filename, 'text/markdown');
+    
+    toast({
+      title: "Creative Combat Exported",
+      description: "Downloaded as markdown file",
+    });
+  };
+
+  const handleCopyToClipboard = async () => {
+    if (editorialPasses.length === 0) return;
+
+    const exportData: ExportData = {
+      prompt: userPrompt || 'Creative Combat Session',
+      timestamp: new Date(),
+      models: editorialPasses.map(pass => ({
+        model: {
+          id: pass.modelId,
+          name: pass.modelName,
+          provider: 'AI Model',
+        } as AIModel,
+        response: {
+          status: 'success' as const,
+          content: pass.content,
+          reasoning: pass.reasoning,
+          responseTime: pass.responseTime,
+          tokenUsage: pass.tokenUsage,
+          cost: pass.cost,
+        }
+      }))
+    };
+
+    const markdown = generateMarkdownExport(exportData);
+    const success = await copyToClipboard(markdown);
+    
+    if (success) {
+      toast({
+        title: "Copied to Clipboard",
+        description: "Creative combat session exported as markdown",
+      });
+    } else {
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
   /**
    * FUNCTION: Toggle Model Selection
    * 
