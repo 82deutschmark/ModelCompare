@@ -209,6 +209,7 @@ export class OpenAIProvider extends BaseProvider {
           content: (response as any).output_text || "No response generated",
           reasoning: reasoning ?? undefined,
           responseTime: Date.now() - startTime,
+          systemPrompt: prompt, // Include the actual prompt sent to the model
           tokenUsage: undefined, // Responses API doesn't provide usage
           cost: undefined, // Cannot calculate without token usage
           modelConfig: modelConfig ? {
@@ -236,16 +237,19 @@ export class OpenAIProvider extends BaseProvider {
 
     const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
 
+    const actualContent = chatResponse.choices[0]?.message?.content || "No response generated";
+    
     return {
-      content: chatResponse.choices[0].message.content || "No response generated",
-      reasoning: reasoning ?? undefined,
+      content: actualContent,
+      reasoning: reasoning || undefined,
       responseTime: Date.now() - startTime,
-      tokenUsage: tokenUsage,
-      cost: cost,
-      modelConfig: modelConfig ? {
-        capabilities: modelConfig.capabilities,
-        pricing: modelConfig.pricing,
-      } : undefined,
+      systemPrompt: prompt, // Include the actual prompt sent to the model
+      tokenUsage,
+      cost,
+      modelConfig: {
+        capabilities: modelConfig!.capabilities,
+        pricing: modelConfig!.pricing
+      }
     };
   }
 }

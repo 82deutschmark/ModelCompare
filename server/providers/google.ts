@@ -112,15 +112,16 @@ export class GoogleProvider extends BaseProvider {
     const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
 
     return {
-      content: response.text || "No response generated",
-      reasoning: undefined, // Gemini thinking is abstracted, full logs not directly accessible via API
+      content: response.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated',
+      reasoning: undefined, // Google doesn't provide reasoning logs yet
       responseTime: Date.now() - startTime,
-      tokenUsage: tokenUsage,
-      cost: cost,
-      modelConfig: modelConfig ? {
-        capabilities: modelConfig.capabilities,
-        pricing: modelConfig.pricing,
-      } : undefined,
+      systemPrompt: prompt, // Include the actual prompt sent to the model
+      tokenUsage,
+      cost,
+      modelConfig: {
+        capabilities: modelConfig!.capabilities,
+        pricing: modelConfig!.pricing
+      }
     };
   }
 }

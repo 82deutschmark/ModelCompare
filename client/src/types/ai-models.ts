@@ -45,6 +45,7 @@ export interface ModelResponse {
   responseTime: number;
   error?: string;
   reasoning?: string;
+  systemPrompt?: string;
   tokenUsage?: {
     input: number;
     output: number;

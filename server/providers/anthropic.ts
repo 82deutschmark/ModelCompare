@@ -158,15 +158,16 @@ ${prompt}`;
     const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
 
     return {
-      content: cleanedContent,
-      reasoning: reasoning ?? undefined,
+      content: (message.content[0]?.type === 'text' ? message.content[0].text : 'No response generated'),
+      reasoning: undefined, // Anthropic doesn't provide reasoning logs yet
       responseTime: Date.now() - startTime,
-      tokenUsage: tokenUsage,
-      cost: cost,
-      modelConfig: modelConfig ? {
-        capabilities: modelConfig.capabilities,
-        pricing: modelConfig.pricing,
-      } : undefined,
+      systemPrompt: prompt, // Include the actual prompt sent to the model
+      tokenUsage,
+      cost,
+      modelConfig: {
+        capabilities: modelConfig!.capabilities,
+        pricing: modelConfig!.pricing
+      }
     };
   }
 }
