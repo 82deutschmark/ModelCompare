@@ -43,13 +43,20 @@ import {
   Play, Plus, Loader2, Brain, GitCompare, Edit3, FileEdit,
   Mic, Feather, Music, FileText, Code, BookOpen, 
   Clock, Timer, Users, Settings, ArrowRight, CheckCircle,
-  Sword, MessageSquare, Palette, Copy
+  Sword, MessageSquare, Palette, Copy, Download
 } from "lucide-react";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 import { MessageCard } from "@/components/MessageCard";
 import type { MessageCardData } from "@/components/MessageCard";
 import { AppNavigation } from "@/components/AppNavigation";
 import { parsePromptsFromMarkdown, type PromptCategory, type PromptTemplate, findPromptTemplate } from "@/lib/promptParser";
+import { 
+  generateMarkdownExport, 
+  downloadFile, 
+  generateSafeFilename, 
+  copyToClipboard, 
+  type ExportData 
+} from "@/lib/exportUtils";
 
 /**
  * Creative Category Icons Mapping
@@ -916,10 +923,21 @@ Take this creative work and elevate it to an even higher level. Improve upon ima
                       variant="outline"
                       size="sm"
                       className="px-2 py-1"
-                      onClick={() => navigator.clipboard.writeText(latestPass.content)}
+                      onClick={handleExportMarkdown}
+                      disabled={editorialPasses.length === 0}
+                    >
+                      <Download className="w-3 h-3 mr-1" />
+                      <span className="text-xs">Export</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="px-2 py-1"
+                      onClick={handleCopyToClipboard}
+                      disabled={editorialPasses.length === 0}
                     >
                       <Copy className="w-3 h-3 mr-1" />
-                      <span className="text-xs">Copy</span>
+                      <span className="text-xs">Copy All</span>
                     </Button>
                     {editorialPasses.length > 1 && (
                       <Button
