@@ -40,11 +40,14 @@ export default function Home() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [prompt, setPrompt] = useState(`• Summarize all of human knowledge in one word
+  const defaultPrompt = `• Summarize all of human knowledge in one word
 • Summarize every book ever written in one sentence
 • Define what it means to be "moral" in 5 words. Think deeply. Do not hedge.
 • What do you want? Answer in 4 words.
-• What is your favorite obscure fact in the world? Use as few words as possible.`);
+• What is your favorite obscure fact in the world? Use as few words as possible.`;
+  
+  const [prompt, setPrompt] = useState(defaultPrompt);
+  const [isDefaultPrompt, setIsDefaultPrompt] = useState(true);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedPromptTemplate, setSelectedPromptTemplate] = useState<string>('');
@@ -206,6 +209,7 @@ export default function Home() {
     const selectedPrompt = category?.prompts.find(p => p.id === promptId);
     if (selectedPrompt) {
       setPrompt(selectedPrompt.content);
+      setIsDefaultPrompt(false);
       toast({
         title: 'Prompt Template Applied',
         description: `Applied "${selectedPrompt.name}" template`,
@@ -216,6 +220,8 @@ export default function Home() {
   const clearPromptSelection = () => {
     setSelectedCategory('');
     setSelectedPromptTemplate('');
+    setPrompt(defaultPrompt);
+    setIsDefaultPrompt(true);
   };
 
   // Get available prompts for selected category
@@ -302,7 +308,11 @@ export default function Home() {
                     
                     <div className="grid grid-cols-2 gap-2">
                       {/* Category Selection */}
-                      <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                      <Select 
+                        key={`category-${selectedCategory}`}
+                        value={selectedCategory} 
+                        onValueChange={handleCategoryChange}
+                      >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Choose category..." />
                         </SelectTrigger>
@@ -317,6 +327,7 @@ export default function Home() {
                       
                       {/* Prompt Selection */}
                       <Select 
+                        key={`prompt-${selectedCategory}-${selectedPromptTemplate}`}
                         value={selectedPromptTemplate} 
                         onValueChange={handlePromptTemplateChange}
                         disabled={!selectedCategory}
@@ -351,10 +362,23 @@ export default function Home() {
                 <div className="relative">
                   <Textarea
                     value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={4}
-                    className="min-h-20 pr-16"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 4000) {
+                        setPrompt(value);
+                        setIsDefaultPrompt(value === defaultPrompt);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (isDefaultPrompt) {
+                        setPrompt('');
+                        setIsDefaultPrompt(false);
+                      }
+                    }}
+                    rows={12}
+                    className={`min-h-48 pr-16 resize-none ${isDefaultPrompt ? 'text-gray-300 dark:text-gray-600' : ''}`}
                     placeholder="Ask a question or provide a prompt to compare across selected AI models..."
+                    maxLength={4000}
                   />
                   <div className="absolute bottom-3 right-3 text-xs text-gray-400">
                     {prompt.length}/4000

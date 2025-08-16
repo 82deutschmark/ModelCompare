@@ -21,6 +21,7 @@ export class GoogleProvider extends BaseProvider {
       name: "Gemini 2.5 Pro",
       provider: "Google",
       model: "gemini-2.5-pro",
+      knowledgeCutoff: "Early 2023",
       capabilities: {
         reasoning: true, // Thinking enabled by default
         multimodal: true,
@@ -41,6 +42,7 @@ export class GoogleProvider extends BaseProvider {
       name: "Gemini 2.5 Flash",
       provider: "Google",
       model: "gemini-2.5-flash",
+      knowledgeCutoff: "Early 2023",
       capabilities: {
         reasoning: true, // Configurable thinking
         multimodal: true,
@@ -62,6 +64,7 @@ export class GoogleProvider extends BaseProvider {
       name: "Gemini 2.0 Flash",
       provider: "Google",
       model: "gemini-2.0-flash",
+      knowledgeCutoff: "September 2021",
       capabilities: {
         reasoning: false,
         multimodal: true,

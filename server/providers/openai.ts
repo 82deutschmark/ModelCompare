@@ -23,6 +23,7 @@ export class OpenAIProvider extends BaseProvider {
       name: "GPT-5",
       provider: "OpenAI",
       model: "gpt-5-2025-08-07",
+      knowledgeCutoff: "October 2024",
       capabilities: {
         reasoning: true, // Reasoning token support
         multimodal: true,
@@ -43,6 +44,7 @@ export class OpenAIProvider extends BaseProvider {
       name: "GPT-4.1 Nano",
       provider: "OpenAI",
       model: "gpt-4.1-nano-2025-04-14",
+      knowledgeCutoff: "October 2023",
       capabilities: {
         reasoning: false,
         multimodal: true,
@@ -63,6 +65,7 @@ export class OpenAIProvider extends BaseProvider {
       name: "GPT-4.1 Mini",
       provider: "OpenAI",
       model: "gpt-4.1-mini-2025-04-14",
+      knowledgeCutoff: "June 2024",
       capabilities: {
         reasoning: false,
         multimodal: true,
@@ -83,6 +86,7 @@ export class OpenAIProvider extends BaseProvider {
       name: "GPT-4o Mini",
       provider: "OpenAI",
       model: "gpt-4o-mini-2024-07-18",
+      knowledgeCutoff: "October 2023",
       capabilities: {
         reasoning: false,
         multimodal: true,
@@ -103,6 +107,7 @@ export class OpenAIProvider extends BaseProvider {
       name: "OpenAI o4 Mini",
       provider: "OpenAI",
       model: "o4-mini-2025-04-16",
+      knowledgeCutoff: "June 2024",
       capabilities: {
         reasoning: true, // Exposed reasoning logs via Responses API
         multimodal: false,
@@ -123,6 +128,7 @@ export class OpenAIProvider extends BaseProvider {
       name: "OpenAI o3",
       provider: "OpenAI",
       model: "o3-2025-04-16",
+      knowledgeCutoff: "June 2024",
       capabilities: {
         reasoning: true, // Exposed reasoning logs via Responses API
         multimodal: false,
@@ -143,6 +149,7 @@ export class OpenAIProvider extends BaseProvider {
       name: "GPT-4.1",
       provider: "OpenAI",
       model: "gpt-4.1-2025-04-14",
+      knowledgeCutoff: "June 2024",
       capabilities: {
         reasoning: false,
         multimodal: true,
@@ -177,7 +184,7 @@ export class OpenAIProvider extends BaseProvider {
           model: model,
           input: [{ role: "user", content: prompt }],
           reasoning: {
-            effort: "medium",
+            effort: "high",
             summary: "detailed"
           }
         });
