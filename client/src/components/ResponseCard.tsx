@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Copy, Clock, AlertTriangle, CheckCircle, RotateCcw, Brain, ChevronDown, ChevronUp } from "lucide-react";
+import { Copy, Clock, AlertTriangle, CheckCircle, RotateCcw, Brain, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
@@ -32,12 +32,14 @@ interface ResponseCardProps {
   response?: ModelResponse;
   onRetry?: () => void;
   showTiming?: boolean;
+  systemPrompt?: string;
 }
 
-export function ResponseCard({ model, response, onRetry, showTiming }: ResponseCardProps) {
+export function ResponseCard({ model, response, onRetry, showTiming, systemPrompt }: ResponseCardProps) {
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
   const [showReasoning, setShowReasoning] = useState(false);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
 
   const copyToClipboard = async () => {
     if (!response?.content) return;
@@ -157,6 +159,24 @@ export function ResponseCard({ model, response, onRetry, showTiming }: ResponseC
                 {response.content}
               </div>
             </div>
+
+            {/* System Prompt (if available) */}
+            {systemPrompt && (
+              <Collapsible open={showSystemPrompt} onOpenChange={setShowSystemPrompt}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start px-1 py-1 h-6">
+                    <FileText className="w-3 h-3 mr-1" />
+                    <span className="text-xs">System Prompt</span>
+                    {showSystemPrompt ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                  <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    {systemPrompt}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             {/* Reasoning Logs (if available) */}
             {response.reasoning && (
