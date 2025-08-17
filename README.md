@@ -147,9 +147,10 @@ The `IStorage` interface in `server/storage.ts` provides:
 - Export and raw prompt preview functionality
 
 **Battle Chat Mode** (`/battle`)
-- Interactive chat-style model comparison
-- Turn-based conversation analysis
-- Challenger prompts and response evaluation
+- Interactive chat-style model comparison with unlimited model seats
+- Turn-based conversation analysis with proper prompt memory persistence
+- PersonX/Challenger prompt template system for dynamic rebuttals
+- Challenger prompts automatically receive previous responses and original prompts
 
 **Debate Mode** (`/debate`)
 - Structured 10-round AI debates between models
