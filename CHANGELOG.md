@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - **Railway Deployment CSS:** Resolved an issue where CSS styles were missing in the production deployment on Railway. The root cause was that `tailwind.config.ts`, `postcss.config.js`, and `components.json` were not being copied into the Docker build context. The `Dockerfile` has been updated to include these files, ensuring Tailwind CSS is processed correctly during the build
 - **Prompt Variable Substitution:** Fixed template variable replacement in debate.tsx ensuring dynamic values (topics, intensity levels, roles) are properly substituted in debate prompts
 - **Missing Prompt Files:** Copied battle-prompts.md and creative-combat-prompts.md to client/public/docs/ directory to ensure all pages can load their respective prompt templates
+- **Battle Page Prompt Parser:** Fixed prompt template pairing issues in battle-prompts.md where "Battle Rap" and "HLE Questions" prompts were missing proper PersonX/Challenger naming conventions, preventing the parser from correctly saving previous prompts in memory and passing them to challenger responses
 
 ### Changed
 - **Debate Model Selection:** Removed restriction preventing users from selecting the same model for both debate sides, allowing for self-debate scenarios
