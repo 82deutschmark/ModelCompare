@@ -9,8 +9,27 @@ A sophisticated web application for comparing responses from multiple AI models 
 - **Backend**: Express.js + TypeScript with ES modules
 - **Database**: PostgreSQL with Drizzle ORM (with in-memory fallback)
 - **Styling**: Tailwind CSS + shadcn/ui component library
-- **State Management**: TanStack Query for server state management
+- **State Management**: Zustand store with TanStack Query for server state
+- **Variable System**: Unified template engine with server-side resolution
 - **Routing**: Wouter for lightweight client-side routing
+
+### State Management Architecture
+
+**Variable Resolution System**
+- **Isomorphic Engine**: Shared template resolution between frontend preview and server execution
+- **Single Source of Truth**: Server performs authoritative variable substitution with audit logging
+- **Type-Safe Registry**: Mode-specific variable schemas with validation and auto-generated UI
+- **Migration Support**: Backward compatibility with alias mapping (e.g., `{RESPONSE}` → `{response}`)
+
+**Unified API Design**
+- **Single Endpoint**: `/api/generate` handles all modes (creative, battle, debate, compare)
+- **Streaming Support**: Real-time SSE events for token-by-token updates
+- **Legacy Compatibility**: Feature-flagged legacy routes during transition period
+
+**Store Architecture**
+- **Zustand Integration**: Optimized state management replacing useState patterns
+- **Derived State**: Computed values via selectors prevent drift and enable streaming
+- **Message-Centric**: UnifiedMessage format supports debates, tools, and streaming status
 
 ### Project Structure
 
@@ -180,26 +199,43 @@ The `IStorage` interface in `server/storage.ts` provides:
 
 ## Frontend Architecture
 
-### Component Hierarchy
+### Modular Component Architecture
+
+The application follows a strict modular component approach to ensure consistency and reusability across all modes:
+
+#### Core Reusable Components
+- **`AppNavigation`** - Unified navigation header with theme toggle
+- **`ModelButton`** - Enhanced model selection with provider colors, capabilities, and cost info
+- **`MessageCard`** - Universal message display for all modes (responses, reasoning, costs)
+- **`ExportButton`** - Standardized export functionality (markdown, clipboard)
+- **`ThemeProvider`** - Global dark/light mode management
+
+#### Component Hierarchy
 
 ```
 App (Theme Provider + Router)
+├── AppNavigation (consistent across all pages)
 ├── Home Page (Compare Mode)
-│   ├── ModelSelector (provider-grouped checkboxes)
-│   ├── PromptInput (with export & preview controls)
-│   └── ResponseGrid
-│       └── ResponseCard[] (individual model responses)
+│   ├── ModelButton[] (provider-grouped with quick actions)
+│   ├── PromptInput (template system integration)
+│   └── ResponseCard[] (individual model responses)
 ├── Battle Chat Page
-│   ├── ChatInterface (turn-based conversation)
-│   └── ResponseComparison (side-by-side analysis)
+│   ├── ModelButton[] (same selection UI)
+│   └── MessageCard[] (turn-based conversation display)
 ├── Debate Page
-│   ├── DebateSetup (model & topic selection)
-│   └── DebateInterface (structured argument display)
+│   ├── ModelButton[] (consistent model selection)
+│   └── MessageCard[] (structured debate display)
 ├── Creative Combat Page
-│   ├── EditorialSetup (model queue management)
-│   └── CreativeEvolution (version tracking display)
+│   ├── ModelButton[] (reused provider-grouped layout)
+│   └── MessageCard[] (creative pass evolution)
 └── ThemeProvider (light/dark mode support)
 ```
+
+#### Design Principles
+1. **Consistency**: All pages use the same `ModelButton` layout and `MessageCard` display
+2. **Reusability**: Components are designed to work across different modes
+3. **Type Safety**: Shared TypeScript interfaces ensure compatibility
+4. **No Duplication**: Custom UI is avoided in favor of existing components
 
 ### State Management Pattern
 

@@ -23,6 +23,9 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import { callModel, getAllModels, getReasoningModels } from "./providers/index.js";
 import { storage } from "./storage";
+import { VariableEngine } from "../shared/variable-engine.js";
+import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
+import type { GenerateRequest, GenerateResponse, UnifiedMessage } from "../shared/api-types.js";
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -268,6 +271,9 @@ Create an enhanced version that builds upon the original while showing masterful
   return categoryPrompts[type];
 }
 
+// Feature flags for legacy route deprecation
+const ENABLE_LEGACY_ROUTES = process.env.ENABLE_LEGACY_ROUTES !== 'false';
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get available models
@@ -381,8 +387,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Battle mode endpoints
-  app.post("/api/battle/start", async (req, res) => {
+  // Legacy Battle mode endpoints (deprecated - use /api/generate)
+  if (ENABLE_LEGACY_ROUTES) {
+    app.post("/api/battle/start", async (req, res) => {
     try {
       const { prompt, model1Id, model2Id } = req.body;
       
@@ -486,8 +493,10 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       res.status(500).json({ error: "Failed to continue battle" });
     }
   });
+  }
 
-  // Creative Combat mode endpoints
+  // Legacy Creative Combat mode endpoints (deprecated - use /api/generate)
+  if (ENABLE_LEGACY_ROUTES) {
   app.post("/api/creative-combat/respond", async (req, res) => {
     try {
       const { category, prompt, modelId, type, previousContent, originalPrompt } = req.body;
@@ -532,6 +541,175 @@ Continue the debate by responding to the last message. Be analytical, challenge 
     } catch (error) {
       console.error("Creative Combat error:", error);
       res.status(500).json({ error: "Failed to process creative combat request" });
+    }
+  });
+  }
+
+  // Unified Generate Endpoint - Single source of truth for all modes
+  app.post("/api/generate", async (req, res) => {
+    try {
+      const requestBody = req.body as GenerateRequest;
+      const { mode, template, variables, seats, options } = requestBody;
+      
+      // Validate mode
+      if (!['creative', 'battle', 'debate', 'compare'].includes(mode)) {
+        return res.status(400).json({ error: `Invalid mode: ${mode}` });
+      }
+
+      // Validate required fields
+      if (!template || !seats || seats.length === 0) {
+        return res.status(400).json({ error: "Missing required fields: template, seats" });
+      }
+
+      // Initialize variable engine with mode-specific aliases
+      const aliases = mode === 'debate' ? {
+        'TOPIC': 'topic',
+        'INTENSITY': 'intensity', 
+        'RESPONSE': 'response'
+      } : {};
+      
+      const variableEngine = new VariableEngine({ 
+        policy: 'error',
+        aliases 
+      });
+
+      // Validate variables against registry
+      const validation = validateVariables(mode as ModeType, variables);
+      if (!validation.isValid) {
+        return res.status(400).json({ 
+          error: "Variable validation failed", 
+          details: validation.errors 
+        });
+      }
+
+      // Server-side variable resolution with logging
+      let resolvedPrompt: string;
+      let variableMapping: Record<string, string>;
+      let warnings: string[];
+
+      try {
+        const resolution = variableEngine.renderFinal(template, variables);
+        resolvedPrompt = resolution.resolved;
+        variableMapping = resolution.mapping;
+        warnings = resolution.warnings;
+        
+        // Log variable resolution for audit
+        console.log(`[${mode.toUpperCase()}] Variable Resolution:`, {
+          template: template.substring(0, 100) + '...',
+          mapping: variableMapping,
+          warnings
+        });
+      } catch (error) {
+        return res.status(400).json({ 
+          error: "Variable resolution failed", 
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+
+      // Handle streaming vs non-streaming
+      if (options?.stream) {
+        // Set SSE headers
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Cache-Control'
+        });
+
+        // Process each seat for streaming
+        for (const seat of seats) {
+          const messageId = `msg_${Date.now()}_${seat.id}`;
+          const createdAt = new Date().toISOString();
+
+          // Send message start event
+          res.write(`data: ${JSON.stringify({
+            type: 'messageStart',
+            messageId,
+            seatId: seat.id,
+            createdAt,
+            resolvedPrompt
+          })}\n\n`);
+
+          try {
+            // Get streaming response from model
+            const result = await callModel(resolvedPrompt, seat.model.id);
+            
+            // Send delta events (simulated for now - real streaming would send incremental)
+            res.write(`data: ${JSON.stringify({
+              type: 'delta',
+              messageId,
+              text: result.content,
+              reasoning: result.reasoning
+            })}\n\n`);
+
+            // Send message end event
+            res.write(`data: ${JSON.stringify({
+              type: 'messageEnd',
+              messageId,
+              finishReason: 'stop',
+              tokenUsage: result.tokenUsage,
+              cost: result.cost,
+              resolvedPrompt,
+              modelConfig: result.modelConfig
+            })}\n\n`);
+            
+          } catch (error) {
+            // Send error event
+            res.write(`data: ${JSON.stringify({
+              type: 'error',
+              messageId,
+              code: 'MODEL_ERROR',
+              message: error instanceof Error ? error.message : 'Unknown error'
+            })}\n\n`);
+          }
+        }
+
+        res.end();
+      } else {
+        // Non-streaming response - process first seat only for now
+        const seat = seats[0];
+        const messageId = `msg_${Date.now()}_${seat.id}`;
+        
+        try {
+          const result = await callModel(resolvedPrompt, seat.model.id);
+          
+          const message: UnifiedMessage = {
+            id: messageId,
+            role: 'assistant',
+            seatId: seat.id,
+            content: result.content,
+            reasoning: result.reasoning,
+            createdAt: new Date().toISOString(),
+            status: 'complete',
+            finishReason: 'stop',
+            tokenUsage: result.tokenUsage,
+            cost: result.cost,
+            modelConfig: result.modelConfig
+          };
+
+          const response: GenerateResponse = {
+            message,
+            tokenUsage: result.tokenUsage,
+            cost: result.cost,
+            resolvedPrompt,
+            variableMapping,
+            warnings
+          };
+
+          res.json(response);
+        } catch (error) {
+          console.error("Generate endpoint error:", error);
+          res.status(500).json({ 
+            error: "Failed to generate response",
+            details: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error("Generate endpoint error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 

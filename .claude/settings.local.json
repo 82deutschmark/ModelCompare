@@ -10,7 +10,8 @@
       "Bash(npx tsc:*)",
       "Bash(taskkill:*)",
       "Bash(cmd /c taskkill:*)",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
