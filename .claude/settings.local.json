@@ -4,7 +4,13 @@
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
       "Bash(node:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c taskkill:*)",
+      "Bash(cmd /c:*)"
     ],
     "deny": [],
     "ask": []

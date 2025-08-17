@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Brain, Zap, Settings, BookOpen, ChevronDown, ChevronUp, Eye } from "lucide-react";
-import { ModelSelector } from "@/components/ModelSelector";
+import { ModelButton } from "@/components/ModelButton";
 import { ResponseCard } from "@/components/ResponseCard";
 import { AppNavigation } from "@/components/AppNavigation";
 import { ExportButton } from "@/components/ExportButton";
@@ -242,55 +242,130 @@ export default function Home() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Model Selection Panel */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-4">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2 text-sm">
-                  <Settings className="w-4 h-4" />
-                  <span>Select Models</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                {modelsLoading ? (
-                  <div className="space-y-3">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4" />
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
-                  </div>
-                ) : (
-                  <ModelSelector
-                    models={models}
-                    selectedModels={selectedModels}
-                    onSelectionChange={setSelectedModels}
-                  />
-                )}
-                
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    {selectedModels.length} model{selectedModels.length !== 1 ? 's' : ''} selected
-                  </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Model Selection Panel - Now wider and better organized */}
+          <div className="xl:col-span-1">
+            <div className="space-y-4">
+              {/* Model Selection */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Brain className="w-5 h-5 text-blue-600" />
+                      <span>AI Models</span>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {selectedModels.length} selected
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  {modelsLoading ? (
+                    <div className="grid grid-cols-1 gap-3">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Provider Groups */}
+                      {Object.entries(
+                        models.reduce((acc, model) => {
+                          if (!acc[model.provider]) acc[model.provider] = [];
+                          acc[model.provider].push(model);
+                          return acc;
+                        }, {} as Record<string, typeof models>)
+                      ).map(([provider, providerModels]) => (
+                        <div key={provider} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                              {provider}
+                            </h3>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const providerModelIds = providerModels.map(m => m.id);
+                                  const allSelected = providerModelIds.every(id => selectedModels.includes(id));
+                                  if (allSelected) {
+                                    setSelectedModels(prev => prev.filter(id => !providerModelIds.includes(id)));
+                                  } else {
+                                    setSelectedModels(prev => Array.from(new Set([...prev, ...providerModelIds])));
+                                  }
+                                }}
+                                className="text-xs h-6 px-2"
+                              >
+                                {providerModels.every(model => selectedModels.includes(model.id)) ? 'None' : 'All'}
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2">
+                            {providerModels.map((model) => (
+                              <ModelButton
+                                key={model.id}
+                                model={model}
+                                isSelected={selectedModels.includes(model.id)}
+                                isAnalyzing={loadingModels.has(model.id)}
+                                responseCount={responses[model.id] ? 1 : 0}
+                                onToggle={(modelId) => {
+                                  setSelectedModels(prev => 
+                                    prev.includes(modelId) 
+                                      ? prev.filter(id => id !== modelId)
+                                      : [...prev, modelId]
+                                  );
+                                }}
+                                disabled={loadingModels.has(model.id)}
+                                showTiming={showTiming}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
-                  <div className="space-y-2">
+                  {/* Quick Actions */}
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedModels(models.map(m => m.id))}
+                        disabled={selectedModels.length === models.length}
+                        className="text-xs"
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedModels([])}
+                        disabled={selectedModels.length === 0}
+                        className="text-xs"
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                    
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="timing"
                         checked={showTiming}
                         onCheckedChange={(checked) => setShowTiming(checked === true)}
                       />
-                      <Label htmlFor="timing" className="text-xs">
+                      <Label htmlFor="timing" className="text-sm">
                         Show response timing
                       </Label>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-          {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-4">
+          {/* Main Content Area - Now takes up more space */}
+          <div className="xl:col-span-2 space-y-4">
             {/* Prompt Input */}
             <Card>
               <CardHeader className="pb-3">
@@ -469,7 +544,7 @@ export default function Home() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {selectedModelData.map((model) => (
                   <ResponseCard
                     key={model.id}
