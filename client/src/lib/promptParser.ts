@@ -439,3 +439,24 @@ export function findBattlePromptPair(
   
   return category.prompts.find(prompt => prompt.id === promptId) || null;
 }
+
+/**
+ * Parses creative-combat-prompts.md to extract Original/Enhancement prompt pairs
+ * for the Creative Combat mode using the standard markdown format
+ */
+export async function parseCreativePromptsFromMarkdown(): Promise<PromptCategory[]> {
+  try {
+    // Fetch the creative combat prompts markdown file
+    const response = await fetch('/docs/creative-combat-prompts.md');
+    if (!response.ok) {
+      throw new Error('Failed to fetch creative-combat-prompts.md');
+    }
+    const markdown = await response.text();
+    
+    // Use the existing standardized parser
+    return await parsePromptsFromStandardMarkdown(markdown);
+  } catch (error) {
+    console.error('Error parsing creative prompts from markdown:', error);
+    return [];
+  }
+}
