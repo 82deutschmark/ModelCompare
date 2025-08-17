@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **State Management & Variable System Standardization (MAJOR ARCHITECTURAL UPDATE):**
+  - **Unified Variable Engine:** Implemented isomorphic variable resolution supporting server-side authoritative templates with frontend preview capabilities
+  - **Single Source of Truth:** Backend now performs final template resolution with comprehensive logging and audit trails
+  - **Unified API Contract:** New `/api/generate` endpoint with mode field supporting all creative modes (creative, battle, debate, compare)
+  - **SSE Streaming Support:** Real-time token streaming across all modes with proper message status tracking
+  - **Zustand Store Integration:** Replaced useState with optimized store using memoized selectors for large state management
+  - **Variable Registry System:** Type-safe variable schemas per mode with server-side validation and auto-generated UI helpers
+  - **Enhanced UnifiedMessage:** Added role, seatId, status, finishReason, streaming fields for debates, tools, and partial tokens
+  - **ISO String Dates:** Eliminated Date objects in React state to prevent serialization issues
+  - **Derived State Management:** currentResponse now derived via selectors from messages array preventing drift
+  - **Missing Variable Policy:** Clear error handling with escaping support for literal braces in templates
+  - **Legacy Route Compatibility:** Feature flags for gradual migration from existing endpoints
+  - **Variable Inspector:** Development tool showing available variables, resolved values, and template validation
+
 - **Export Functionality:** Added comprehensive markdown export and clipboard copy features across all pages (home/compare, battle-chat, debate, creative-combat) with consistent UI controls and safe filename generation
 - **Raw Prompt Preview:** Implemented prompt transparency widgets on all pages allowing users to view the exact prompts sent to AI models via toggle buttons with Eye icon
 - **Enhanced User Experience:** Users can now select the same model for both sides in debates, providing more flexibility for testing scenarios
@@ -19,5 +33,16 @@ All notable changes to this project will be documented in this file.
 - **Debate Model Selection:** Removed restriction preventing users from selecting the same model for both debate sides, allowing for self-debate scenarios
 - **UI Consistency:** Standardized export button placement and styling across all comparison modes
 - **Code Organization:** Enhanced component structure with clear authorship attribution and improved code documentation
+- **Creative Combat Refactor:** Completely refactored creative-combat.tsx to use modular components instead of custom UI, reducing code from ~830 lines to ~460 lines while improving consistency and maintainability
+
+### Refactored
+- **Creative Combat Architecture:** Replaced 700+ lines of custom UI with established modular components:
+  - **Model Selection:** Now uses `ModelButton` components with provider-grouped layout from home.tsx instead of basic `ModelSelector`
+  - **Message Display:** Replaced custom response cards with `MessageCard` component for consistent display across all modes
+  - **Export Functionality:** Removed custom export logic in favor of `ExportButton` component
+  - **Prompt Parser:** Integrated `parseCreativePromptsFromMarkdown()` function following established patterns
+  - **Variable System:** Standardized `{response}` and `{originalPrompt}` placeholder handling
+  - **UI Components:** Consistent use of shadcn/ui `Card`, `Badge`, `Button` components matching other pages
+- **Prompt File Structure:** Updated creative-combat-prompts.md to follow standard `## Category` / `### Original Prompt` / `### Enhancement Prompt` format for parser compatibility
 
 *Author: Claude 4 Sonnet Thinking BYOK*

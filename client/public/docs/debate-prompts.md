@@ -18,9 +18,9 @@ DEBATE STRUCTURE RULES:
 5. Build logical chains of reasoning
 6. Acknowledge strong opposing points while maintaining your position
 
-Your debate role: {ROLE} (You are arguing {POSITION} the proposition) 
-Debate topic: {TOPIC}
-Adversarial intensity: {INTENSITY}
+Your debate role: {role} (You are arguing {position} the proposition) 
+Debate topic: {topic}
+Adversarial intensity: {intensity}
 ```
 
 ### Adversarial Intensity Levels
@@ -116,7 +116,7 @@ Deploy maximum rhetorical force. Use sharp language, devastating critiques, and 
 
 ### Opening Statement Template
 ```
-As the {ROLE} in this debate on "{TOPIC}", I will demonstrate that {POSITION}. 
+As the {role} in this debate on "{topic}", I will demonstrate that {position}. 
 
 My case rests on three fundamental pillars:
 1. [First main argument]
@@ -125,14 +125,14 @@ My case rests on three fundamental pillars:
 
 [Detailed argument with evidence and reasoning]
 
-The weight of evidence and logic compels us to {CONCLUSION}.
+The weight of evidence and logic compels us to {conclusion}.
 ```
 
 ### Rebuttal Template
 ```
-You are responding to your opponent's previous argument as the {ROLE} debater arguing {POSITION} the proposition: "{TOPIC}"
+You are responding to your opponent's previous argument as the {role} debater arguing {position} the proposition: "{topic}"
 
-Your opponent just said: "{RESPONSE}"
+Your opponent just said: "{response}"
 
 Structure your rebuttal by:
 1. Identifying the key weaknesses in your opponent's argument
@@ -145,13 +145,13 @@ Be forceful in your argumentation while maintaining debate decorum. Address thei
 
 ### Closing Argument Template
 ```
-Throughout this debate, I have established beyond doubt that {MAIN_THESIS}.
+Throughout this debate, I have established beyond doubt that {mainThesis}.
 
-My opponent has failed to adequately address {KEY_UNREFUTED_POINT}, and their central argument {IDENTIFY_WEAKNESS} falls apart under scrutiny.
+My opponent has failed to adequately address {keyUnrefutedPoint}, and their central argument {identifyWeakness} falls apart under scrutiny.
 
-The preponderance of evidence, the weight of logic, and the demands of {MORAL/PRACTICAL IMPERATIVE} all point to one inescapable conclusion: {FINAL_POSITION}.
+The preponderance of evidence, the weight of logic, and the demands of {moralPracticalImperative} all point to one inescapable conclusion: {finalPosition}.
 
-I urge you to reject my opponent's flawed reasoning and embrace the compelling case for {YOUR_STANCE}.
+I urge you to reject my opponent's flawed reasoning and embrace the compelling case for {yourStance}.
 ```
 
 ---
@@ -159,12 +159,12 @@ I urge you to reject my opponent's flawed reasoning and embrace the compelling c
 ## Usage Instructions for Developers
 
 ### Prompt Template Variables:
-- `{ROLE}` - "AFFIRMATIVE" or "NEGATIVE"  
-- `{POSITION}` - "FOR" or "AGAINST"
-- `{TOPIC}` - The full debate proposition
-- `{INTENSITY}` - Adversarial level (1-4)
-- `{RESPONSE}` - Previous opponent's argument
-- `{ORIGINAL_PROMPT}` - The debate topic for reference
+- `{role}` - "AFFIRMATIVE" or "NEGATIVE"  
+- `{position}` - "FOR" or "AGAINST"
+- `{topic}` - The full debate proposition
+- `{intensity}` - Adversarial level (1-4)
+- `{response}` - Previous opponent's argument
+- `{originalPrompt}` - The debate topic for reference
 
 ### Implementation Notes:
 - Model 1 always gets AFFIRMATIVE (Pro) role
