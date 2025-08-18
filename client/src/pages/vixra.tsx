@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Brain, Zap, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Brain, Zap, Settings, ChevronDown, ChevronUp, Download, Copy, Printer } from "lucide-react";
 import { ModelButton } from "@/components/ModelButton";
 import { ResponseCard } from "@/components/ResponseCard";
 import { AppNavigation } from "@/components/AppNavigation";
@@ -26,7 +26,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { autoGenerateVariables, substituteVariables, parseVixraTemplates } from "@/lib/vixraUtils";
+import { autoGenerateVariables, substituteVariables, parseVixraTemplates, downloadVixraPaper, copyVixraPaper, printVixraPaper } from "@/lib/vixraUtils";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
 const SCIENCE_CATEGORIES = [
@@ -500,12 +500,69 @@ export default function VixraPage() {
                     
                     <div className="flex items-center space-x-2">
                       {Object.keys(sectionResponses).length > 0 && (
-                        <ExportButton
-                          prompt="Vixra Satirical Paper"
-                          models={selectedModelData}
-                          responses={sectionResponses}
-                          disabled={loadingModels.length > 0}
-                        />
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await copyVixraPaper(variables, sectionResponses, selectedModelData);
+                                toast({
+                                  title: "Copied to clipboard",
+                                  description: "Paper has been copied as markdown",
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Copy failed",
+                                  description: "Could not copy to clipboard",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            disabled={loadingModels.length > 0}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              downloadVixraPaper(variables, sectionResponses, selectedModelData);
+                              toast({
+                                title: "Download started",
+                                description: "Paper is downloading as markdown",
+                              });
+                            }}
+                            disabled={loadingModels.length > 0}
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Download MD
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              try {
+                                printVixraPaper(variables, sectionResponses, selectedModelData);
+                                toast({
+                                  title: "Print dialog opened",
+                                  description: "Save as PDF in the print dialog",
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Print failed",
+                                  description: "Could not open print dialog",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            disabled={loadingModels.length > 0}
+                          >
+                            <Printer className="w-3 h-3 mr-1" />
+                            Print/PDF
+                          </Button>
+                        </div>
                       )}
                       <Button
                         onClick={generateSection}
