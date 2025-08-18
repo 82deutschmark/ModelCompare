@@ -1,5 +1,13 @@
 # Changelog
 
+<!--
+File: CHANGELOG.md
+Purpose: Human-readable history of notable changes.
+How the project uses it: Source for release notes and audit of major updates.
+Author: Cascade (AI assistant)
+Date: 2025-08-17
+-->
+
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
@@ -21,6 +29,22 @@ All notable changes to this project will be documented in this file.
   - **Research Synthesis Mode:** Advanced multi-model collaborative research mode demonstrating sophisticated variable system capabilities with 11+ typed variables, multi-round synthesis, and dynamic role assignment
 
 - **Export Functionality:** Added comprehensive markdown export and clipboard copy features across all pages (home/compare, battle-chat, debate, creative-combat) with consistent UI controls and safe filename generation
+
+- **Vixra Mode (Satirical Papers):**
+  - New page at `client/src/pages/vixra.tsx` accessible via route `/vixra`
+  - Uses existing model selection UI and `ResponseCard` display
+  - Loads templates from `client/public/docs/vixra-prompts.md`
+  - Calls existing endpoints (`GET /api/models`, `POST /api/models/respond`)
+
+- **Prompt Parser Helper:**
+  - Added `parsePromptsFromMarkdownFile(path: string)` in `client/src/lib/promptParser.ts`
+  - Enables loading prompt templates from arbitrary markdown files (e.g., `/docs/vixra-prompts.md`)
+  - Keeps existing `parsePromptsFromMarkdown()` (compare-prompts) unchanged
+
+### Changed
+- Documentation updates:
+  - `docs/api-and-routes.md`: Added `/vixra` and `/creative` to frontend routes, documented Vixra client API usage
+  - `README.md`: Documented Vixra Mode in Comparison Modes section
 - **Raw Prompt Preview:** Implemented prompt transparency widgets on all pages allowing users to view the exact prompts sent to AI models via toggle buttons with Eye icon
 - **Enhanced User Experience:** Users can now select the same model for both sides in debates, providing more flexibility for testing scenarios
 

@@ -134,6 +134,24 @@ export async function parsePromptsFromMarkdown(): Promise<PromptCategory[]> {
 }
 
 /**
+ * Parses a markdown file at a given public docs path using the standardized parser.
+ * Example path: '/docs/vixra-prompts.md'
+ */
+export async function parsePromptsFromMarkdownFile(path: string): Promise<PromptCategory[]> {
+  try {
+    const response = await fetch(path);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${path}`);
+    }
+    const markdown = await response.text();
+    return await parsePromptsFromStandardMarkdown(markdown);
+  } catch (error) {
+    console.error('Error parsing prompts from markdown file:', error);
+    return [];
+  }
+}
+
+/**
  * Battle-specific prompt interfaces for PersonX and Challenger prompts
  */
 export interface BattlePromptPair {

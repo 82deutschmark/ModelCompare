@@ -21,14 +21,14 @@
  * - {SpecialRequests}: Additional user requirements
  * - {response}: Previous stage output for multi-stage prompts
  * 
- * Author: Cascade
- * Date: January 16, 2025
+ * Author: Cascade Code with Claude 4 Sonnet Thinking BYOK 
+ * Date: August 17, 2025
  */
 
 ## Paper Structure
 
 ### Abstract Generation
-You are writing the abstract for a satirical research paper for Vixra (not arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous.
+You are writing the abstract for a satirical research paper for Vixra (in the style of arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous.
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -36,26 +36,26 @@ Authors: "{Authors}"
 Institution: "{Institution}"
 Keywords: "{Keywords}"
 
-Write a 150-200 word abstract that:
-- Uses excessive technical jargon and complex terminology
+Write a 2400-3000 word abstract that:
+- Uses excessive technical jargon and complex terminology from the chosen {ScienceCategory}
 - Makes grandiose claims about revolutionary discoveries
-- References non-existent or absurd methodologies
+- References non-existent or absurd or disproven methodologies
 - Maintains perfect academic formatting and tone
-- Includes made-up statistical results with impressive precision
-- Claims to solve fundamental problems in science
+- Includes simulated statistical results with impressive precision
+- Claims to solve fundamental problems in science or math or Machine Learning or AGI or AI such as the Millennium Prize Problems or ARC-AGI 2 or other new age technologies critical to humanity's survival
 
 The abstract should sound like it was written by someone who desperately wants to appear brilliant but lacks any actual scientific understanding. Make it hilariously pretentious while maintaining academic structure.
 
 ### Introduction Section
-You are writing the introduction section for a satirical Vixra research paper. This should establish the "groundbreaking" nature of the research with excessive citations to non-existent work.
+You are writing the introduction section for a satirical Vixra research paper. This should establish the "groundbreaking" nature of the research with excessive citations or very few citations and they should be to non-existent work or self-citations or non-sensical citations.
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
 Research Focus: "{Methodology}"
 
-Write a 300-400 word introduction that:
+Write a 1100-1500 word introduction that:
 - Begins with sweeping statements about the current state of the field
-- Cites numerous made-up papers with realistic-looking citations
+- Cites numerous papers with realistic-looking citations
 - Uses phrases like "paradigm shift," "revolutionary framework," and "unprecedented breakthrough"
 - Establishes a completely absurd research gap that "desperately needs addressing"
 - Positions the current work as solving all major problems in the field
@@ -70,13 +70,16 @@ Paper Title: "{Title}"
 Methodology Approach: "{Methodology}"
 Special Focus: "{SpecialRequests}"
 
-Write a 400-500 word methodology section that:
+Write a 1000-2000 word methodology section that:
 - Describes impossible or nonsensical experimental procedures
 - Uses highly technical language to mask the absurdity
+- Demonstrates a complete lack of understanding of the entire field of study (divide by zero, confuse elemental states, etc.)
+- Includes a list of materials and chemicals
+- Includes a list of fantastical sounding software and tools
 - Includes detailed steps for ridiculous processes
 - References non-existent equipment and techniques
-- Claims rigorous controls and statistical methods
-- Mentions ethical approval from made-up committees
+- Claims rigorous controls and statistical methods while presenting clear mathematical errors (divide by zero, etc.)
+- Mentions approval or bitter rejection from ridiculous committees
 - Uses mathematical formulas that look impressive but are meaningless
 
 Present everything as if it's the most scientifically rigorous approach ever devised. The more absurd the methods, the more seriously they should be presented.
@@ -88,7 +91,7 @@ Paper Title: "{Title}"
 Abstract Context: "{Abstract}"
 Methodology Used: "{Methodology}"
 
-Write a 400-500 word results section that:
+Write a 1400-2000 word results section that:
 - Presents impossible or contradictory findings as groundbreaking discoveries
 - Uses tables, figures, and statistical analysis (all made up)
 - Includes p-values, confidence intervals, and error bars
@@ -148,9 +151,9 @@ Number of Citations Needed: 15-25
 Create citations that:
 - Use proper academic formatting (author, year, title, journal)
 - Reference prestigious but made-up journals
-- Include authors with realistic names but absurd paper titles
+- Include authors with New Age or Alien names but absurd paper titles
 - Span different years to show "extensive research history"
-- Mix different types of sources (journals, conferences, books)
+- Mix different types of sources (journals, conferences, books, ethereal vibrations, crystals, auras, etc.)
 - Include some self-citations by "{ResearcherName}"
 - Reference work that would supposedly support the impossible claims
 
@@ -164,15 +167,14 @@ Institution: "{Institution}"
 Funding Source: "{Funding}"
 
 Write acknowledgments that:
-- Thank made-up colleagues and mentors
+- Are incredibly narcissistic and self-centered
 - Reference impossible funding sources or amounts
 - Mention absurd institutional support
 - Include gratitude for ridiculous resources or assistance
-- Thank family members for tolerating "revolutionary work"
 - Reference non-existent research facilities or equipment
 - Maintain proper academic tone throughout
 
-Keep it to 100-150 words while making it hilariously over-the-top in its gratitude for supporting completely impossible research.
+Keep it to 1000-1500 words while making it hilariously over-the-top in its gratitude for supporting completely impossible research.
 
 ## Quality Control
 
@@ -190,4 +192,4 @@ Create responses to 3-4 made-up reviewer comments that:
 - Suggest reviewers may not be familiar with cutting-edge techniques
 - Maintain respectful academic tone while being completely wrong
 
-Each response should be 100-150 words and demonstrate the author's complete confidence in their impossible work.
+Each response should be 1000-1500 words and demonstrate the reviewer's complete confidence in the author's impossible work.
