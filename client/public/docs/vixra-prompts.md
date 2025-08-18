@@ -28,7 +28,7 @@
 ## Paper Structure
 
 ### Abstract Generation
-You are writing the abstract for a satirical research paper for Vixra (in the style of arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous.
+You are writing the abstract for a satirical research paper for Vixra (in the style of arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous. Be sure to include the following and use the variables provided, if no variable is provided, use your own value:
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"

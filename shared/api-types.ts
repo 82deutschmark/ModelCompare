@@ -69,7 +69,7 @@ export interface UnifiedMessage {
 }
 
 export interface GenerateRequest {
-  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment';
+  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment' | 'vixra';
   sessionId?: string;
   template: string;
   variables: Record<string, string>;
