@@ -143,6 +143,7 @@ Source: `client/src/App.tsx`
 - `/battle` → `client/src/pages/battle-chat.tsx` (Battle Mode, chat-room style)
 - `/debate` → `client/src/pages/debate.tsx` (Dedicated manual 10-round debate UI)
 - `/plan-assessment` → `client/src/pages/plan-assessment.tsx` (Planned; assesses an LLM-authored plan)
+- `/vixra` → `client/src/pages/vixra.tsx` (Satirical paper generation using markdown templates)
 - Fallback → `client/src/pages/not-found.tsx`
 
 Related pages present but not routed by default: `client/src/pages/battle.tsx`, `client/src/pages/battle-new.tsx`.
@@ -168,6 +169,9 @@ Pages using endpoints:
   - GET `/api/models`
   - POST `/api/models/respond`
   - POST `/api/battle/continue`
+- `vixra.tsx`:
+  - GET `/api/models`
+  - POST `/api/models/respond`
 - `battle.tsx` (not routed by default):
   - GET `/api/models`
   - POST `/api/battle/start`
