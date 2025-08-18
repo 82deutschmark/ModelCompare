@@ -193,6 +193,10 @@ The `IStorage` interface in `server/storage.ts` provides:
 
 **Vixra Mode** (`/vixra`)
 - Generate satirical academic-style papers with template-driven sections
+- **Auto Mode**: One-click generation of complete papers with automatic section progression
+- Intelligent dependency resolution (abstract → introduction → methodology → results → discussion → conclusion)
+- Real-time progress tracking with pause/resume functionality
+- Manual section control still available alongside auto mode
 - Uses the same model selection UI and `ResponseCard` display as Compare mode
 - Loads templates from `client/public/docs/vixra-prompts.md`
 - Calls existing endpoints (`GET /api/models`, `POST /api/models/respond`)

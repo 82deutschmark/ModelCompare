@@ -32,6 +32,10 @@ All notable changes to this project will be documented in this file.
 
 - **Vixra Mode (Satirical Papers):**
   - New page at `client/src/pages/vixra.tsx` accessible via route `/vixra`
+  - **Auto Mode:** One-click automatic paper generation with intelligent section progression
+  - Real-time progress tracking with pause/resume functionality
+  - Automatic dependency resolution (abstract → introduction → methodology → results → discussion → conclusion → citations → acknowledgments)
+  - Manual section control still available alongside auto mode
   - Uses existing model selection UI and `ResponseCard` display
   - Loads templates from `client/public/docs/vixra-prompts.md`
   - Calls existing endpoints (`GET /api/models`, `POST /api/models/respond`)
