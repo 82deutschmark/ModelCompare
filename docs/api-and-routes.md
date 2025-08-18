@@ -100,6 +100,27 @@ Source: `server/routes.ts`, provider registry `server/providers/index.ts`, base 
 - Response: `{ response: ModelResponse & { status: 'success' }, modelId: string }`
 - Errors: 400 for missing history or modelId; 500 on failure
 
+### POST /api/generate
+- Purpose: Unified generation endpoint for all modes (single source of truth).
+- Request body (`shared/api-types.ts` → `GenerateRequest`):
+  - `mode`: `'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment'`
+  - `template: string`
+  - `variables: Record<string,string>` (validated via `shared/variable-registry.ts` per mode)
+  - `messages: UnifiedMessageIn[]` (reserved for future/context)
+  - `seats: { id: string; model: ModelConfig; label?: string }[]` (first seat used non‑streaming)
+  - `options?: { temperature?: number; maxTokens?: number; stream?: boolean }`
+- Responses:
+  - Non‑streaming: `GenerateResponse` with `message`, `tokenUsage`, `cost`, `resolvedPrompt`, `variableMapping`, `warnings`
+  - Streaming (SSE): Events per `SSEEvents` in `shared/api-types.ts`
+    - `messageStart { messageId, seatId, createdAt, resolvedPrompt }`
+    - `delta { messageId, text, reasoning?, tokens? }`
+    - `messageEnd { messageId, finishReason, tokenUsage, cost, resolvedPrompt, modelConfig }`
+    - `error { messageId?, code, message }`
+- Notes:
+  - Modes are allow‑listed in `server/routes.ts`.
+  - Server provides safe defaults for `tokenUsage` and `cost` when absent.
+  - Variable resolution performed server‑side via `VariableEngine` with mapping/warnings.
+
 ---
 
 ## Data Shapes Summary
@@ -121,6 +142,8 @@ Source: `client/src/App.tsx`
 - `/` → `client/src/pages/home.tsx` (Compare Mode)
 - `/battle` → `client/src/pages/battle-chat.tsx` (Battle Mode, chat-room style)
 - `/debate` → `client/src/pages/debate.tsx` (Dedicated manual 10-round debate UI)
+- `/plan-assessment` → `client/src/pages/plan-assessment.tsx` (Planned; assesses an LLM-authored plan)
+- `/vixra` → `client/src/pages/vixra.tsx` (Satirical paper generation using markdown templates)
 - Fallback → `client/src/pages/not-found.tsx`
 
 Related pages present but not routed by default: `client/src/pages/battle.tsx`, `client/src/pages/battle-new.tsx`.
@@ -146,6 +169,9 @@ Pages using endpoints:
   - GET `/api/models`
   - POST `/api/models/respond`
   - POST `/api/battle/continue`
+- `vixra.tsx`:
+  - GET `/api/models`
+  - POST `/api/models/respond`
 - `battle.tsx` (not routed by default):
   - GET `/api/models`
   - POST `/api/battle/start`

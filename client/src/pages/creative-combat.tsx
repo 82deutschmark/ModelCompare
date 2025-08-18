@@ -24,7 +24,7 @@
  * Date: August 17, 2025
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,18 +34,13 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { 
-  Play, Loader2, Brain, Edit3, Settings, ArrowRight, CheckCircle,
-  Palette, Copy, Download, Eye, Clock, Plus
-} from "lucide-react";
+import { Play, Loader2, Brain, Edit3, Settings, Palette, Clock } from "lucide-react";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 import { ModelButton } from "@/components/ModelButton";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { ExportButton } from "@/components/ExportButton";
-import { ModelSelector } from "@/components/ModelSelector";
 import { AppNavigation } from "@/components/AppNavigation";
-import { parseCreativePromptsFromMarkdown, type PromptCategory, type PromptTemplate, findPromptTemplate } from "@/lib/promptParser";
-import { type ExportData } from "@/lib/exportUtils";
+import { parseCreativePromptsFromMarkdown, type PromptCategory, findPromptTemplate } from "@/lib/promptParser";
 
 // Enhanced Pass interface to track the complex workflow
 interface CreativePass {
@@ -88,7 +83,7 @@ interface WorkflowState {
 export default function CreativeCombat() {
   const { toast } = useToast();
 
-  // State Management
+  // Workflow state managed locally for this page
   const [workflow, setWorkflow] = useState<WorkflowState>({
     originalPrompt: '',
     currentResponse: '',
@@ -99,7 +94,7 @@ export default function CreativeCombat() {
     awaitingNextEditor: false,
     awaitingFirstModel: false,
     sessionStartTime: null,
-    totalCost: 0
+    totalCost: 0,
   });
 
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
@@ -117,55 +112,62 @@ export default function CreativeCombat() {
     },
   });
 
-  // Model response mutation with proper React Query integration
-  const modelResponseMutation = useMutation({
+  // Group models by provider with strong typing (after models is declared)
+  const groupedModels = useMemo(() => {
+    return (models as AIModel[]).reduce<Record<string, AIModel[]>>((acc, model) => {
+      if (!acc[model.provider]) acc[model.provider] = [];
+      acc[model.provider].push(model);
+      return acc;
+    }, {});
+  }, [models]);
+
+  // Per-model response mutation (same API used by Compare page)
+  const modelResponseMutation = useMutation<
+    { modelId: string; response: ModelResponse },
+    Error,
+    { prompt: string; modelId: string }
+  >({
     mutationFn: async (data: { prompt: string; modelId: string }) => {
       const response = await apiRequest('POST', '/api/models/respond', data);
-      const responseData = await response.json() as ModelResponse;
-      return { modelId: data.modelId, response: responseData };
+      const body = await response.json() as ModelResponse;
+      return { modelId: data.modelId, response: body };
     },
-    onSuccess: (data) => {
-      const model = models.find((m: AIModel) => m.id === data.modelId);
-      
-      const newPass: CreativePass = {
-        id: `${data.modelId}-${Date.now()}`,
-        modelName: model?.name || 'Unknown Model',
-        modelId: data.modelId,
-        content: data.response.content,
-        reasoning: data.response.reasoning,
-        passNumber: workflow.passes.length + 1,
-        responseTime: data.response.responseTime,
-        cost: data.response.cost,
-        tokenUsage: data.response.tokenUsage,
+    onSuccess: ({ modelId, response }) => {
+      const model = models.find((m: AIModel) => m.id === modelId);
+      const pass: CreativePass = {
+        id: `${modelId}-${Date.now()}`,
+        modelName: model?.name || modelId,
+        modelId,
+        content: response.content,
+        reasoning: response.reasoning,
+        passNumber: (workflow.passes[workflow.passes.length - 1]?.passNumber || 0) + 1,
+        responseTime: response.responseTime,
+        cost: response.cost,
+        tokenUsage: response.tokenUsage,
         timestamp: new Date(),
         isOriginal: workflow.passes.length === 0,
-        promptUsed: '', // Will be set by the calling function
-        enhancementPrompt: undefined
+        promptUsed: '',
       };
 
       setWorkflow(prev => ({
         ...prev,
-        passes: [...prev.passes, newPass],
-        currentResponse: data.response.content,
-        totalCost: prev.totalCost + (data.response.cost?.total || 0),
+        passes: [...prev.passes, pass],
+        currentResponse: response.content,
         isProcessing: false,
-        awaitingNextEditor: true
+        awaitingNextEditor: true,
+        totalCost: prev.totalCost + (response.cost?.total || 0),
+        awaitingFirstModel: false,
       }));
 
       toast({
         title: "Creative Pass Complete",
-        description: `${model?.name || 'Model'} has ${newPass.isOriginal ? 'created original content' : 'enhanced the work'}. Choose next action.`,
+        description: workflow.passes.length === 0 ? 'Original content created' : 'Content enhanced',
       });
     },
-    onError: (error, variables) => {
+    onError: (error: any) => {
       setWorkflow(prev => ({ ...prev, isProcessing: false }));
-      const model = models.find((m: AIModel) => m.id === variables.modelId);
-      toast({
-        title: "Creative Pass Failed",
-        description: `Failed to get response from ${model?.name || 'Model'}: ${error.message}`,
-        variant: "destructive",
-      });
-    },
+      toast({ title: 'Creative Pass Failed', description: error.message, variant: 'destructive' });
+    }
   });
 
   // Load Creative Combat prompt templates using the modular prompt parser
@@ -287,10 +289,7 @@ export default function CreativeCombat() {
     }
 
     // Use the React Query mutation
-    modelResponseMutation.mutate({
-      prompt: finalPrompt,
-      modelId
-    });
+    modelResponseMutation.mutate({ prompt: finalPrompt, modelId });
   };
 
   // Continue with next enhancement
@@ -482,21 +481,96 @@ export default function CreativeCombat() {
                   </div>
                 ) : null}
                 
-                <ModelSelector
-                  models={models}
-                  selectedModels={workflow.selectedModels}
-                  onSelectionChange={(selectedIds) => {
-                    if (workflow.awaitingFirstModel && selectedIds.length > workflow.selectedModels.length) {
-                      // User clicked a model while awaiting first - start session
-                      const newModelId = selectedIds.find(id => !workflow.selectedModels.includes(id));
-                      if (newModelId) {
-                        processCreativePass(newModelId, true);
-                      }
-                    } else {
-                      setWorkflow(prev => ({ ...prev, selectedModels: selectedIds }));
-                    }
-                  }}
-                />
+                {modelsLoading ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Provider Groups */}
+                    {Object.entries(groupedModels).map(([provider, providerModels]) => (
+                      <div key={provider} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                            {provider}
+                          </h3>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const providerModelIds = (providerModels as AIModel[]).map((m) => m.id);
+                                const allSelected = providerModelIds.every((id) => workflow.selectedModels.includes(id));
+                                if (allSelected) {
+                                  setWorkflow(prev => ({ 
+                                    ...prev, 
+                                    selectedModels: prev.selectedModels.filter(id => !providerModelIds.includes(id)) 
+                                  }));
+                                } else {
+                                  setWorkflow(prev => ({ 
+                                    ...prev, 
+                                    selectedModels: Array.from(new Set([...prev.selectedModels, ...providerModelIds])) 
+                                  }));
+                                }
+                              }}
+                              className="text-xs h-6 px-2"
+                            >
+                              {(providerModels as AIModel[]).every((model) => workflow.selectedModels.includes(model.id)) ? 'None' : 'All'}
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          {(providerModels as AIModel[]).map((model) => (
+                            <ModelButton
+                              key={model.id}
+                              model={model}
+                              isSelected={workflow.selectedModels.includes(model.id)}
+                              isAnalyzing={workflow.isProcessing && modelResponseMutation.variables?.modelId === model.id}
+                              responseCount={workflow.passes.filter(pass => pass.modelId === model.id).length}
+                              onToggle={(modelId) => {
+                                if (workflow.awaitingFirstModel) {
+                                  // Start with first model
+                                  processCreativePass(modelId, true);
+                                } else {
+                                  // Normal toggle for selection
+                                  toggleModel(modelId);
+                                }
+                              }}
+                              disabled={workflow.isProcessing || (workflow.awaitingFirstModel && !workflow.selectedModels.includes(model.id))}
+                              showTiming={false}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Quick Actions */}
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWorkflow(prev => ({ ...prev, selectedModels: (models as AIModel[]).map((m: AIModel) => m.id) }))}
+                          disabled={workflow.selectedModels.length === models.length}
+                          className="text-xs"
+                        >
+                          Select All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWorkflow(prev => ({ ...prev, selectedModels: [] }))}
+                          disabled={workflow.selectedModels.length === 0}
+                          className="text-xs"
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

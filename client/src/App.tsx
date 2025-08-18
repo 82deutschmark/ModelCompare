@@ -8,7 +8,10 @@ import Home from "@/pages/home";
 import Battle from "@/pages/battle-chat";
 import CreativeCombat from "./pages/creative-combat";
 import Debate from "@/pages/debate";
+import ResearchSynthesis from "@/pages/research-synthesis";
+import PlanAssessmentPage from "@/pages/plan-assessment";
 import NotFound from "@/pages/not-found";
+import VixraPage from "./pages/vixra";
 
 function Router() {
   return (
@@ -17,6 +20,9 @@ function Router() {
       <Route path="/battle" component={Battle} />
       <Route path="/creative-combat" component={CreativeCombat} />
       <Route path="/debate" component={Debate} />
+      <Route path="/vixra" component={VixraPage} />
+      <Route path="/research-synthesis" component={ResearchSynthesis} />
+      <Route path="/plan-assessment" component={PlanAssessmentPage} />
       <Route component={NotFound} />
     </Switch>
   );
