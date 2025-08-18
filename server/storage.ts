@@ -19,20 +19,28 @@
  * Date: August 9, 2025
  */
 
-import { type Comparison, type InsertComparison } from "@shared/schema";
+import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   createComparison(comparison: InsertComparison): Promise<Comparison>;
   getComparison(id: string): Promise<Comparison | undefined>;
   getComparisons(): Promise<Comparison[]>;
+  
+  // Vixra session persistence
+  createVixraSession(session: InsertVixraSession): Promise<VixraSession>;
+  updateVixraSession(id: string, session: Partial<InsertVixraSession>): Promise<VixraSession | undefined>;
+  getVixraSession(id: string): Promise<VixraSession | undefined>;
+  getVixraSessions(): Promise<VixraSession[]>;
 }
 
 export class MemStorage implements IStorage {
   private comparisons: Map<string, Comparison>;
+  private vixraSessions: Map<string, VixraSession>;
 
   constructor() {
     this.comparisons = new Map();
+    this.vixraSessions = new Map();
   }
 
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
@@ -55,6 +63,62 @@ export class MemStorage implements IStorage {
   async getComparisons(): Promise<Comparison[]> {
     return Array.from(this.comparisons.values()).sort(
       (a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
+    );
+  }
+
+  async createVixraSession(insertSession: InsertVixraSession): Promise<VixraSession> {
+    const id = randomUUID();
+    const session: VixraSession = {
+      id,
+      variables: insertSession.variables,
+      template: insertSession.template,
+      responses: insertSession.responses as Record<string, {
+        content: string;
+        reasoning?: string;
+        status: 'success' | 'error' | 'loading';
+        responseTime: number;
+        tokenUsage?: { input: number; output: number; reasoning?: number };
+        cost?: { total: number; input: number; output: number; reasoning?: number };
+        modelName: string;
+        error?: string;
+      }>,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.vixraSessions.set(id, session);
+    return session;
+  }
+
+  async updateVixraSession(id: string, updates: Partial<InsertVixraSession>): Promise<VixraSession | undefined> {
+    const existing = this.vixraSessions.get(id);
+    if (!existing) return undefined;
+    
+    const updated: VixraSession = {
+      ...existing,
+      ...updates,
+      responses: updates.responses ? updates.responses as Record<string, {
+        content: string;
+        reasoning?: string;
+        status: 'success' | 'error' | 'loading';
+        responseTime: number;
+        tokenUsage?: { input: number; output: number; reasoning?: number };
+        cost?: { total: number; input: number; output: number; reasoning?: number };
+        modelName: string;
+        error?: string;
+      }> : existing.responses,
+      updatedAt: new Date()
+    };
+    this.vixraSessions.set(id, updated);
+    return updated;
+  }
+
+  async getVixraSession(id: string): Promise<VixraSession | undefined> {
+    return this.vixraSessions.get(id);
+  }
+
+  async getVixraSessions(): Promise<VixraSession[]> {
+    return Array.from(this.vixraSessions.values()).sort(
+      (a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0)
     );
   }
 }
