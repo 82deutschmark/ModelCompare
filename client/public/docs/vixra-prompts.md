@@ -50,7 +50,7 @@ The abstract should sound like it was written by someone who desperately wants t
 
 <!-- SECTION_START:introduction -->
 ### Introduction Section
-You are writing the introduction section for a satirical Vixra research paper. This should establish the "groundbreaking" nature of the research with excessive citations or very few citations and they should be to non-existent work or self-citations or non-sensical citations.
+You are writing the introduction section for a satirical Vixra research paper. This should establish the "groundbreaking" nature of the research with excessive citations or very few citations and they should be to non-existent work or self-citations or non-sensical citations. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -69,7 +69,7 @@ Make it sound like the author believes they are writing the most important paper
 
 <!-- SECTION_START:methodology -->
 ### Methodology Section
-You are writing the methodology section for a satirical Vixra research paper. Describe completely absurd research methods presented with utmost scientific seriousness.
+You are writing the methodology section for a satirical Vixra research paper. Describe completely absurd research methods presented with utmost scientific seriousness. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Methodology Approach: "{Methodology}"
@@ -92,7 +92,7 @@ Present everything as if it's the most scientifically rigorous approach ever dev
 
 <!-- SECTION_START:results -->
 ### Results Section
-You are writing the results section for a satirical Vixra research paper. Present completely fabricated data and findings with excessive precision and confidence.
+You are writing the results section for a satirical Vixra research paper. Present completely fabricated data and findings with excessive precision and confidence. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Abstract Context: "{Abstract}"
@@ -112,7 +112,7 @@ The results should be so extraordinary that they would immediately alert any rea
 
 <!-- SECTION_START:discussion -->
 ### Discussion Section  
-You are writing the discussion section for a satirical Vixra research paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity.
+You are writing the discussion section for a satirical Vixra research paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Key Findings Summary: "{response}"
@@ -133,7 +133,7 @@ Present the discussion as if the author genuinely believes they have made the mo
 
 <!-- SECTION_START:conclusion -->
 ### Conclusion Section
-You are writing the conclusion section for a satirical Vixra research paper. Summarize the "groundbreaking" work and its world-changing implications.
+You are writing the conclusion section for a satirical Vixra research paper. Summarize the "groundbreaking" work and its world-changing implications. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Main Findings: "{response}"
@@ -155,7 +155,7 @@ The conclusion should read like the author expects to be remembered as the great
 
 <!-- SECTION_START:citations -->
 ### Citations Generator
-You are creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but completely fake citations that support the absurd claims made in the paper.
+You are creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but completely fake citations that support the absurd claims made in the paper. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -175,7 +175,7 @@ Format each citation properly and make them sound plausible at first glance whil
 
 <!-- SECTION_START:acknowledgments -->
 ### Acknowledgments Section
-You are writing the acknowledgments section for a satirical Vixra research paper with appropriate academic gratitude but absurd content.
+You are writing the acknowledgments section for a satirical Vixra research paper with appropriate academic gratitude but absurd content. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Researcher: "{ResearcherName}"
 Institution: "{Institution}"
@@ -196,7 +196,7 @@ Keep it to 1000-1500 words while making it hilariously over-the-top in its grati
 
 <!-- SECTION_START:peer-review -->
 ### Peer Review Response
-You are responding to imaginary peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity.
+You are responding to imaginary peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Original Content: "{response}"
