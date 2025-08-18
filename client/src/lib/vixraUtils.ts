@@ -179,10 +179,29 @@ export function exportVixraPaper(
 
   // Add each section that has been generated
   for (const section of PAPER_SECTIONS) {
-    const response = sectionResponses[section.id];
-    if (response && response.content) {
+    const sectionModelResponses = sectionResponses[section.id];
+    if (sectionModelResponses && Object.keys(sectionModelResponses).length > 0) {
       paper += `## ${section.title}\n\n`;
-      paper += `${response.content}\n\n`;
+      
+      // If multiple models generated this section, show all responses
+      const modelIds = Object.keys(sectionModelResponses);
+      if (modelIds.length === 1) {
+        // Single model - just show the content
+        const response = sectionModelResponses[modelIds[0]];
+        paper += `${response.content}\n\n`;
+      } else {
+        // Multiple models - show each with model attribution
+        modelIds.forEach((modelId, index) => {
+          const response = sectionModelResponses[modelId];
+          const model = selectedModels.find(m => m.id === modelId);
+          const modelName = model ? model.name : modelId;
+          
+          if (index > 0) paper += `\n---\n\n`;
+          paper += `**${modelName} Response:**\n\n`;
+          paper += `${response.content}\n\n`;
+        });
+      }
+      
       paper += `---\n\n`;
     }
   }
@@ -193,7 +212,10 @@ export function exportVixraPaper(
   selectedModels.forEach(model => {
     paper += `- ${model.name} (${model.provider})\n`;
   });
-  paper += `\n**Total sections generated:** ${Object.keys(sectionResponses).length}\n\n`;
+  const completedSections = Object.keys(sectionResponses).filter(sectionId => 
+    sectionResponses[sectionId] && Object.keys(sectionResponses[sectionId]).length > 0
+  ).length;
+  paper += `\n**Total sections generated:** ${completedSections}\n\n`;
   
   // Add variable summary
   paper += `**Paper variables:**\n`;

@@ -66,7 +66,7 @@ export default function VixraPage() {
   // State for section generation
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [currentSection, setCurrentSection] = useState('abstract');
-  const [sectionResponses, setSectionResponses] = useState<Record<string, ModelResponse>>({});
+  const [sectionResponses, setSectionResponses] = useState<Record<string, Record<string, ModelResponse>>>({});
   const [loadingModels, setLoadingModels] = useState<string[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<Map<string, string>>(new Map());
   const [showVariablesPanel, setShowVariablesPanel] = useState(true);
@@ -136,13 +136,16 @@ export default function VixraPage() {
       setSectionResponses(prev => ({
         ...prev,
         [data.sectionId]: {
-          content: data.content,
-          reasoning: data.reasoning,
-          responseTime: data.responseTime,
-          tokenUsage: data.tokenUsage,
-          cost: data.cost,
-          modelConfig: data.modelConfig,
-          status: 'success' as const
+          ...prev[data.sectionId],
+          [data.modelId]: {
+            content: data.content,
+            reasoning: data.reasoning,
+            responseTime: data.responseTime,
+            tokenUsage: data.tokenUsage,
+            cost: data.cost,
+            modelConfig: data.modelConfig,
+            status: 'success' as const
+          }
         }
       }));
 
@@ -151,9 +154,13 @@ export default function VixraPage() {
         description: `${SECTION_ORDER.find(s => s.id === data.sectionId)?.name || data.sectionId} completed`,
       });
 
-      // Auto mode: Continue to next section if auto generating
+      // Auto mode: Continue to next section only after all models complete
       if (isAutoGenerating) {
-        generateNextSection();
+        // Check if all selected models have finished for this section
+        const stillLoading = selectedModels.some(modelId => loadingModels.includes(modelId));
+        if (!stillLoading) {
+          generateNextSection();
+        }
       }
     },
     onError: (error, variables) => {
@@ -164,6 +171,15 @@ export default function VixraPage() {
         description: `Failed to generate section: ${error.message}`,
         variant: "destructive",
       });
+
+      // Auto mode: Continue to next section if all models are done (including failed ones)
+      if (isAutoGenerating) {
+        // Check if all selected models have finished for this section
+        const stillLoading = selectedModels.some(modelId => loadingModels.includes(modelId));
+        if (!stillLoading) {
+          generateNextSection();
+        }
+      }
     },
   });
 
@@ -173,7 +189,9 @@ export default function VixraPage() {
 
   // Auto mode helper functions
   const getNextEligibleSection = useCallback((): string | null => {
-    const completedSections = new Set(Object.keys(sectionResponses));
+    const completedSections = new Set(Object.keys(sectionResponses).filter(sectionId => 
+      sectionResponses[sectionId] && Object.keys(sectionResponses[sectionId]).length > 0
+    ));
     
     for (const section of SECTION_ORDER) {
       // Skip if already completed
@@ -252,7 +270,9 @@ export default function VixraPage() {
   // Update progress when sections complete
   useEffect(() => {
     if (isAutoGenerating) {
-      const completed = Object.keys(sectionResponses).length;
+      const completed = Object.keys(sectionResponses).filter(sectionId => 
+        sectionResponses[sectionId] && Object.keys(sectionResponses[sectionId]).length > 0
+      ).length;
       setAutoModeProgress({ current: completed, total: SECTION_ORDER.length });
     }
   }, [sectionResponses, isAutoGenerating]);
@@ -272,12 +292,17 @@ export default function VixraPage() {
     
     if (sectionInfo?.dependencies) {
       sectionInfo.dependencies.forEach(depId => {
-        const depResponse = sectionResponses[depId];
-        if (depResponse) {
-          allVariables[depId] = depResponse.content;
-          // For single dependency, also add as {response}
-          if (sectionInfo.dependencies.length === 1) {
-            allVariables.response = depResponse.content;
+        const depSectionResponses = sectionResponses[depId];
+        if (depSectionResponses) {
+          // Use the first available response from any model for this dependency
+          const firstModelId = Object.keys(depSectionResponses)[0];
+          if (firstModelId && depSectionResponses[firstModelId]) {
+            const depResponse = depSectionResponses[firstModelId];
+            allVariables[depId] = depResponse.content;
+            // For single dependency, also add as {response}
+            if (sectionInfo.dependencies.length === 1) {
+              allVariables.response = depResponse.content;
+            }
           }
         }
       });
@@ -310,7 +335,9 @@ export default function VixraPage() {
     // Check dependencies
     const sectionInfo = SECTION_ORDER.find(s => s.id === currentSection);
     if (sectionInfo?.dependencies) {
-      const missingDeps = sectionInfo.dependencies.filter(dep => !sectionResponses[dep]);
+      const missingDeps = sectionInfo.dependencies.filter(dep => 
+        !sectionResponses[dep] || Object.keys(sectionResponses[dep]).length === 0
+      );
       if (missingDeps.length > 0) {
         toast({
           title: "Missing dependencies",
@@ -607,9 +634,13 @@ export default function VixraPage() {
                           </Button>
                         )}
                         
-                        {Object.keys(sectionResponses).length > 0 && (
+                        {Object.keys(sectionResponses).some(sectionId => 
+                          sectionResponses[sectionId] && Object.keys(sectionResponses[sectionId]).length > 0
+                        ) && (
                           <div className="text-xs text-gray-600 dark:text-gray-400">
-                            {Object.keys(sectionResponses).length} sections completed
+                            {Object.keys(sectionResponses).filter(sectionId => 
+                              sectionResponses[sectionId] && Object.keys(sectionResponses[sectionId]).length > 0
+                            ).length} sections completed
                           </div>
                         )}
                       </div>
@@ -636,8 +667,10 @@ export default function VixraPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {SECTION_ORDER.map((section) => {
-                              const isAvailable = section.dependencies.every(dep => sectionResponses[dep]);
-                              const isGenerated = sectionResponses[section.id];
+                              const isAvailable = section.dependencies.every(dep => 
+                                sectionResponses[dep] && Object.keys(sectionResponses[dep]).length > 0
+                              );
+                              const isGenerated = sectionResponses[section.id] && Object.keys(sectionResponses[section.id]).length > 0;
                               
                               return (
                                 <SelectItem 
@@ -667,7 +700,9 @@ export default function VixraPage() {
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      {Object.keys(sectionResponses).length > 0 && (
+                      {Object.keys(sectionResponses).some(sectionId => 
+                        sectionResponses[sectionId] && Object.keys(sectionResponses[sectionId]).length > 0
+                      ) && (
                         <div className="flex items-center space-x-2">
                           <Button
                             variant="outline"
@@ -763,7 +798,9 @@ export default function VixraPage() {
             </Card>
 
             {/* Section Results */}
-            {Object.keys(sectionResponses).length === 0 ? (
+            {!Object.keys(sectionResponses).some(sectionId => 
+              sectionResponses[sectionId] && Object.keys(sectionResponses[sectionId]).length > 0
+            ) ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -775,23 +812,31 @@ export default function VixraPage() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {SECTION_ORDER.filter(section => sectionResponses[section.id]).map((section) => {
-                  const response = sectionResponses[section.id];
-                  const model = models.find(m => m.id === selectedModels[0]); // Show first model for now
+                {SECTION_ORDER.filter(section => 
+                  sectionResponses[section.id] && Object.keys(sectionResponses[section.id]).length > 0
+                ).map((section) => {
+                  const sectionModelResponses = sectionResponses[section.id];
                   
                   return (
                     <div key={section.id} className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full" />
                         <h3 className="text-sm font-semibold">{section.name}</h3>
+                        <span className="text-xs text-gray-500">
+                          {Object.keys(sectionModelResponses).length} model{Object.keys(sectionModelResponses).length !== 1 ? 's' : ''}
+                        </span>
                       </div>
-                      {model && (
-                        <ResponseCard
-                          model={model}
-                          response={response}
-                          showTiming={true}
-                        />
-                      )}
+                      {Object.entries(sectionModelResponses).map(([modelId, response]) => {
+                        const model = models.find(m => m.id === modelId);
+                        return model ? (
+                          <ResponseCard
+                            key={`${section.id}-${modelId}`}
+                            model={model}
+                            response={response}
+                            showTiming={true}
+                          />
+                        ) : null;
+                      })}
                     </div>
                   );
                 })}
