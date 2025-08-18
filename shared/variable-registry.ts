@@ -187,6 +187,103 @@ export const VARIABLE_REGISTRIES = {
       description: 'Specialized role for this model in research process' 
     }
   ],
+  vixra: [
+    {
+      name: 'ResearcherName',
+      type: 'string' as const,
+      required: true,
+      description: 'Name of the primary researcher for the paper'
+    },
+    {
+      name: 'Collaborators',
+      type: 'string' as const,
+      required: false,
+      description: 'Comma-separated list of collaborators'
+    },
+    {
+      name: 'Email',
+      type: 'string' as const,
+      required: false,
+      description: 'Researcher\'s email address (optional)'
+    },
+    {
+      name: 'ScienceCategory',
+      type: 'enum' as const,
+      required: true,
+      enum: ['Physics - High Energy Particle Physics', 'Physics - Quantum Gravity and String Theory', 'Physics - Relativity and Cosmology', 'Physics - Astrophysics', 'Physics - Quantum Physics', 'Physics - Nuclear and Atomic Physics', 'Physics - Condensed Matter', 'Physics - Thermodynamics and Energy', 'Physics - Classical Physics', 'Physics - Geophysics', 'Physics - Climate Research', 'Physics - Mathematical Physics', 'Physics - History and Philosophy of Physics', 'Mathematics - Set Theory and Logic', 'Mathematics - Number Theory', 'Mathematics - Combinatorics and Graph Theory', 'Mathematics - Algebra', 'Mathematics - Geometry', 'Mathematics - Topology', 'Mathematics - Functions and Analysis', 'Mathematics - Statistics', 'Mathematics - General Mathematics', 'Computational Science - Digital Signal Processing', 'Computational Science - Data Structures and Algorithms', 'Computational Science - Artificial Intelligence', 'Biology - Biochemistry', 'Biology - Physics of Biology', 'Biology - Mind Science', 'Biology - Quantitative Biology', 'Chemistry', 'Humanities - Archaeology', 'Humanities - Linguistics', 'Humanities - Economics and Finance', 'Humanities - Social Science', 'Humanities - Religion and Spiritualism', 'General Science and Philosophy', 'Education and Didactics'],
+      description: 'The scientific category for the paper submission'
+    },
+    {
+      name: 'Title',
+      type: 'string' as const,
+      required: true,
+      description: 'The title of the research paper'
+    },
+    {
+      name: 'Authors',
+      type: 'string' as const,
+      required: true,
+      description: 'Formatted list of authors for the paper'
+    },
+    {
+      name: 'Abstract',
+      type: 'string' as const,
+      required: false,
+      description: 'The abstract of the paper (can be auto-generated)'
+    },
+    {
+      name: 'NumPages',
+      type: 'number' as const,
+      required: false,
+      description: 'Estimated number of pages for the paper'
+    },
+    {
+      name: 'Comment',
+      type: 'string' as const,
+      required: false,
+      description: 'Technical comments about the submission'
+    },
+    {
+      name: 'OtherInstructions',
+      type: 'string' as const,
+      required: false,
+      description: 'Other instructions for the administrator'
+    },
+    {
+      name: 'PromptMode',
+      type: 'enum' as const,
+      required: true,
+      enum: ['custom', 'template'],
+      description: 'Whether to use a custom prompt or a pre-defined template'
+    },
+    {
+      name: 'CustomPrompt',
+      type: 'string' as const,
+      required: false,
+      description: 'The user-defined custom prompt for the paper generation'
+    },
+    {
+      name: 'TemplateKey',
+      type: 'string' as const,
+      required: false,
+      description: 'The key for the selected prompt template'
+    },
+    {
+      name: 'TargetSections',
+      type: 'number' as const,
+      required: false,
+      default: '6',
+      description: 'The target number of sections for the paper body'
+    },
+    {
+      name: 'IncludeImages',
+      type: 'enum' as const,
+      required: false,
+      default: 'true',
+      enum: ['true', 'false'],
+      description: 'Whether to include image/diagram generation prompts'
+    }
+  ],
   'plan-assessment': [
     { 
       name: 'planMarkdown',
