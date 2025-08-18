@@ -11,14 +11,16 @@
  * Date: August 18, 2025
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Brain, Zap, Settings, ChevronDown, ChevronUp, Download, Copy, Printer } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { FileText, Brain, Zap, Settings, ChevronDown, ChevronUp, Download, Copy, Printer, Play, Pause, Square } from "lucide-react";
 import { ModelButton } from "@/components/ModelButton";
 import { ResponseCard } from "@/components/ResponseCard";
 import { AppNavigation } from "@/components/AppNavigation";
@@ -68,6 +70,11 @@ export default function VixraPage() {
   const [loadingModels, setLoadingModels] = useState<string[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<Map<string, string>>(new Map());
   const [showVariablesPanel, setShowVariablesPanel] = useState(true);
+  
+  // Auto mode state
+  const [autoMode, setAutoMode] = useState(false);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [autoModeProgress, setAutoModeProgress] = useState({ current: 0, total: 0 });
 
   // Fetch available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -143,6 +150,11 @@ export default function VixraPage() {
         title: 'Section Generated',
         description: `${SECTION_ORDER.find(s => s.id === data.sectionId)?.name || data.sectionId} completed`,
       });
+
+      // Auto mode: Continue to next section if auto generating
+      if (isAutoGenerating) {
+        generateNextSection();
+      }
     },
     onError: (error, variables) => {
       setLoadingModels(prev => prev.filter(id => id !== variables.modelId));
@@ -158,6 +170,92 @@ export default function VixraPage() {
   const updateVariable = (name: string, value: string) => {
     setVariables(prev => ({ ...prev, [name]: value }));
   };
+
+  // Auto mode helper functions
+  const getNextEligibleSection = useCallback((): string | null => {
+    const completedSections = new Set(Object.keys(sectionResponses));
+    
+    for (const section of SECTION_ORDER) {
+      // Skip if already completed
+      if (completedSections.has(section.id)) continue;
+      
+      // Check if all dependencies are met
+      const allDependenciesMet = section.dependencies.every(dep => completedSections.has(dep));
+      
+      if (allDependenciesMet) {
+        return section.id;
+      }
+    }
+    return null;
+  }, [sectionResponses]);
+
+  const generateNextSection = useCallback(async () => {
+    const nextSection = getNextEligibleSection();
+    if (!nextSection) {
+      // Auto generation complete
+      setIsAutoGenerating(false);
+      toast({
+        title: "Auto generation complete",
+        description: "All paper sections have been generated successfully.",
+      });
+      return;
+    }
+
+    // Update current section and generate
+    setCurrentSection(nextSection);
+    
+    // Small delay for better UX
+    setTimeout(() => {
+      generateSection();
+    }, 1500);
+  }, [getNextEligibleSection, toast]);
+
+  const startAutoGeneration = () => {
+    if (selectedModels.length === 0) {
+      toast({
+        title: "No models selected",
+        description: "Please select at least one model to start auto generation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!variables.ScienceCategory) {
+      toast({
+        title: "Missing required field",
+        description: "Please select a Science Category before starting auto generation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAutoGenerating(true);
+    setAutoModeProgress({ current: 0, total: SECTION_ORDER.length });
+    
+    // Start with first eligible section
+    const firstSection = getNextEligibleSection() || 'abstract';
+    setCurrentSection(firstSection);
+    
+    setTimeout(() => {
+      generateSection();
+    }, 500);
+  };
+
+  const stopAutoGeneration = () => {
+    setIsAutoGenerating(false);
+    toast({
+      title: "Auto generation stopped",
+      description: "You can continue manually or restart auto generation.",
+    });
+  };
+
+  // Update progress when sections complete
+  useEffect(() => {
+    if (isAutoGenerating) {
+      const completed = Object.keys(sectionResponses).length;
+      setAutoModeProgress({ current: completed, total: SECTION_ORDER.length });
+    }
+  }, [sectionResponses, isAutoGenerating]);
 
   const buildSectionPrompt = (sectionId: string): string => {
     const template = promptTemplates.get(sectionId);
@@ -453,6 +551,74 @@ export default function VixraPage() {
               )}
             </Card>
 
+            {/* Auto Mode Controls */}
+            <Card>
+              <CardContent className="pt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Label htmlFor="autoMode" className="text-sm font-medium">Auto Mode</Label>
+                      <Switch
+                        id="autoMode"
+                        checked={autoMode}
+                        onCheckedChange={setAutoMode}
+                        disabled={isAutoGenerating}
+                      />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {autoMode ? 'Generate all sections automatically' : 'Manual section control'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {autoMode && (
+                    <div className="space-y-3">
+                      {isAutoGenerating && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Progress: {autoModeProgress.current} of {autoModeProgress.total} sections</span>
+                            <span>{Math.round((autoModeProgress.current / autoModeProgress.total) * 100)}%</span>
+                          </div>
+                          <Progress value={(autoModeProgress.current / autoModeProgress.total) * 100} className="w-full" />
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            Currently generating: {SECTION_ORDER.find(s => s.id === currentSection)?.name || currentSection}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center space-x-2">
+                        {!isAutoGenerating ? (
+                          <Button
+                            onClick={startAutoGeneration}
+                            disabled={selectedModels.length === 0}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            size="sm"
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            Start Auto Generation
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={stopAutoGeneration}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Square className="w-3 h-3 mr-1" />
+                            Stop Auto Generation
+                          </Button>
+                        )}
+                        
+                        {Object.keys(sectionResponses).length > 0 && (
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {Object.keys(sectionResponses).length} sections completed
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Section Generation Controls */}
             <Card>
               <CardContent className="pt-4">
@@ -490,6 +656,8 @@ export default function VixraPage() {
                       <div className="text-xs text-gray-600 dark:text-gray-400">
                         {selectedModels.length === 0 ? (
                           "Select models to generate sections"
+                        ) : isAutoGenerating ? (
+                          `Auto-generating ${currentSectionName}...`
                         ) : loadingModels.length > 0 ? (
                           `Generating ${currentSectionName}...`
                         ) : (
@@ -564,24 +732,30 @@ export default function VixraPage() {
                           </Button>
                         </div>
                       )}
-                      <Button
-                        onClick={generateSection}
-                        disabled={loadingModels.length > 0 || selectedModels.length === 0}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        size="sm"
-                      >
-                        {loadingModels.length > 0 ? (
-                          <>
-                            <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            <span className="text-sm">Generating...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-3 h-3 mr-1" />
-                            <span className="text-sm">Generate Section</span>
-                          </>
-                        )}
-                      </Button>
+                      {!autoMode ? (
+                        <Button
+                          onClick={generateSection}
+                          disabled={loadingModels.length > 0 || selectedModels.length === 0}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          size="sm"
+                        >
+                          {loadingModels.length > 0 ? (
+                            <>
+                              <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              <span className="text-sm">Generating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3 h-3 mr-1" />
+                              <span className="text-sm">Generate Section</span>
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Auto mode enabled - use controls above
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
