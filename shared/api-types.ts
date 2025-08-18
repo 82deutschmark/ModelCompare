@@ -1,3 +1,15 @@
+/**
+ * Shared API Types
+ * Author: GPT-5 (medium reasoning)
+ * Date: 2025-08-17
+ *
+ * What this file does: Centralizes request/response and model types shared by
+ * client and server (GenerateRequest, UnifiedMessage, TokenUsage, Cost, etc.).
+ * How it works: Types are imported by server/routes.ts and client call sites to
+ * ensure consistent contracts for /api/generate and legacy endpoints.
+ * How the project uses it: Frontend builds payloads for /api/generate with a
+ * mode union that matches server allow-list, including new modes.
+ */
 export interface TokenUsage {
   input: number;
   output: number;
@@ -57,7 +69,7 @@ export interface UnifiedMessage {
 }
 
 export interface GenerateRequest {
-  mode: 'creative' | 'battle' | 'debate' | 'compare';
+  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment';
   sessionId?: string;
   template: string;
   variables: Record<string, string>;

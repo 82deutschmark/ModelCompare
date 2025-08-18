@@ -15,6 +15,8 @@
  * All responses are formatted consistently for frontend consumption.
  * 
  * Author: Replit Agent
+ * Updates: Added 'plan-assessment' mode allowlist in unified generate endpoint.
+ * Updated by: GPT-5 (medium reasoning)
  * Date: August 9, 2025
  */
 
@@ -552,7 +554,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       const { mode, template, variables, seats, options } = requestBody;
       
       // Validate mode
-      if (!['creative', 'battle', 'debate', 'compare'].includes(mode)) {
+      if (!['creative', 'battle', 'debate', 'compare', 'research-synthesis', 'plan-assessment'].includes(mode)) {
         return res.status(400).json({ error: `Invalid mode: ${mode}` });
       }
 
@@ -562,15 +564,18 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       }
 
       // Initialize variable engine with mode-specific aliases
-      const aliases = mode === 'debate' ? {
-        'TOPIC': 'topic',
-        'INTENSITY': 'intensity', 
-        'RESPONSE': 'response'
-      } : {};
-      
-      const variableEngine = new VariableEngine({ 
+      const aliases: Record<string, string> | undefined =
+        mode === 'debate'
+          ? {
+              TOPIC: 'topic',
+              INTENSITY: 'intensity',
+              RESPONSE: 'response',
+            }
+          : undefined;
+
+      const variableEngine = new VariableEngine({
         policy: 'error',
-        aliases 
+        aliases,
       });
 
       // Validate variables against registry
@@ -648,8 +653,8 @@ Continue the debate by responding to the last message. Be analytical, challenge 
               type: 'messageEnd',
               messageId,
               finishReason: 'stop',
-              tokenUsage: result.tokenUsage,
-              cost: result.cost,
+              tokenUsage: result.tokenUsage ?? { input: 0, output: 0 },
+              cost: result.cost ?? { total: 0, input: 0, output: 0 },
               resolvedPrompt,
               modelConfig: result.modelConfig
             })}\n\n`);
@@ -683,15 +688,15 @@ Continue the debate by responding to the last message. Be analytical, challenge 
             createdAt: new Date().toISOString(),
             status: 'complete',
             finishReason: 'stop',
-            tokenUsage: result.tokenUsage,
-            cost: result.cost,
+            tokenUsage: result.tokenUsage ?? { input: 0, output: 0 },
+            cost: result.cost ?? { total: 0, input: 0, output: 0 },
             modelConfig: result.modelConfig
           };
 
           const response: GenerateResponse = {
             message,
-            tokenUsage: result.tokenUsage,
-            cost: result.cost,
+            tokenUsage: result.tokenUsage ?? { input: 0, output: 0 },
+            cost: result.cost ?? { total: 0, input: 0, output: 0 },
             resolvedPrompt,
             variableMapping,
             warnings

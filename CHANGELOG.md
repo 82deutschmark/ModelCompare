@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
   - **Missing Variable Policy:** Clear error handling with escaping support for literal braces in templates
   - **Legacy Route Compatibility:** Feature flags for gradual migration from existing endpoints
   - **Variable Inspector:** Development tool showing available variables, resolved values, and template validation
+  - **Research Synthesis Mode:** Advanced multi-model collaborative research mode demonstrating sophisticated variable system capabilities with 11+ typed variables, multi-round synthesis, and dynamic role assignment
 
 - **Export Functionality:** Added comprehensive markdown export and clipboard copy features across all pages (home/compare, battle-chat, debate, creative-combat) with consistent UI controls and safe filename generation
 - **Raw Prompt Preview:** Implemented prompt transparency widgets on all pages allowing users to view the exact prompts sent to AI models via toggle buttons with Eye icon
