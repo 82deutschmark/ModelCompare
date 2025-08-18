@@ -1,79 +1,80 @@
 /**
  * Vixra Mode Page - Satirical AI-Generated Research Papers
  * 
- * This page provides a specialized interface for generating satirical academic papers
- * using AI models with proper variable substitution and validation. It follows the
- * project's modular architecture and uses the unified /api/generate endpoint.
+ * Simplified implementation that uses the same working patterns as home page:
+ * - Uses /api/models/respond endpoint (same as home page) 
+ * - Auto-generates missing variables before sending prompts
+ * - Sequential section generation with simple UI controls
+ * - Reuses existing components (ModelButton, MessageCard, ExportButton)
  * 
- * Author: Claude (updated to use unified variable system)
- * Date: January 2025
+ * Author: Claude Code
+ * Date: August 18, 2025
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Brain, Zap, BookOpen, Eye, Settings } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { FileText, Brain, Zap, Settings, ChevronDown, ChevronUp, Download, Copy, Printer, Play, Pause, Square } from "lucide-react";
 import { ModelButton } from "@/components/ModelButton";
-import { MessageCard, type MessageCardData } from "@/components/MessageCard";
+import { ResponseCard } from "@/components/ResponseCard";
 import { AppNavigation } from "@/components/AppNavigation";
 import { ExportButton } from "@/components/ExportButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { parsePromptsFromMarkdownFile, type PromptCategory } from "@/lib/promptParser";
-import { VARIABLE_REGISTRIES, getDefaultVariables } from "../../../shared/variable-registry";
-import type { GenerateRequest, GenerateResponse, ModelSeat, UnifiedMessage } from "../../../shared/api-types";
-import type { AIModel } from "@/types/ai-models";
+import { autoGenerateVariables, substituteVariables, parseVixraTemplates, downloadVixraPaper, copyVixraPaper, printVixraPaper } from "@/lib/vixraUtils";
+import type { AIModel, ModelResponse } from "@/types/ai-models";
 
-const SCIENCE_CATEGORIES = VARIABLE_REGISTRIES.vixra.find(v => v.name === 'ScienceCategory')?.enum || [];
+const SCIENCE_CATEGORIES = [
+  'Physics - Quantum Physics',
+  'Mathematics - General Mathematics', 
+  'Biology - Mind Science',
+  'Computational Science - Artificial Intelligence',
+  'Chemistry',
+  'General Science and Philosophy'
+];
+
+// Define the sections in dependency order
+const SECTION_ORDER = [
+  { id: 'abstract', name: 'Abstract Generation', dependencies: [] },
+  { id: 'introduction', name: 'Introduction Section', dependencies: ['abstract'] },
+  { id: 'methodology', name: 'Methodology Section', dependencies: ['introduction'] },
+  { id: 'results', name: 'Results Section', dependencies: ['abstract', 'methodology'] },
+  { id: 'discussion', name: 'Discussion Section', dependencies: ['results'] },
+  { id: 'conclusion', name: 'Conclusion Section', dependencies: ['discussion'] },
+  { id: 'citations', name: 'Citations Generator', dependencies: ['abstract', 'results'] },
+  { id: 'acknowledgments', name: 'Acknowledgments Section', dependencies: ['conclusion'] },
+];
 
 export default function VixraPage() {
   const { toast } = useToast();
   
-  // State for variables
-  const [variables, setVariables] = useState<Record<string, string>>(() => ({
-    ...getDefaultVariables('vixra'),
-    ResearcherName: 'Dr. Pseudo Science',
+  // State for variables (user input) - simplified to core fields
+  const [variables, setVariables] = useState<Record<string, string>>({
+    ResearcherName: '',
     ScienceCategory: SCIENCE_CATEGORIES[0] || '',
-    Title: 'Revolutionary Breakthrough in Quantum Coffee Dynamics',
-    Authors: 'Dr. Pseudo Science, Prof. Mock Academia',
-    PromptMode: 'template'
-  }));
+    Title: '',
+    Authors: ''
+  });
   
+  // State for section generation
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedPromptTemplate, setSelectedPromptTemplate] = useState<string>('');
-  const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
-  const [promptsLoading, setPromptsLoading] = useState(true);
-  const [currentTemplate, setCurrentTemplate] = useState<string>('');
-  const [responses, setResponses] = useState<Record<string, UnifiedMessage>>({});
-  
-  // Convert UnifiedMessage to MessageCardData format
-  const getMessageCardData = (modelId: string, message: UnifiedMessage | undefined, model: AIModel): MessageCardData | undefined => {
-    if (!message) return undefined;
-    
-    return {
-      id: message.id,
-      modelName: model.name,
-      modelId: model.id,
-      content: message.content,
-      reasoning: message.reasoning,
-      responseTime: 0, // Not tracked in UnifiedMessage
-      tokenUsage: message.tokenUsage,
-      cost: message.cost,
-      timestamp: new Date(message.createdAt).getTime()
-    };
-  };
-  const [loadingModels, setLoadingModels] = useState<Set<string>>(new Set());
-  const [completedModels, setCompletedModels] = useState<Set<string>>(new Set());
-  const [showTiming, setShowTiming] = useState(true);
-  const [showPromptPreview, setShowPromptPreview] = useState(false);
+  const [currentSection, setCurrentSection] = useState('abstract');
+  const [sectionResponses, setSectionResponses] = useState<Record<string, ModelResponse>>({});
+  const [loadingModels, setLoadingModels] = useState<string[]>([]);
+  const [promptTemplates, setPromptTemplates] = useState<Map<string, string>>(new Map());
   const [showVariablesPanel, setShowVariablesPanel] = useState(true);
+  
+  // Auto mode state
+  const [autoMode, setAutoMode] = useState(false);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [autoModeProgress, setAutoModeProgress] = useState({ current: 0, total: 0 });
 
   // Fetch available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -85,236 +86,275 @@ export default function VixraPage() {
     },
   });
 
-  // Load Vixra prompt templates from markdown
+  // Load Vixra prompt templates
   useEffect(() => {
-    const loadVixraPrompts = async () => {
-      setPromptsLoading(true);
+    const loadVixraTemplates = async () => {
       try {
-        const categories = await parsePromptsFromMarkdownFile('/docs/vixra-prompts.md');
-        setPromptCategories(categories);
-        if (categories.length > 0) {
-          const firstCategory = categories[0];
-          setSelectedCategory(firstCategory.id);
-          if (firstCategory.prompts.length > 0) {
-            const firstPrompt = firstCategory.prompts[0];
-            setSelectedPromptTemplate(firstPrompt.id);
-            setCurrentTemplate(firstPrompt.content);
-          }
+        const response = await fetch('/docs/vixra-prompts.md');
+        const markdownContent = await response.text();
+        
+        // Parse section templates using utility function
+        const templates = parseVixraTemplates(markdownContent);
+        setPromptTemplates(templates);
+        
+        if (templates.size === 0) {
+          toast({
+            title: 'No templates found',
+            description: 'Could not parse section templates from vixra-prompts.md',
+            variant: 'destructive',
+          });
         }
       } catch (error) {
-        console.error('Failed to load Vixra prompt templates:', error);
+        console.error('Failed to load Vixra templates:', error);
         toast({
-          title: 'Failed to load Vixra templates',
-          description: 'Using default template.',
+          title: 'Failed to load templates',
+          description: 'Could not load Vixra section templates.',
           variant: 'destructive',
         });
-        setCurrentTemplate('Generate a satirical academic paper about {Title} in the category {ScienceCategory} by {Authors}.');
-      } finally {
-        setPromptsLoading(false);
       }
     };
 
-    loadVixraPrompts();
+    loadVixraTemplates();
   }, [toast]);
 
-  // Unified generation mutation
-  const generateMutation = useMutation({
-    mutationFn: async (data: { template: string; variables: Record<string, string>; seats: ModelSeat[] }) => {
-      const request: GenerateRequest = {
-        mode: 'vixra',
-        template: data.template,
-        variables: data.variables,
-        messages: [],
-        seats: data.seats,
-        options: { stream: false }
-      };
-      
-      const response = await apiRequest('POST', '/api/generate', request);
-      return response.json() as Promise<GenerateResponse>;
+  // Individual model response mutation (same pattern as home page)
+  const modelResponseMutation = useMutation({
+    mutationFn: async (data: { prompt: string; modelId: string; sectionId: string }) => {
+      const response = await apiRequest('POST', '/api/models/respond', {
+        modelId: data.modelId,
+        prompt: data.prompt
+      });
+      const responseData = await response.json() as ModelResponse;
+      return { ...responseData, sectionId: data.sectionId, modelId: data.modelId };
     },
-    onSuccess: (data, variables) => {
-      const seatId = variables.seats[0].id;
-      setResponses(prev => ({ ...prev, [seatId]: data.message }));
-      setLoadingModels(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(seatId);
-        return newSet;
-      });
-      setCompletedModels(prev => new Set([...Array.from(prev), seatId]));
-      
-      toast({
-        title: 'Paper Generated',
-        description: `Generated in ${(data.message.tokenUsage?.input || 0) + (data.message.tokenUsage?.output || 0)} tokens`,
-      });
+    onMutate: (variables) => {
+      setLoadingModels(prev => [...prev, variables.modelId]);
     },
-    onError: (error, variables) => {
-      const seatId = variables.seats[0].id;
-      setLoadingModels(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(seatId);
-        return newSet;
-      });
+    onSuccess: (data) => {
+      setLoadingModels(prev => prev.filter(id => id !== data.modelId));
       
-      setResponses(prev => ({
+      setSectionResponses(prev => ({
         ...prev,
-        [seatId]: {
-          id: `error-${Date.now()}`,
-          role: 'assistant' as const,
-          content: '',
-          createdAt: new Date().toISOString(),
-          status: 'error' as const,
-          finishReason: 'error' as const
+        [data.sectionId]: {
+          content: data.content,
+          reasoning: data.reasoning,
+          responseTime: data.responseTime,
+          tokenUsage: data.tokenUsage,
+          cost: data.cost,
+          modelConfig: data.modelConfig,
+          status: 'success' as const
         }
       }));
+
+      toast({
+        title: 'Section Generated',
+        description: `${SECTION_ORDER.find(s => s.id === data.sectionId)?.name || data.sectionId} completed`,
+      });
+
+      // Auto mode: Continue to next section if auto generating
+      if (isAutoGenerating) {
+        generateNextSection();
+      }
+    },
+    onError: (error, variables) => {
+      setLoadingModels(prev => prev.filter(id => id !== variables.modelId));
       
       toast({
         title: 'Generation Failed',
-        description: error.message,
+        description: `Failed to generate section: ${error.message}`,
         variant: "destructive",
       });
     },
   });
 
-  const handleSubmit = () => {
-    if (!currentTemplate.trim()) {
-      toast({
-        title: "No template selected",
-        description: "Please select a prompt template.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (selectedModels.length === 0) {
-      toast({
-        title: "Select models",
-        description: "Please select at least one model to generate papers.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate required variables
-    const registry = VARIABLE_REGISTRIES.vixra;
-    const missingRequired = registry
-      .filter(schema => schema.required && (!variables[schema.name] || variables[schema.name].trim() === ''))
-      .map(schema => schema.name);
-      
-    if (missingRequired.length > 0) {
-      toast({
-        title: "Missing required fields",
-        description: `Please fill in: ${missingRequired.join(', ')}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Reset state for new generation
-    setResponses({});
-    setLoadingModels(new Set(selectedModels));
-    setCompletedModels(new Set());
-    
-    // Start generation for each model
-    selectedModels.forEach(modelId => {
-      const model = models.find(m => m.id === modelId);
-      if (!model) return;
-      
-      const seat: ModelSeat = {
-        id: modelId,
-        model: {
-          id: model.id,
-          name: model.name,
-          provider: model.provider
-        }
-      };
-      
-      generateMutation.mutate({ 
-        template: currentTemplate, 
-        variables, 
-        seats: [seat] 
-      });
-    });
-    
-    toast({
-      title: "Paper Generation Started",
-      description: `Generating satirical papers with ${selectedModels.length} models...`,
-    });
-  };
-
-  const retryModel = async (modelId: string) => {
-    if (!currentTemplate.trim()) return;
-    
-    const model = models.find(m => m.id === modelId);
-    if (!model) return;
-    
-    setLoadingModels(prev => new Set([...Array.from(prev), modelId]));
-    setCompletedModels(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(modelId);
-      return newSet;
-    });
-    
-    setResponses(prev => {
-      const newResponses = { ...prev };
-      delete newResponses[modelId];
-      return newResponses;
-    });
-    
-    const seat: ModelSeat = {
-      id: modelId,
-      model: {
-        id: model.id,
-        name: model.name,
-        provider: model.provider
-      }
-    };
-    
-    generateMutation.mutate({ 
-      template: currentTemplate, 
-      variables, 
-      seats: [seat] 
-    });
-  };
-
-  // Prompt template handlers
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setSelectedPromptTemplate('');
-  };
-
-  const handlePromptTemplateChange = (promptId: string) => {
-    setSelectedPromptTemplate(promptId);
-    const category = promptCategories.find(cat => cat.id === selectedCategory);
-    const selectedPrompt = category?.prompts.find(p => p.id === promptId);
-    if (selectedPrompt) {
-      setCurrentTemplate(selectedPrompt.content);
-      toast({
-        title: 'Vixra Template Applied',
-        description: `Applied "${selectedPrompt.name}" template`,
-      });
-    }
-  };
-
-  const availablePrompts = selectedCategory 
-    ? promptCategories.find(cat => cat.id === selectedCategory)?.prompts || []
-    : [];
-
-  const selectedModelData = models.filter(model => selectedModels.includes(model.id));
-
   const updateVariable = (name: string, value: string) => {
     setVariables(prev => ({ ...prev, [name]: value }));
   };
+
+  // Auto mode helper functions
+  const getNextEligibleSection = useCallback((): string | null => {
+    const completedSections = new Set(Object.keys(sectionResponses));
+    
+    for (const section of SECTION_ORDER) {
+      // Skip if already completed
+      if (completedSections.has(section.id)) continue;
+      
+      // Check if all dependencies are met
+      const allDependenciesMet = section.dependencies.every(dep => completedSections.has(dep));
+      
+      if (allDependenciesMet) {
+        return section.id;
+      }
+    }
+    return null;
+  }, [sectionResponses]);
+
+  const generateNextSection = useCallback(async () => {
+    const nextSection = getNextEligibleSection();
+    if (!nextSection) {
+      // Auto generation complete
+      setIsAutoGenerating(false);
+      toast({
+        title: "Auto generation complete",
+        description: "All paper sections have been generated successfully.",
+      });
+      return;
+    }
+
+    // Update current section and generate
+    setCurrentSection(nextSection);
+    
+    // Small delay for better UX
+    setTimeout(() => {
+      generateSection();
+    }, 1500);
+  }, [getNextEligibleSection, toast]);
+
+  const startAutoGeneration = () => {
+    if (selectedModels.length === 0) {
+      toast({
+        title: "No models selected",
+        description: "Please select at least one model to start auto generation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!variables.ScienceCategory) {
+      toast({
+        title: "Missing required field",
+        description: "Please select a Science Category before starting auto generation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAutoGenerating(true);
+    setAutoModeProgress({ current: 0, total: SECTION_ORDER.length });
+    
+    // Start with first eligible section
+    const firstSection = getNextEligibleSection() || 'abstract';
+    setCurrentSection(firstSection);
+    
+    setTimeout(() => {
+      generateSection();
+    }, 500);
+  };
+
+  const stopAutoGeneration = () => {
+    setIsAutoGenerating(false);
+    toast({
+      title: "Auto generation stopped",
+      description: "You can continue manually or restart auto generation.",
+    });
+  };
+
+  // Update progress when sections complete
+  useEffect(() => {
+    if (isAutoGenerating) {
+      const completed = Object.keys(sectionResponses).length;
+      setAutoModeProgress({ current: completed, total: SECTION_ORDER.length });
+    }
+  }, [sectionResponses, isAutoGenerating]);
+
+  const buildSectionPrompt = (sectionId: string): string => {
+    const template = promptTemplates.get(sectionId);
+    if (!template) {
+      throw new Error(`No template found for section: ${sectionId}`);
+    }
+
+    // Auto-generate any missing variables
+    const autoGeneratedVars = autoGenerateVariables(variables, variables.ScienceCategory || '');
+    
+    // Add previous section content as variables for dependencies
+    const sectionInfo = SECTION_ORDER.find(s => s.id === sectionId);
+    const allVariables = { ...autoGeneratedVars };
+    
+    if (sectionInfo?.dependencies) {
+      sectionInfo.dependencies.forEach(depId => {
+        const depResponse = sectionResponses[depId];
+        if (depResponse) {
+          allVariables[depId] = depResponse.content;
+          // For single dependency, also add as {response}
+          if (sectionInfo.dependencies.length === 1) {
+            allVariables.response = depResponse.content;
+          }
+        }
+      });
+    }
+
+    // Use utility function for variable substitution
+    return substituteVariables(template, allVariables);
+  };
+
+  const generateSection = async () => {
+    if (selectedModels.length === 0) {
+      toast({
+        title: "No models selected",
+        description: "Please select at least one model to generate the section.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Simple validation - just check if we have the core required fields
+    if (!variables.ScienceCategory) {
+      toast({
+        title: "Missing required field",
+        description: "Please select a Science Category",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check dependencies
+    const sectionInfo = SECTION_ORDER.find(s => s.id === currentSection);
+    if (sectionInfo?.dependencies) {
+      const missingDeps = sectionInfo.dependencies.filter(dep => !sectionResponses[dep]);
+      if (missingDeps.length > 0) {
+        toast({
+          title: "Missing dependencies",
+          description: `Please generate these sections first: ${missingDeps.join(', ')}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    try {
+      const prompt = buildSectionPrompt(currentSection);
+      
+      // Generate with each selected model
+      selectedModels.forEach(modelId => {
+        modelResponseMutation.mutate({
+          prompt,
+          modelId,
+          sectionId: currentSection
+        });
+      });
+    } catch (error) {
+      toast({
+        title: "Prompt generation failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const selectedModelData = models.filter(model => selectedModels.includes(model.id));
+  const currentSectionName = SECTION_ORDER.find(s => s.id === currentSection)?.name || currentSection;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <AppNavigation 
         title="Vixra Mode" 
-        subtitle="Generate satirical academic papers with variable substitution"
+        subtitle="Generate satirical academic papers with AI models"
         icon={FileText}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          
           {/* Model Selection Panel */}
           <div className="xl:col-span-1">
             <Card>
@@ -373,8 +413,8 @@ export default function VixraPage() {
                               key={model.id}
                               model={model}
                               isSelected={selectedModels.includes(model.id)}
-                              isAnalyzing={loadingModels.has(model.id)}
-                              responseCount={responses[model.id] ? 1 : 0}
+                              isAnalyzing={loadingModels.includes(model.id)}
+                              responseCount={Object.values(sectionResponses).length}
                               onToggle={(modelId) => {
                                 setSelectedModels(prev => 
                                   prev.includes(modelId) 
@@ -382,8 +422,7 @@ export default function VixraPage() {
                                     : [...prev, modelId]
                                 );
                               }}
-                              disabled={loadingModels.has(model.id)}
-                              showTiming={showTiming}
+                              disabled={loadingModels.includes(model.id)}
                             />
                           ))}
                         </div>
@@ -413,17 +452,6 @@ export default function VixraPage() {
                       Clear All
                     </Button>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="timing"
-                      checked={showTiming}
-                      onCheckedChange={(checked) => setShowTiming(checked === true)}
-                    />
-                    <Label htmlFor="timing" className="text-sm">
-                      Show response timing
-                    </Label>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -431,54 +459,7 @@ export default function VixraPage() {
 
           {/* Main Content Area */}
           <div className="xl:col-span-2 space-y-4">
-            {/* Template Selection */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2 text-sm">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Prompt Template</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                {!promptsLoading && promptCategories.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select 
-                      value={selectedCategory} 
-                      onValueChange={handleCategoryChange}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose category..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {promptCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select 
-                      value={selectedPromptTemplate} 
-                      onValueChange={handlePromptTemplateChange}
-                      disabled={!selectedCategory}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select template..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availablePrompts.map((prompt) => (
-                          <SelectItem key={prompt.id} value={prompt.id}>
-                            {prompt.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
+            
             {/* Variables Panel */}
             <Card>
               <CardHeader className="pb-3">
@@ -492,7 +473,7 @@ export default function VixraPage() {
                     size="sm"
                     onClick={() => setShowVariablesPanel(!showVariablesPanel)}
                   >
-                    {showVariablesPanel ? 'Hide' : 'Show'}
+                    {showVariablesPanel ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </Button>
                 </CardTitle>
               </CardHeader>
@@ -509,7 +490,7 @@ export default function VixraPage() {
                           id="researcherName"
                           value={variables.ResearcherName || ''}
                           onChange={(e) => updateVariable('ResearcherName', e.target.value)}
-                          placeholder="Dr. Pseudo Science"
+                          placeholder="Dr. Pseudo Science (auto-generated if blank)"
                           className="mt-1"
                         />
                       </div>
@@ -539,7 +520,7 @@ export default function VixraPage() {
                           id="title"
                           value={variables.Title || ''}
                           onChange={(e) => updateVariable('Title', e.target.value)}
-                          placeholder="Revolutionary Breakthrough in..."
+                          placeholder="Revolutionary Breakthrough in... (auto-generated if blank)"
                           className="mt-1"
                         />
                       </div>
@@ -550,7 +531,7 @@ export default function VixraPage() {
                           id="authors"
                           value={variables.Authors || ''}
                           onChange={(e) => updateVariable('Authors', e.target.value)}
-                          placeholder="Dr. Pseudo Science, Independent Researcher."
+                          placeholder="Dr. Pseudo Science, Independent Researcher (auto-generated if blank)"
                           className="mt-1"
                         />
                       </div>
@@ -558,196 +539,260 @@ export default function VixraPage() {
 
                     {/* Optional Variables */}
                     <div className="space-y-3">
-                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Optional Fields</Label>
-                      
-                      <div>
-                        <Label htmlFor="collaborators" className="text-xs">Collaborators</Label>
-                        <Input
-                          id="collaborators"
-                          value={variables.Collaborators || ''}
-                          onChange={(e) => updateVariable('Collaborators', e.target.value)}
-                          placeholder="Aliens, Advanced AI, Time Travelers, Extradimensional Beings,"
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="email" className="text-xs">Email</Label>
-                        <Input
-                          id="email"
-                          value={variables.Email || ''}
-                          onChange={(e) => updateVariable('Email', e.target.value)}
-                          placeholder="researcher@example.com"
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="numPages" className="text-xs">Number of Pages</Label>
-                        <Input
-                          id="numPages"
-                          type="number"
-                          value={variables.NumPages || ''}
-                          onChange={(e) => updateVariable('NumPages', e.target.value)}
-                          placeholder="10"
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="targetSections" className="text-xs">Target Sections</Label>
-                        <Input
-                          id="targetSections"
-                          type="number"
-                          value={variables.TargetSections || '6'}
-                          onChange={(e) => updateVariable('TargetSections', e.target.value)}
-                          className="mt-1"
-                        />
+                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Info</Label>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 space-y-2">
+                        <p>• Leave fields blank for auto-generation of satirical content</p>
+                        <p>• Each section builds on previous ones</p>
+                        <p>• Generate sections in sequence for best results</p>
                       </div>
                     </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="abstract" className="text-xs">Abstract (optional)</Label>
-                    <Textarea
-                      id="abstract"
-                      value={variables.Abstract || ''}
-                      onChange={(e) => updateVariable('Abstract', e.target.value)}
-                      placeholder="Leave blank for auto-generation"
-                      rows={3}
-                      className="mt-1"
-                    />
                   </div>
                 </CardContent>
               )}
             </Card>
 
-            {/* Controls */}
+            {/* Auto Mode Controls */}
             <Card>
               <CardContent className="pt-4">
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                    {selectedModels.length === 0 ? (
-                      "Select models to generate satirical papers"
-                    ) : (
-                      `Ready to generate with ${selectedModels.length} model${selectedModels.length !== 1 ? 's' : ''}`
-                    )}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Label htmlFor="autoMode" className="text-sm font-medium">Auto Mode</Label>
+                      <Switch
+                        id="autoMode"
+                        checked={autoMode}
+                        onCheckedChange={setAutoMode}
+                        disabled={isAutoGenerating}
+                      />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {autoMode ? 'Generate all sections automatically' : 'Manual section control'}
+                      </span>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      onClick={() => setShowPromptPreview(!showPromptPreview)}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      <Eye className="w-3 h-3 mr-1" />
-                      {showPromptPreview ? 'Hide' : 'Show'} Template
-                    </Button>
-                    <ExportButton
-                      prompt={currentTemplate}
-                      models={selectedModelData}
-                      responses={Object.fromEntries(
-                        Object.entries(responses).map(([key, value]) => [
-                          key, 
-                          {
-                            content: value.content,
-                            status: (value.status === 'complete' ? 'success' : value.status === 'error' ? 'error' : 'loading') as 'success' | 'error' | 'loading',
-                            responseTime: 0,
-                            reasoning: value.reasoning,
-                            tokenUsage: value.tokenUsage,
-                            cost: value.cost
-                          }
-                        ])
+                  {autoMode && (
+                    <div className="space-y-3">
+                      {isAutoGenerating && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Progress: {autoModeProgress.current} of {autoModeProgress.total} sections</span>
+                            <span>{Math.round((autoModeProgress.current / autoModeProgress.total) * 100)}%</span>
+                          </div>
+                          <Progress value={(autoModeProgress.current / autoModeProgress.total) * 100} className="w-full" />
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            Currently generating: {SECTION_ORDER.find(s => s.id === currentSection)?.name || currentSection}
+                          </div>
+                        </div>
                       )}
-                      disabled={loadingModels.size > 0}
-                    />
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={loadingModels.size > 0 || !currentTemplate.trim() || selectedModels.length === 0}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
-                      size="sm"
-                    >
-                      {loadingModels.size > 0 ? (
-                        <>
-                          <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          <span className="text-sm">Generating...</span>
-                        </>
+                      
+                      <div className="flex items-center space-x-2">
+                        {!isAutoGenerating ? (
+                          <Button
+                            onClick={startAutoGeneration}
+                            disabled={selectedModels.length === 0}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            size="sm"
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            Start Auto Generation
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={stopAutoGeneration}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Square className="w-3 h-3 mr-1" />
+                            Stop Auto Generation
+                          </Button>
+                        )}
+                        
+                        {Object.keys(sectionResponses).length > 0 && (
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {Object.keys(sectionResponses).length} sections completed
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Section Generation Controls */}
+            <Card>
+              <CardContent className="pt-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div>
+                        <Label htmlFor="currentSection" className="text-xs">Current Section</Label>
+                        <Select 
+                          value={currentSection} 
+                          onValueChange={setCurrentSection}
+                        >
+                          <SelectTrigger className="w-64 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SECTION_ORDER.map((section) => {
+                              const isAvailable = section.dependencies.every(dep => sectionResponses[dep]);
+                              const isGenerated = sectionResponses[section.id];
+                              
+                              return (
+                                <SelectItem 
+                                  key={section.id} 
+                                  value={section.id}
+                                  disabled={!isAvailable && !isGenerated}
+                                >
+                                  {section.name} {isGenerated ? '✓' : isAvailable ? '○' : '⚬'}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        {selectedModels.length === 0 ? (
+                          "Select models to generate sections"
+                        ) : isAutoGenerating ? (
+                          `Auto-generating ${currentSectionName}...`
+                        ) : loadingModels.length > 0 ? (
+                          `Generating ${currentSectionName}...`
+                        ) : (
+                          `Ready to generate ${currentSectionName}`
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      {Object.keys(sectionResponses).length > 0 && (
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await copyVixraPaper(variables, sectionResponses, selectedModelData);
+                                toast({
+                                  title: "Copied to clipboard",
+                                  description: "Paper has been copied as markdown",
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Copy failed",
+                                  description: "Could not copy to clipboard",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            disabled={loadingModels.length > 0}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              downloadVixraPaper(variables, sectionResponses, selectedModelData);
+                              toast({
+                                title: "Download started",
+                                description: "Paper is downloading as markdown",
+                              });
+                            }}
+                            disabled={loadingModels.length > 0}
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Download MD
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              try {
+                                printVixraPaper(variables, sectionResponses, selectedModelData);
+                                toast({
+                                  title: "Print dialog opened",
+                                  description: "Save as PDF in the print dialog",
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Print failed",
+                                  description: "Could not open print dialog",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            disabled={loadingModels.length > 0}
+                          >
+                            <Printer className="w-3 h-3 mr-1" />
+                            Print/PDF
+                          </Button>
+                        </div>
+                      )}
+                      {!autoMode ? (
+                        <Button
+                          onClick={generateSection}
+                          disabled={loadingModels.length > 0 || selectedModels.length === 0}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          size="sm"
+                        >
+                          {loadingModels.length > 0 ? (
+                            <>
+                              <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              <span className="text-sm">Generating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3 h-3 mr-1" />
+                              <span className="text-sm">Generate Section</span>
+                            </>
+                          )}
+                        </Button>
                       ) : (
-                        <>
-                          <Zap className="w-3 h-3 mr-1" />
-                          <span className="text-sm">Generate Papers</span>
-                        </>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Auto mode enabled - use controls above
+                        </div>
                       )}
-                    </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Template Preview */}
-            {showPromptPreview && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center space-x-2 text-sm">
-                    <BookOpen className="w-4 h-4" />
-                    <span>Template Preview (with variables)</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 border">
-                    <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
-                      {currentTemplate || 'No template selected'}
-                    </pre>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Results */}
-            {selectedModelData.length === 0 ? (
+            {/* Section Results */}
+            {Object.keys(sectionResponses).length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">No Models Selected</h3>
+                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">No Sections Generated</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Select some models to start generating satirical papers.
+                    Select models and generate your first section to get started.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {selectedModelData.map((model) => {
-                  const messageData = getMessageCardData(model.id, responses[model.id], model);
-                  
-                  if (!messageData && !loadingModels.has(model.id)) {
-                    return null; // No message and not loading
-                  }
-                  
-                  if (loadingModels.has(model.id)) {
-                    // Show loading state
-                    return (
-                      <Card key={model.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex items-center justify-center space-x-2">
-                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                              Generating paper with {model.name}...
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  }
+              <div className="space-y-4">
+                {SECTION_ORDER.filter(section => sectionResponses[section.id]).map((section) => {
+                  const response = sectionResponses[section.id];
+                  const model = models.find(m => m.id === selectedModels[0]); // Show first model for now
                   
                   return (
-                    <MessageCard
-                      key={model.id}
-                      message={messageData!}
-                      variant="detailed"
-                      showHeader={true}
-                      showFooter={true}
-                    />
+                    <div key={section.id} className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        <h3 className="text-sm font-semibold">{section.name}</h3>
+                      </div>
+                      {model && (
+                        <ResponseCard
+                          model={model}
+                          response={response}
+                          showTiming={true}
+                        />
+                      )}
+                    </div>
                   );
                 })}
               </div>

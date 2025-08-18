@@ -50,6 +50,12 @@ Science Category options (subset of viXra list; full list can be added verbatim)
 ## Staged Generation Pipeline
 Staging orchestrated client-side via calls to `/api/generate` with `mode: 'vixra'`. The server is authoritative for prompt resolution.
 
+**Auto Mode Support**: Added automatic section progression that eliminates manual stage management. When enabled:
+- Automatically detects next eligible section based on dependencies
+- Provides real-time progress tracking with pause/resume functionality  
+- Respects dependency chain: abstract → introduction → methodology → results → discussion → conclusion → citations → acknowledgments
+- Users can switch between auto and manual control at any time
+
 Stages (each stage appends to an aggregated manuscript state):
 1. __Stage 0—Metadata & Long Introduction__
    - Inputs: User variables; optional `CustomPrompt` or resolved template.
@@ -106,7 +112,9 @@ At each stage, pass `{context}` and numbered `{response#}` placeholders to maint
 - __Form__: Fields listed in Variables section with validation; template picker or custom prompt.
 - __Model selection__: Multi-select with visible ordering (smallest → largest). Display max tokens/context per model row.
 - __Orchestration__: Run stages sequentially; show progress chips (Intro → TOC → Sec 1..N → Conclusion → Abstract).
-- __Preview__: Collapsible preview of assembled manuscript after each stage. “Show Raw Prompt” toggle for transparency.
+- __Auto Mode__: Toggle switch enabling one-click complete paper generation with real-time progress tracking
+- __Manual Control__: Traditional section-by-section generation with dependency validation
+- __Preview__: Collapsible preview of assembled manuscript after each stage. "Show Raw Prompt" toggle for transparency.
 - __Export__: Reuse `ExportButton` to save the final manuscript.
 
 ## Edge Cases & Policies

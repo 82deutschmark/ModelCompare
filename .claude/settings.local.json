@@ -11,7 +11,10 @@
       "Bash(taskkill:*)",
       "Bash(cmd /c taskkill:*)",
       "Bash(cmd /c:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(curl:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

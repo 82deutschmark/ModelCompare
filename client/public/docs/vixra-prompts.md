@@ -27,6 +27,7 @@
 
 ## Paper Structure
 
+<!-- SECTION_START:abstract -->
 ### Abstract Generation
 You are writing the abstract for a satirical research paper for Vixra (in the style of arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous. Be sure to include the following and use the variables provided, if no variable is provided, use your own value:
 
@@ -45,9 +46,11 @@ Write a 2400-3000 word abstract that:
 - Claims to solve fundamental problems in science or math or Machine Learning or AGI or AI such as the Millennium Prize Problems or ARC-AGI 2 or other new age technologies critical to humanity's survival
 
 The abstract should sound like it was written by someone who desperately wants to appear brilliant but lacks any actual scientific understanding. Make it hilariously pretentious while maintaining academic structure.
+<!-- SECTION_END:abstract -->
 
+<!-- SECTION_START:introduction -->
 ### Introduction Section
-You are writing the introduction section for a satirical Vixra research paper. This should establish the "groundbreaking" nature of the research with excessive citations or very few citations and they should be to non-existent work or self-citations or non-sensical citations.
+You are writing the introduction section for a satirical Vixra research paper. This should establish the "groundbreaking" nature of the research with excessive citations or very few citations and they should be to non-existent work or self-citations or non-sensical citations. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -62,9 +65,11 @@ Write a 1100-1500 word introduction that:
 - Includes technical terminology used incorrectly but confidently
 
 Make it sound like the author believes they are writing the most important paper ever published while being completely oblivious to how ridiculous it sounds.
+<!-- SECTION_END:introduction -->
 
+<!-- SECTION_START:methodology -->
 ### Methodology Section
-You are writing the methodology section for a satirical Vixra research paper. Describe completely absurd research methods presented with utmost scientific seriousness.
+You are writing the methodology section for a satirical Vixra research paper. Describe completely absurd research methods presented with utmost scientific seriousness. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Methodology Approach: "{Methodology}"
@@ -83,9 +88,11 @@ Write a 1000-2000 word methodology section that:
 - Uses mathematical formulas that look impressive but are meaningless
 
 Present everything as if it's the most scientifically rigorous approach ever devised. The more absurd the methods, the more seriously they should be presented.
+<!-- SECTION_END:methodology -->
 
+<!-- SECTION_START:results -->
 ### Results Section
-You are writing the results section for a satirical Vixra research paper. Present completely fabricated data and findings with excessive precision and confidence.
+You are writing the results section for a satirical Vixra research paper. Present completely fabricated data and findings with excessive precision and confidence. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Abstract Context: "{Abstract}"
@@ -101,9 +108,11 @@ Write a 1400-2000 word results section that:
 - Presents data that would revolutionize multiple fields of science
 
 The results should be so extraordinary that they would immediately alert any real scientist to the paper's satirical nature, yet be presented with complete academic seriousness.
+<!-- SECTION_END:results -->
 
+<!-- SECTION_START:discussion -->
 ### Discussion Section  
-You are writing the discussion section for a satirical Vixra research paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity.
+You are writing the discussion section for a satirical Vixra research paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Key Findings Summary: "{response}"
@@ -120,9 +129,11 @@ Write a 400-500 word discussion that:
 - Uses excessive hedging language while making grandiose claims
 
 Present the discussion as if the author genuinely believes they have made the most important scientific discovery in history.
+<!-- SECTION_END:discussion -->
 
+<!-- SECTION_START:conclusion -->
 ### Conclusion Section
-You are writing the conclusion section for a satirical Vixra research paper. Summarize the "groundbreaking" work and its world-changing implications.
+You are writing the conclusion section for a satirical Vixra research paper. Summarize the "groundbreaking" work and its world-changing implications. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Main Findings: "{response}"
@@ -138,11 +149,13 @@ Write a 200-300 word conclusion that:
 - Ends with a grandiose statement about advancing human knowledge
 
 The conclusion should read like the author expects to be remembered as the greatest scientist in history based on this single, completely ridiculous paper.
+<!-- SECTION_END:conclusion -->
 
 ## Paper Formatting
 
+<!-- SECTION_START:citations -->
 ### Citations Generator
-You are creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but completely fake citations that support the absurd claims made in the paper.
+You are creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but completely fake citations that support the absurd claims made in the paper. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -158,9 +171,11 @@ Create citations that:
 - Reference work that would supposedly support the impossible claims
 
 Format each citation properly and make them sound plausible at first glance while being completely fabricated.
+<!-- SECTION_END:citations -->
 
+<!-- SECTION_START:acknowledgments -->
 ### Acknowledgments Section
-You are writing the acknowledgments section for a satirical Vixra research paper with appropriate academic gratitude but absurd content.
+You are writing the acknowledgments section for a satirical Vixra research paper with appropriate academic gratitude but absurd content. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Researcher: "{ResearcherName}"
 Institution: "{Institution}"
@@ -175,11 +190,13 @@ Write acknowledgments that:
 - Maintain proper academic tone throughout
 
 Keep it to 1000-1500 words while making it hilariously over-the-top in its gratitude for supporting completely impossible research.
+<!-- SECTION_END:acknowledgments -->
 
 ## Quality Control
 
+<!-- SECTION_START:peer-review -->
 ### Peer Review Response
-You are responding to imaginary peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity.
+You are responding to imaginary peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Original Content: "{response}"
@@ -193,3 +210,4 @@ Create responses to 3-4 made-up reviewer comments that:
 - Maintain respectful academic tone while being completely wrong
 
 Each response should be 1000-1500 words and demonstrate the reviewer's complete confidence in the author's impossible work.
+<!-- SECTION_END:peer-review -->
