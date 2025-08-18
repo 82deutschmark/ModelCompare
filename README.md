@@ -1,3 +1,11 @@
+<!--
+File: README.md
+Purpose: Primary developer/operator documentation for architecture, setup, and usage.
+How it works: Summarizes stack, routes, APIs, environment, and workflows. Serves as onboarding doc.
+Author: Cascade (AI assistant)
+Date: 2025-08-17
+-->
+
 # AI Model Comparison Tool
 
 A sophisticated web application for comparing responses from multiple AI models simultaneously. Built with React, TypeScript, and Express, supporting all major AI providers with real-time response comparison and analysis.
