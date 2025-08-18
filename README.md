@@ -183,6 +183,12 @@ The `IStorage` interface in `server/storage.ts` provides:
 - Editorial pass tracking and version comparison
 - Manual model selection for each enhancement round
 
+**Vixra Mode** (`/vixra`)
+- Generate satirical academic-style papers with template-driven sections
+- Uses the same model selection UI and `ResponseCard` display as Compare mode
+- Loads templates from `client/public/docs/vixra-prompts.md`
+- Calls existing endpoints (`GET /api/models`, `POST /api/models/respond`)
+
 ### Universal Features
 
 **Export Functionality**
