@@ -24,7 +24,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { callModel, getAllModels, getReasoningModels } from "./providers/index.js";
-import { storage } from "./storage";
+import { getStorage } from "./storage";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
 import type { GenerateRequest, GenerateResponse, UnifiedMessage } from "../shared/api-types.js";
@@ -87,6 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await Promise.all(modelPromises);
 
       // Store the comparison
+      const storage = await getStorage();
       const comparison = await storage.createComparison({
         prompt,
         selectedModels: modelIds,
@@ -109,6 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get comparison history
   app.get("/api/comparisons", async (req, res) => {
     try {
+      const storage = await getStorage();
       const comparisons = await storage.getComparisons();
       res.json(comparisons);
     } catch (error) {
@@ -119,6 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get specific comparison
   app.get("/api/comparisons/:id", async (req, res) => {
     try {
+      const storage = await getStorage();
       const comparison = await storage.getComparison(req.params.id);
       if (!comparison) {
         return res.status(404).json({ error: "Comparison not found" });
@@ -307,6 +310,14 @@ Continue the debate by responding to the last message. Be analytical, challenge 
   app.post("/api/generate", async (req, res) => {
     try {
       const requestBody = req.body as GenerateRequest;
+      // Debug: trace incoming request early to verify middleware is not intercepting
+      console.log('[API] /api/generate received', {
+        bodyType: typeof req.body,
+        keys: req.body ? Object.keys(req.body) : [],
+        contentPreview: typeof req.body?.template === 'string' ? req.body.template.slice(0, 60) + '…' : undefined,
+        seatsCount: Array.isArray(req.body?.seats) ? req.body.seats.length : 0,
+        mode: req.body?.mode,
+      });
       const { mode, template, variables, seats, options } = requestBody;
       
       // Validate mode
@@ -483,6 +494,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
         return res.status(400).json({ error: "Missing variables or template" });
       }
       
+      const storage = await getStorage();
       const session = await storage.createVixraSession({
         variables,
         template, 
@@ -501,6 +513,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       const { id } = req.params;
       const updates = req.body;
       
+      const storage = await getStorage();
       const session = await storage.updateVixraSession(id, updates);
       if (!session) {
         return res.status(404).json({ error: "Session not found" });
@@ -516,6 +529,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
   app.get("/api/vixra/sessions/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      const storage = await getStorage();
       const session = await storage.getVixraSession(id);
       
       if (!session) {
@@ -531,6 +545,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
 
   app.get("/api/vixra/sessions", async (req, res) => {
     try {
+      const storage = await getStorage();
       const sessions = await storage.getVixraSessions();
       res.json(sessions);
     } catch (error) {
