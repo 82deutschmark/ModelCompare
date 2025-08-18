@@ -282,7 +282,7 @@ export default function PlanAssessmentPage() {
                     rows={3}
                     value={contextSummary}
                     onChange={(e) => setContextSummary(e.target.value)}
-                    placeholder="Any context to consider"
+                    placeholder="Assess my over-confident junior developer's plan.  What are the key insights he is missing?"
                   />
                 </div>
 
