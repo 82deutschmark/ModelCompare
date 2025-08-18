@@ -2,10 +2,10 @@
  * Vixra Mode Page - Satirical AI-Generated Research Papers
  * 
  * This page provides a specialized interface for generating satirical academic papers
- * using AI models. It follows the same pattern as the home page but with Vixra-specific
- * prompt templates for creating humorous research papers.
+ * using AI models with proper variable substitution and validation. It follows the
+ * project's modular architecture and uses the unified /api/generate endpoint.
  * 
- * Author: Cascade
+ * Author: Claude (updated to use unified variable system)
  * Date: January 2025
  */
 
@@ -13,41 +13,67 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Brain, Zap, BookOpen, Eye } from "lucide-react";
+import { FileText, Brain, Zap, BookOpen, Eye, Settings } from "lucide-react";
 import { ModelButton } from "@/components/ModelButton";
-import { ResponseCard } from "@/components/ResponseCard";
+import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { AppNavigation } from "@/components/AppNavigation";
 import { ExportButton } from "@/components/ExportButton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { parsePromptsFromMarkdownFile, type PromptCategory } from "@/lib/promptParser";
-import type { AIModel, ModelResponse } from "@/types/ai-models";
+import { VARIABLE_REGISTRIES, getDefaultVariables } from "../../../shared/variable-registry";
+import type { GenerateRequest, GenerateResponse, ModelSeat, UnifiedMessage } from "../../../shared/api-types";
+import type { AIModel } from "@/types/ai-models";
+
+const SCIENCE_CATEGORIES = VARIABLE_REGISTRIES.vixra.find(v => v.name === 'ScienceCategory')?.enum || [];
 
 export default function VixraPage() {
   const { toast } = useToast();
   
-  const defaultPrompt = `Write a satirical academic paper about the relationship between caffeine consumption and developer productivity. Include:
-• An abstract with overblown claims
-• Methodology involving questionable data sources
-• Statistical analysis that proves correlation equals causation
-• A conclusion that coffee is the fundamental force driving technological progress`;
+  // State for variables
+  const [variables, setVariables] = useState<Record<string, string>>(() => ({
+    ...getDefaultVariables('vixra'),
+    ResearcherName: 'Dr. Pseudo Science',
+    ScienceCategory: SCIENCE_CATEGORIES[0] || '',
+    Title: 'Revolutionary Breakthrough in Quantum Coffee Dynamics',
+    Authors: 'Dr. Pseudo Science, Prof. Mock Academia',
+    PromptMode: 'template'
+  }));
   
-  const [prompt, setPrompt] = useState(defaultPrompt);
-  const [isDefaultPrompt, setIsDefaultPrompt] = useState(true);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedPromptTemplate, setSelectedPromptTemplate] = useState<string>('');
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
   const [promptsLoading, setPromptsLoading] = useState(true);
-  const [responses, setResponses] = useState<Record<string, ModelResponse>>({});
+  const [currentTemplate, setCurrentTemplate] = useState<string>('');
+  const [responses, setResponses] = useState<Record<string, UnifiedMessage>>({});
+  
+  // Convert UnifiedMessage to MessageCardData format
+  const getMessageCardData = (modelId: string, message: UnifiedMessage | undefined, model: AIModel): MessageCardData | undefined => {
+    if (!message) return undefined;
+    
+    return {
+      id: message.id,
+      modelName: model.name,
+      modelId: model.id,
+      content: message.content,
+      reasoning: message.reasoning,
+      responseTime: 0, // Not tracked in UnifiedMessage
+      tokenUsage: message.tokenUsage,
+      cost: message.cost,
+      timestamp: new Date(message.createdAt).getTime()
+    };
+  };
   const [loadingModels, setLoadingModels] = useState<Set<string>>(new Set());
   const [completedModels, setCompletedModels] = useState<Set<string>>(new Set());
   const [showTiming, setShowTiming] = useState(true);
   const [showPromptPreview, setShowPromptPreview] = useState(false);
+  const [showVariablesPanel, setShowVariablesPanel] = useState(true);
 
   // Fetch available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -64,16 +90,25 @@ export default function VixraPage() {
     const loadVixraPrompts = async () => {
       setPromptsLoading(true);
       try {
-        // Parse the markdown from the vixra-specific prompts file using the standard parser
         const categories = await parsePromptsFromMarkdownFile('/docs/vixra-prompts.md');
         setPromptCategories(categories);
+        if (categories.length > 0) {
+          const firstCategory = categories[0];
+          setSelectedCategory(firstCategory.id);
+          if (firstCategory.prompts.length > 0) {
+            const firstPrompt = firstCategory.prompts[0];
+            setSelectedPromptTemplate(firstPrompt.id);
+            setCurrentTemplate(firstPrompt.content);
+          }
+        }
       } catch (error) {
         console.error('Failed to load Vixra prompt templates:', error);
         toast({
           title: 'Failed to load Vixra templates',
-          description: 'Using default prompt input only.',
+          description: 'Using default template.',
           variant: 'destructive',
         });
+        setCurrentTemplate('Generate a satirical academic paper about {Title} in the category {ScienceCategory} by {Authors}.');
       } finally {
         setPromptsLoading(false);
       }
@@ -82,49 +117,58 @@ export default function VixraPage() {
     loadVixraPrompts();
   }, [toast]);
 
-  // Individual model response mutation (same as home page)
-  const modelResponseMutation = useMutation({
-    mutationFn: async (data: { prompt: string; modelId: string }) => {
-      const response = await apiRequest('POST', '/api/models/respond', data);
-      const responseData = await response.json() as ModelResponse;
-      return { modelId: data.modelId, response: responseData };
+  // Unified generation mutation
+  const generateMutation = useMutation({
+    mutationFn: async (data: { template: string; variables: Record<string, string>; seats: ModelSeat[] }) => {
+      const request: GenerateRequest = {
+        mode: 'vixra',
+        template: data.template,
+        variables: data.variables,
+        messages: [],
+        seats: data.seats,
+        options: { stream: false }
+      };
+      
+      const response = await apiRequest('POST', '/api/generate', request);
+      return response.json() as Promise<GenerateResponse>;
     },
-    onSuccess: (data) => {
-      const responseWithStatus = { ...data.response, status: 'success' as const };
-      setResponses(prev => ({ ...prev, [data.modelId]: responseWithStatus }));
+    onSuccess: (data, variables) => {
+      const seatId = variables.seats[0].id;
+      setResponses(prev => ({ ...prev, [seatId]: data.message }));
       setLoadingModels(prev => {
         const newSet = new Set(prev);
-        newSet.delete(data.modelId);
+        newSet.delete(seatId);
         return newSet;
       });
-      setCompletedModels(prev => new Set([...Array.from(prev), data.modelId]));
+      setCompletedModels(prev => new Set([...Array.from(prev), seatId]));
       
-      const model = models.find(m => m.id === data.modelId);
       toast({
-        title: `${model?.name || 'Model'} Responded`,
-        description: `Satirical paper generated in ${(data.response.responseTime / 1000).toFixed(1)}s`,
+        title: 'Paper Generated',
+        description: `Generated in ${(data.message.tokenUsage?.input || 0) + (data.message.tokenUsage?.output || 0)} tokens`,
       });
     },
     onError: (error, variables) => {
+      const seatId = variables.seats[0].id;
       setLoadingModels(prev => {
         const newSet = new Set(prev);
-        newSet.delete(variables.modelId);
+        newSet.delete(seatId);
         return newSet;
       });
       
       setResponses(prev => ({
         ...prev,
-        [variables.modelId]: {
+        [seatId]: {
+          id: `error-${Date.now()}`,
+          role: 'assistant' as const,
           content: '',
+          createdAt: new Date().toISOString(),
           status: 'error' as const,
-          responseTime: 0,
-          error: error.message
+          finishReason: 'error' as const
         }
       }));
       
-      const model = models.find(m => m.id === variables.modelId);
       toast({
-        title: `${model?.name || 'Model'} Failed`,
+        title: 'Generation Failed',
         description: error.message,
         variant: "destructive",
       });
@@ -132,10 +176,10 @@ export default function VixraPage() {
   });
 
   const handleSubmit = () => {
-    if (!prompt.trim()) {
+    if (!currentTemplate.trim()) {
       toast({
-        title: "Enter a prompt",
-        description: "Please enter a prompt for your satirical paper.",
+        title: "No template selected",
+        description: "Please select a prompt template.",
         variant: "destructive",
       });
       return;
@@ -150,14 +194,45 @@ export default function VixraPage() {
       return;
     }
 
+    // Validate required variables
+    const registry = VARIABLE_REGISTRIES.vixra;
+    const missingRequired = registry
+      .filter(schema => schema.required && (!variables[schema.name] || variables[schema.name].trim() === ''))
+      .map(schema => schema.name);
+      
+    if (missingRequired.length > 0) {
+      toast({
+        title: "Missing required fields",
+        description: `Please fill in: ${missingRequired.join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Reset state for new generation
     setResponses({});
     setLoadingModels(new Set(selectedModels));
     setCompletedModels(new Set());
     
-    // Start all model requests in parallel
+    // Start generation for each model
     selectedModels.forEach(modelId => {
-      modelResponseMutation.mutate({ prompt, modelId });
+      const model = models.find(m => m.id === modelId);
+      if (!model) return;
+      
+      const seat: ModelSeat = {
+        id: modelId,
+        model: {
+          id: model.id,
+          name: model.name,
+          provider: model.provider
+        }
+      };
+      
+      generateMutation.mutate({ 
+        template: currentTemplate, 
+        variables, 
+        seats: [seat] 
+      });
     });
     
     toast({
@@ -167,7 +242,10 @@ export default function VixraPage() {
   };
 
   const retryModel = async (modelId: string) => {
-    if (!prompt.trim()) return;
+    if (!currentTemplate.trim()) return;
+    
+    const model = models.find(m => m.id === modelId);
+    if (!model) return;
     
     setLoadingModels(prev => new Set([...Array.from(prev), modelId]));
     setCompletedModels(prev => {
@@ -182,10 +260,23 @@ export default function VixraPage() {
       return newResponses;
     });
     
-    modelResponseMutation.mutate({ prompt, modelId });
+    const seat: ModelSeat = {
+      id: modelId,
+      model: {
+        id: model.id,
+        name: model.name,
+        provider: model.provider
+      }
+    };
+    
+    generateMutation.mutate({ 
+      template: currentTemplate, 
+      variables, 
+      seats: [seat] 
+    });
   };
 
-  // Prompt template handlers (same as home page)
+  // Prompt template handlers
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedPromptTemplate('');
@@ -196,20 +287,12 @@ export default function VixraPage() {
     const category = promptCategories.find(cat => cat.id === selectedCategory);
     const selectedPrompt = category?.prompts.find(p => p.id === promptId);
     if (selectedPrompt) {
-      setPrompt(selectedPrompt.content);
-      setIsDefaultPrompt(false);
+      setCurrentTemplate(selectedPrompt.content);
       toast({
         title: 'Vixra Template Applied',
         description: `Applied "${selectedPrompt.name}" template`,
       });
     }
-  };
-
-  const clearPromptSelection = () => {
-    setSelectedCategory('');
-    setSelectedPromptTemplate('');
-    setPrompt(defaultPrompt);
-    setIsDefaultPrompt(true);
   };
 
   const availablePrompts = selectedCategory 
@@ -218,11 +301,15 @@ export default function VixraPage() {
 
   const selectedModelData = models.filter(model => selectedModels.includes(model.id));
 
+  const updateVariable = (name: string, value: string) => {
+    setVariables(prev => ({ ...prev, [name]: value }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <AppNavigation 
         title="Vixra Mode" 
-        subtitle="Generate satirical academic papers"
+        subtitle="Generate satirical academic papers with variable substitution"
         icon={FileText}
       />
 
@@ -344,97 +431,200 @@ export default function VixraPage() {
 
           {/* Main Content Area */}
           <div className="xl:col-span-2 space-y-4">
-            {/* Prompt Input */}
+            {/* Template Selection */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center space-x-2 text-sm">
-                  <FileText className="w-4 h-4" />
-                  <span>Paper Topic & Requirements</span>
+                  <BookOpen className="w-4 h-4" />
+                  <span>Prompt Template</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pt-0">
-                {/* Vixra Templates Section */}
                 {!promptsLoading && promptCategories.length > 0 && (
-                  <div className="space-y-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border">
-                    <div className="flex items-center space-x-2">
-                      <BookOpen className="w-3 h-3 text-blue-600" />
-                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Vixra Templates</Label>
-                    </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select 
+                      value={selectedCategory} 
+                      onValueChange={handleCategoryChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choose category..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {promptCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select 
-                        value={selectedCategory} 
-                        onValueChange={handleCategoryChange}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose category..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {promptCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      <Select 
-                        value={selectedPromptTemplate} 
-                        onValueChange={handlePromptTemplateChange}
-                        disabled={!selectedCategory}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select template..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availablePrompts.map((prompt) => (
-                            <SelectItem key={prompt.id} value={prompt.id}>
-                              {prompt.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {(selectedCategory || selectedPromptTemplate) && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={clearPromptSelection}
-                        className="w-full"
-                      >
-                        Clear Selection & Use Custom Topic
-                      </Button>
-                    )}
+                    <Select 
+                      value={selectedPromptTemplate} 
+                      onValueChange={handlePromptTemplateChange}
+                      disabled={!selectedCategory}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select template..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availablePrompts.map((prompt) => (
+                          <SelectItem key={prompt.id} value={prompt.id}>
+                            {prompt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
-                
-                <div className="relative">
-                  <Textarea
-                    value={prompt}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value.length <= 4000) {
-                        setPrompt(value);
-                        setIsDefaultPrompt(value === defaultPrompt);
-                      }
-                    }}
-                    onFocus={() => {
-                      if (isDefaultPrompt) {
-                        setPrompt('');
-                        setIsDefaultPrompt(false);
-                      }
-                    }}
-                    rows={12}
-                    className={`min-h-48 pr-16 resize-none ${isDefaultPrompt ? 'text-gray-300 dark:text-gray-600' : ''}`}
-                    placeholder="Describe the topic for your satirical academic paper..."
-                    maxLength={4000}
-                  />
-                  <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-                    {prompt.length}/4000
+              </CardContent>
+            </Card>
+
+            {/* Variables Panel */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <Settings className="w-4 h-4" />
+                    <span>Paper Variables</span>
                   </div>
-                </div>
-                
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowVariablesPanel(!showVariablesPanel)}
+                  >
+                    {showVariablesPanel ? 'Hide' : 'Show'}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              {showVariablesPanel && (
+                <CardContent className="space-y-4 pt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Required Variables */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Required Fields</Label>
+                      
+                      <div>
+                        <Label htmlFor="researcherName" className="text-xs">Researcher Name *</Label>
+                        <Input
+                          id="researcherName"
+                          value={variables.ResearcherName || ''}
+                          onChange={(e) => updateVariable('ResearcherName', e.target.value)}
+                          placeholder="Dr. Pseudo Science"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="scienceCategory" className="text-xs">Science Category *</Label>
+                        <Select 
+                          value={variables.ScienceCategory || ''} 
+                          onValueChange={(value) => updateVariable('ScienceCategory', value)}
+                        >
+                          <SelectTrigger className="w-full mt-1">
+                            <SelectValue placeholder="Select category..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SCIENCE_CATEGORIES.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="title" className="text-xs">Paper Title *</Label>
+                        <Input
+                          id="title"
+                          value={variables.Title || ''}
+                          onChange={(e) => updateVariable('Title', e.target.value)}
+                          placeholder="Revolutionary Breakthrough in..."
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="authors" className="text-xs">Authors *</Label>
+                        <Input
+                          id="authors"
+                          value={variables.Authors || ''}
+                          onChange={(e) => updateVariable('Authors', e.target.value)}
+                          placeholder="Dr. Pseudo Science, Independent Researcher."
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Optional Variables */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Optional Fields</Label>
+                      
+                      <div>
+                        <Label htmlFor="collaborators" className="text-xs">Collaborators</Label>
+                        <Input
+                          id="collaborators"
+                          value={variables.Collaborators || ''}
+                          onChange={(e) => updateVariable('Collaborators', e.target.value)}
+                          placeholder="Aliens, Advanced AI, Time Travelers, Extradimensional Beings,"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="email" className="text-xs">Email</Label>
+                        <Input
+                          id="email"
+                          value={variables.Email || ''}
+                          onChange={(e) => updateVariable('Email', e.target.value)}
+                          placeholder="researcher@example.com"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="numPages" className="text-xs">Number of Pages</Label>
+                        <Input
+                          id="numPages"
+                          type="number"
+                          value={variables.NumPages || ''}
+                          onChange={(e) => updateVariable('NumPages', e.target.value)}
+                          placeholder="10"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="targetSections" className="text-xs">Target Sections</Label>
+                        <Input
+                          id="targetSections"
+                          type="number"
+                          value={variables.TargetSections || '6'}
+                          onChange={(e) => updateVariable('TargetSections', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="abstract" className="text-xs">Abstract (optional)</Label>
+                    <Textarea
+                      id="abstract"
+                      value={variables.Abstract || ''}
+                      onChange={(e) => updateVariable('Abstract', e.target.value)}
+                      placeholder="Leave blank for auto-generation"
+                      rows={3}
+                      className="mt-1"
+                    />
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Controls */}
+            <Card>
+              <CardContent className="pt-4">
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-gray-600 dark:text-gray-400">
                     {selectedModels.length === 0 ? (
@@ -452,17 +642,29 @@ export default function VixraPage() {
                       className="text-xs"
                     >
                       <Eye className="w-3 h-3 mr-1" />
-                      {showPromptPreview ? 'Hide' : 'Show'} Raw Prompt
+                      {showPromptPreview ? 'Hide' : 'Show'} Template
                     </Button>
                     <ExportButton
-                      prompt={prompt}
+                      prompt={currentTemplate}
                       models={selectedModelData}
-                      responses={responses}
+                      responses={Object.fromEntries(
+                        Object.entries(responses).map(([key, value]) => [
+                          key, 
+                          {
+                            content: value.content,
+                            status: (value.status === 'complete' ? 'success' : value.status === 'error' ? 'error' : 'loading') as 'success' | 'error' | 'loading',
+                            responseTime: 0,
+                            reasoning: value.reasoning,
+                            tokenUsage: value.tokenUsage,
+                            cost: value.cost
+                          }
+                        ])
+                      )}
                       disabled={loadingModels.size > 0}
                     />
                     <Button
                       onClick={handleSubmit}
-                      disabled={loadingModels.size > 0 || !prompt.trim() || selectedModels.length === 0}
+                      disabled={loadingModels.size > 0 || !currentTemplate.trim() || selectedModels.length === 0}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
                       size="sm"
                     >
@@ -483,19 +685,19 @@ export default function VixraPage() {
               </CardContent>
             </Card>
 
-            {/* Raw Prompt Preview */}
+            {/* Template Preview */}
             {showPromptPreview && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center space-x-2 text-sm">
                     <BookOpen className="w-4 h-4" />
-                    <span>Raw Prompt Preview</span>
+                    <span>Template Preview (with variables)</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 border">
                     <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
-                      {prompt || 'No prompt entered'}
+                      {currentTemplate || 'No template selected'}
                     </pre>
                   </div>
                 </CardContent>
@@ -515,15 +717,39 @@ export default function VixraPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 gap-4">
-                {selectedModelData.map((model) => (
-                  <ResponseCard
-                    key={model.id}
-                    model={model}
-                    response={responses[model.id]}
-                    onRetry={() => retryModel(model.id)}
-                    showTiming={showTiming}
-                  />
-                ))}
+                {selectedModelData.map((model) => {
+                  const messageData = getMessageCardData(model.id, responses[model.id], model);
+                  
+                  if (!messageData && !loadingModels.has(model.id)) {
+                    return null; // No message and not loading
+                  }
+                  
+                  if (loadingModels.has(model.id)) {
+                    // Show loading state
+                    return (
+                      <Card key={model.id}>
+                        <CardContent className="pt-6">
+                          <div className="flex items-center justify-center space-x-2">
+                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              Generating paper with {model.name}...
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                  
+                  return (
+                    <MessageCard
+                      key={model.id}
+                      message={messageData!}
+                      variant="detailed"
+                      showHeader={true}
+                      showFooter={true}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
