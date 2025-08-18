@@ -107,6 +107,63 @@ export function autoGenerateVariables(
 }
 
 /**
+ * Generate missing variables using LLM while respecting user input.
+ * This is the core feature that makes Vixra mode fun - it generates 
+ * hilarious academic-sounding names, titles, and institutions when 
+ * the user leaves fields blank, but never overwrites user input.
+ */
+export async function generateMissingVariables(
+  userVariables: Record<string, string>,
+  promptTemplates: Map<string, string>
+): Promise<Record<string, string>> {
+  const result = { ...userVariables };
+  
+  // Only generate if user hasn't provided value
+  if (!result.Title?.trim() && result.ScienceCategory) {
+    result.Title = await generateSingleVariable(
+      'generate-title', 
+      { ScienceCategory: result.ScienceCategory }, 
+      promptTemplates
+    );
+  }
+  
+  if (!result.Author?.trim()) {
+    result.Author = await generateSingleVariable('generate-author', {}, promptTemplates);
+  }
+  
+  return result;
+}
+
+/**
+ * Generate a single variable using LLM
+ */
+async function generateSingleVariable(
+  templateId: string, 
+  variables: Record<string, string>,
+  templates: Map<string, string>
+): Promise<string> {
+  const template = templates.get(templateId);
+  if (!template) return '';
+  
+  const prompt = substituteVariables(template, variables);
+  
+  // Use same pattern as section generation
+  try {
+    const { apiRequest } = await import('@/lib/queryClient');
+    const response = await apiRequest('POST', '/api/models/respond', {
+      modelId: 'gpt-4o-mini', // Fast, cheap model for variables
+      prompt
+    });
+    
+    const data = await response.json();
+    return data.content?.trim() || '';
+  } catch (error) {
+    console.error('Variable generation failed:', error);
+    return ''; // Return empty - don't overwrite with fallback
+  }
+}
+
+/**
  * Simple variable substitution for templates.
  * Replaces {variableName} placeholders with actual values.
  */

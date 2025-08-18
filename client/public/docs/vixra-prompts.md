@@ -211,3 +211,21 @@ Create responses to 3-4 made-up reviewer comments that:
 
 Each response should be 1000-1500 words and demonstrate the reviewer's complete confidence in the author's impossible work.
 <!-- SECTION_END:peer-review -->
+
+## Variable Generation
+
+<!-- SECTION_START:generate-title -->
+### Generate Paper Title
+Generate a satirical but believable academic paper title for "{ScienceCategory}". 
+The title should sound grandiose and revolutionary while being completely absurd.
+Examples: "Revolutionary Breakthrough in Quantum Coffee Dynamics", "Novel Approach to Interdimensional Sock Teleportation"
+Output only the title, no commentary.
+<!-- SECTION_END:generate-title -->
+
+<!-- SECTION_START:generate-author -->
+### Generate Author Name  
+Generate a satirical researcher name that sounds academic but ridiculous.
+Format: "Dr./Prof. [Pretentious First Name] [Academic-sounding Last Name]"
+Examples: "Dr. Quantum Pseudoscience", "Prof. Cosmic Paradigm", "Dr. Ethereal Breakthrough"
+Output only the name, no commentary.
+<!-- SECTION_END:generate-author -->
