@@ -474,6 +474,71 @@ Continue the debate by responding to the last message. Be analytical, challenge 
     }
   });
 
+  // Vixra session persistence endpoints
+  app.post("/api/vixra/sessions", async (req, res) => {
+    try {
+      const { variables, template, responses } = req.body;
+      
+      if (!variables || !template) {
+        return res.status(400).json({ error: "Missing variables or template" });
+      }
+      
+      const session = await storage.createVixraSession({
+        variables,
+        template, 
+        responses: responses || {}
+      });
+      
+      res.json(session);
+    } catch (error) {
+      console.error("Create Vixra session error:", error);
+      res.status(500).json({ error: "Failed to create session" });
+    }
+  });
+
+  app.put("/api/vixra/sessions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const session = await storage.updateVixraSession(id, updates);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      
+      res.json(session);
+    } catch (error) {
+      console.error("Update Vixra session error:", error);
+      res.status(500).json({ error: "Failed to update session" });
+    }
+  });
+
+  app.get("/api/vixra/sessions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const session = await storage.getVixraSession(id);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      
+      res.json(session);
+    } catch (error) {
+      console.error("Get Vixra session error:", error);
+      res.status(500).json({ error: "Failed to get session" });
+    }
+  });
+
+  app.get("/api/vixra/sessions", async (req, res) => {
+    try {
+      const sessions = await storage.getVixraSessions();
+      res.json(sessions);
+    } catch (error) {
+      console.error("Get Vixra sessions error:", error);
+      res.status(500).json({ error: "Failed to get sessions" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

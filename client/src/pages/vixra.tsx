@@ -29,51 +29,59 @@ import { parsePromptsFromMarkdownFile, type PromptCategory } from "@/lib/promptP
 import { VARIABLE_REGISTRIES, getDefaultVariables } from "../../../shared/variable-registry";
 import type { GenerateRequest, GenerateResponse, ModelSeat, UnifiedMessage } from "../../../shared/api-types";
 import type { AIModel } from "@/types/ai-models";
+import {
+  parseVixraTemplates,
+  autoGenerateVariables,
+  buildVariablesForSection,
+  getNextEligibleSections,
+  isWorkflowComplete,
+  getWorkflowProgress,
+  createWorkflowState,
+  type SectionTemplate,
+  type SectionOutput,
+  type WorkflowState,
+  type WorkflowSession
+} from "@/lib/vixraWorkflow";
 
 const SCIENCE_CATEGORIES = VARIABLE_REGISTRIES.vixra.find(v => v.name === 'ScienceCategory')?.enum || [];
+
+interface VixraSession {
+  id: string;
+  variables: Record<string, string>;
+  template: string;
+  responses: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function VixraPage() {
   const { toast } = useToast();
   
-  // State for variables
+  // Session persistence state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  
+  // Workflow state
+  const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
+  const [templates, setTemplates] = useState<Map<string, SectionTemplate>>(new Map());
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [isWorkflowRunning, setIsWorkflowRunning] = useState(false);
+  
+  // State for variables (these get auto-generated if missing)
   const [variables, setVariables] = useState<Record<string, string>>(() => ({
     ...getDefaultVariables('vixra'),
-    ResearcherName: 'Dr. Pseudo Science',
+    ResearcherName: '',
     ScienceCategory: SCIENCE_CATEGORIES[0] || '',
-    Title: 'Revolutionary Breakthrough in Quantum Coffee Dynamics',
-    Authors: 'Dr. Pseudo Science, Prof. Mock Academia',
+    Title: '',
+    Authors: '',
     PromptMode: 'template'
   }));
   
-  const [selectedModels, setSelectedModels] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedPromptTemplate, setSelectedPromptTemplate] = useState<string>('');
-  const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
-  const [promptsLoading, setPromptsLoading] = useState(true);
-  const [currentTemplate, setCurrentTemplate] = useState<string>('');
-  const [responses, setResponses] = useState<Record<string, UnifiedMessage>>({});
-  
-  // Convert UnifiedMessage to MessageCardData format
-  const getMessageCardData = (modelId: string, message: UnifiedMessage | undefined, model: AIModel): MessageCardData | undefined => {
-    if (!message) return undefined;
-    
-    return {
-      id: message.id,
-      modelName: model.name,
-      modelId: model.id,
-      content: message.content,
-      reasoning: message.reasoning,
-      responseTime: 0, // Not tracked in UnifiedMessage
-      tokenUsage: message.tokenUsage,
-      cost: message.cost,
-      timestamp: new Date(message.createdAt).getTime()
-    };
-  };
-  const [loadingModels, setLoadingModels] = useState<Set<string>>(new Set());
-  const [completedModels, setCompletedModels] = useState<Set<string>>(new Set());
+  // UI state
   const [showTiming, setShowTiming] = useState(true);
   const [showPromptPreview, setShowPromptPreview] = useState(false);
   const [showVariablesPanel, setShowVariablesPanel] = useState(true);
+  const [showWorkflowPanel, setShowWorkflowPanel] = useState(true);
 
   // Fetch available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -85,142 +93,180 @@ export default function VixraPage() {
     },
   });
 
-  // Load Vixra prompt templates from markdown
+  // Load Vixra workflow templates from markdown
   useEffect(() => {
-    const loadVixraPrompts = async () => {
-      setPromptsLoading(true);
+    const loadVixraWorkflow = async () => {
       try {
-        const categories = await parsePromptsFromMarkdownFile('/docs/vixra-prompts.md');
-        setPromptCategories(categories);
-        if (categories.length > 0) {
-          const firstCategory = categories[0];
-          setSelectedCategory(firstCategory.id);
-          if (firstCategory.prompts.length > 0) {
-            const firstPrompt = firstCategory.prompts[0];
-            setSelectedPromptTemplate(firstPrompt.id);
-            setCurrentTemplate(firstPrompt.content);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load Vixra prompt templates:', error);
+        const response = await fetch('/docs/vixra-prompts.md');
+        const markdownContent = await response.text();
+        
+        const parsedTemplates = parseVixraTemplates(markdownContent);
+        setTemplates(parsedTemplates);
+        
+        // Initialize workflow state with required sections
+        const initialState = createWorkflowState(parsedTemplates);
+        setWorkflowState(initialState);
+        
         toast({
-          title: 'Failed to load Vixra templates',
-          description: 'Using default template.',
+          title: 'Workflow Templates Loaded',
+          description: `Loaded ${parsedTemplates.size} section templates`,
+        });
+      } catch (error) {
+        console.error('Failed to load Vixra workflow templates:', error);
+        toast({
+          title: 'Failed to load workflow',
+          description: 'Could not initialize the assembly line.',
           variant: 'destructive',
         });
-        setCurrentTemplate('Generate a satirical academic paper about {Title} in the category {ScienceCategory} by {Authors}.');
-      } finally {
-        setPromptsLoading(false);
       }
     };
 
-    loadVixraPrompts();
+    loadVixraWorkflow();
   }, [toast]);
 
-  // Unified generation mutation
-  const generateMutation = useMutation({
-    mutationFn: async (data: { template: string; variables: Record<string, string>; seats: ModelSeat[] }) => {
-      const request: GenerateRequest = {
-        mode: 'vixra',
-        template: data.template,
-        variables: data.variables,
-        messages: [],
-        seats: data.seats,
-        options: { stream: false }
-      };
-      
-      const response = await apiRequest('POST', '/api/generate', request);
-      return response.json() as Promise<GenerateResponse>;
-    },
-    onSuccess: (data, variables) => {
-      const seatId = variables.seats[0].id;
-      setResponses(prev => ({ ...prev, [seatId]: data.message }));
-      setLoadingModels(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(seatId);
-        return newSet;
-      });
-      setCompletedModels(prev => new Set([...Array.from(prev), seatId]));
-      
-      toast({
-        title: 'Paper Generated',
-        description: `Generated in ${(data.message.tokenUsage?.input || 0) + (data.message.tokenUsage?.output || 0)} tokens`,
-      });
-    },
-    onError: (error, variables) => {
-      const seatId = variables.seats[0].id;
-      setLoadingModels(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(seatId);
-        return newSet;
-      });
-      
-      setResponses(prev => ({
-        ...prev,
-        [seatId]: {
-          id: `error-${Date.now()}`,
-          role: 'assistant' as const,
-          content: '',
-          createdAt: new Date().toISOString(),
-          status: 'error' as const,
-          finishReason: 'error' as const
-        }
-      }));
-      
-      toast({
-        title: 'Generation Failed',
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = () => {
-    if (!currentTemplate.trim()) {
-      toast({
-        title: "No template selected",
-        description: "Please select a prompt template.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (selectedModels.length === 0) {
-      toast({
-        title: "Select models",
-        description: "Please select at least one model to generate papers.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate required variables
-    const registry = VARIABLE_REGISTRIES.vixra;
-    const missingRequired = registry
-      .filter(schema => schema.required && (!variables[schema.name] || variables[schema.name].trim() === ''))
-      .map(schema => schema.name);
-      
-    if (missingRequired.length > 0) {
-      toast({
-        title: "Missing required fields",
-        description: `Please fill in: ${missingRequired.join(', ')}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Reset state for new generation
-    setResponses({});
-    setLoadingModels(new Set(selectedModels));
-    setCompletedModels(new Set());
+  // Load session from URL parameter on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session');
     
-    // Start generation for each model
-    selectedModels.forEach(modelId => {
-      const model = models.find(m => m.id === modelId);
-      if (!model) return;
+    if (sessionId && sessionId !== currentSessionId) {
+      loadSession(sessionId);
+    }
+  }, []);
+
+  // Update URL when session changes
+  useEffect(() => {
+    if (currentSessionId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('session', currentSessionId);
+      window.history.replaceState({}, '', url.toString());
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('session');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [currentSessionId]);
+
+  // Session management functions
+  const createOrUpdateSession = async () => {
+    if (!workflowState) return;
+    
+    try {
+      const sessionData = {
+        variables,
+        template: 'Vixra Assembly Line Workflow',
+        responses: workflowState.sectionOutputs.size > 0 ? Object.fromEntries(
+          Array.from(workflowState.sectionOutputs).map(([sectionId, output]) => [
+            sectionId,
+            {
+              content: output.content,
+              reasoning: undefined,
+              status: 'success' as const,
+              responseTime: 0,
+              tokenUsage: output.tokenUsage,
+              cost: output.cost,
+              modelName: models.find(m => m.id === output.modelId)?.name || 'Unknown',
+            }
+          ])
+        ) : {} // Empty responses if no sections generated yet
+      };
+
+      if (currentSessionId) {
+        // Update existing session
+        const response = await apiRequest('PUT', `/api/vixra/sessions/${currentSessionId}`, sessionData);
+        return response.json();
+      } else {
+        // Create new session
+        const response = await apiRequest('POST', '/api/vixra/sessions', sessionData);
+        const session = await response.json();
+        setCurrentSessionId(session.id);
+        return session;
+      }
+    } catch (error) {
+      console.error('Failed to save session:', error);
+      toast({
+        title: 'Session Save Failed',
+        description: 'Could not save your work to the server',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const loadSession = async (sessionId: string) => {
+    try {
+      setIsLoadingSession(true);
+      const response = await apiRequest('GET', `/api/vixra/sessions/${sessionId}`);
+      const session: VixraSession = await response.json();
+      
+      setVariables(session.variables);
+      
+        // Convert session responses back to workflow state
+      const newState = createWorkflowState(templates);
+      Object.entries(session.responses).forEach(([sectionId, resp]: [string, any]) => {
+        const output: SectionOutput = {
+          sectionId,
+          content: resp.content,
+          modelId: 'session-restored',
+          timestamp: Date.now(),
+          tokenUsage: resp.tokenUsage,
+          cost: resp.cost
+        };
+        newState.sectionOutputs.set(sectionId, output);
+      });
+      
+      setWorkflowState(newState);
+      setCurrentSessionId(sessionId);
+      
+      toast({
+        title: 'Session Loaded',
+        description: `Restored session from ${new Date(session.updatedAt).toLocaleString()}`
+      });
+    } catch (error) {
+      console.error('Failed to load session:', error);
+      toast({
+        title: 'Load Failed',
+        description: 'Could not load the session',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingSession(false);
+    }
+  };
+
+  // Auto-save session when workflow state or variables change
+  useEffect(() => {
+    if (workflowState && models.length > 0 && (workflowState.sectionOutputs.size > 0 || currentSessionId)) {
+      const timer = setTimeout(() => {
+        createOrUpdateSession();
+      }, 1000); // Debounce auto-save
+      
+      return () => clearTimeout(timer);
+    }
+  }, [workflowState?.sectionOutputs, variables, models, currentSessionId]);
+
+  // Save variables even before any sections are generated
+  useEffect(() => {
+    if (workflowState && models.length > 0 && Object.keys(variables).length > 0) {
+      // Only auto-save if we have some meaningful content or existing session
+      const hasContent = Object.values(variables).some(v => v && v.trim() !== '') || currentSessionId;
+      if (hasContent) {
+        const timer = setTimeout(() => {
+          createOrUpdateSession();
+        }, 2000); // Longer debounce for variable-only changes
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [variables, workflowState, models, currentSessionId]);
+
+  // Section generation mutation for assembly line workflow
+  const generateSectionMutation = useMutation({
+    mutationFn: async (data: { sectionId: string; template: string; variables: Record<string, string>; modelId: string }) => {
+      const model = models.find(m => m.id === data.modelId);
+      if (!model) throw new Error('Model not found');
       
       const seat: ModelSeat = {
-        id: modelId,
+        id: data.sectionId,
         model: {
           id: model.id,
           name: model.name,
@@ -228,82 +274,166 @@ export default function VixraPage() {
         }
       };
       
-      generateMutation.mutate({ 
-        template: currentTemplate, 
-        variables, 
-        seats: [seat] 
+      const request: GenerateRequest = {
+        mode: 'vixra',
+        template: data.template,
+        variables: data.variables,
+        messages: [],
+        seats: [seat],
+        options: { stream: false }
+      };
+      
+      const response = await apiRequest('POST', '/api/generate', request);
+      const result = await response.json() as GenerateResponse;
+      
+      return {
+        sectionId: data.sectionId,
+        modelId: data.modelId,
+        result
+      };
+    },
+    onSuccess: (data) => {
+      if (!workflowState) return;
+      
+      // Add section output to workflow state
+      const sectionOutput: SectionOutput = {
+        sectionId: data.sectionId,
+        content: data.result.message.content,
+        modelId: data.modelId,
+        timestamp: Date.now(),
+        tokenUsage: data.result.message.tokenUsage,
+        cost: data.result.message.cost
+      };
+      
+      setWorkflowState(prev => {
+        if (!prev) return prev;
+        const newState = { ...prev };
+        newState.sectionOutputs.set(data.sectionId, sectionOutput);
+        newState.processingSection = null;
+        newState.currentStep += 1;
+        return newState;
       });
+      
+      toast({
+        title: 'Section Complete',
+        description: `${templates.get(data.sectionId)?.name || data.sectionId} section generated`,
+      });
+      
+      // Continue workflow if not complete
+      setTimeout(() => {
+        continueWorkflow();
+      }, 500);
+    },
+    onError: (error, variables) => {
+      setWorkflowState(prev => {
+        if (!prev) return prev;
+        return { ...prev, processingSection: null };
+      });
+      
+      setIsWorkflowRunning(false);
+      
+      toast({
+        title: 'Section Generation Failed',
+        description: `Failed to generate ${variables.sectionId}: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Continue workflow by processing next eligible sections
+  const continueWorkflow = () => {
+    if (!workflowState || !isWorkflowRunning) return;
+    
+    // Check if workflow is complete
+    if (isWorkflowComplete(workflowState)) {
+      setIsWorkflowRunning(false);
+      toast({
+        title: "Assembly Line Complete!",
+        description: "All sections have been generated successfully.",
+      });
+      return;
+    }
+    
+    // Get next eligible sections
+    const nextSections = getNextEligibleSections(workflowState);
+    if (nextSections.length === 0) return;
+    
+    // Process the first eligible section
+    const nextSectionId = nextSections[0];
+    const template = templates.get(nextSectionId);
+    if (!template) return;
+    
+    // Auto-generate missing variables
+    const autoGeneratedVars = autoGenerateVariables(variables, variables.ScienceCategory || '');
+    
+    // Build variables for this section
+    const sectionVariables = buildVariablesForSection(nextSectionId, workflowState, autoGeneratedVars);
+    
+    // Select model (round-robin)
+    const modelIndex = workflowState.currentStep % selectedModels.length;
+    const modelId = selectedModels[modelIndex];
+    
+    // Update state to show this section is processing
+    setWorkflowState(prev => {
+      if (!prev) return prev;
+      return { ...prev, processingSection: nextSectionId };
     });
+    
+    // Generate section
+    generateSectionMutation.mutate({
+      sectionId: nextSectionId,
+      template: template.content,
+      variables: sectionVariables,
+      modelId
+    });
+  };
+
+  const startWorkflow = () => {
+    if (!workflowState || selectedModels.length === 0) {
+      toast({
+        title: "Cannot start workflow",
+        description: "Please select at least one model.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Auto-generate any missing variables
+    const autoGeneratedVars = autoGenerateVariables(variables, variables.ScienceCategory || '');
+    setVariables(autoGeneratedVars);
+    
+    // Reset workflow state
+    setWorkflowState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        sectionOutputs: new Map(),
+        processingSection: null,
+        currentStep: 0
+      };
+    });
+    
+    setIsWorkflowRunning(true);
     
     toast({
-      title: "Paper Generation Started",
-      description: `Generating satirical papers with ${selectedModels.length} models...`,
-    });
-  };
-
-  const retryModel = async (modelId: string) => {
-    if (!currentTemplate.trim()) return;
-    
-    const model = models.find(m => m.id === modelId);
-    if (!model) return;
-    
-    setLoadingModels(prev => new Set([...Array.from(prev), modelId]));
-    setCompletedModels(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(modelId);
-      return newSet;
+      title: "Assembly Line Started",
+      description: `Generating satirical paper with ${selectedModels.length} models...`,
     });
     
-    setResponses(prev => {
-      const newResponses = { ...prev };
-      delete newResponses[modelId];
-      return newResponses;
-    });
-    
-    const seat: ModelSeat = {
-      id: modelId,
-      model: {
-        id: model.id,
-        name: model.name,
-        provider: model.provider
-      }
-    };
-    
-    generateMutation.mutate({ 
-      template: currentTemplate, 
-      variables, 
-      seats: [seat] 
-    });
+    // Start processing
+    setTimeout(() => {
+      continueWorkflow();
+    }, 100);
   };
-
-  // Prompt template handlers
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setSelectedPromptTemplate('');
-  };
-
-  const handlePromptTemplateChange = (promptId: string) => {
-    setSelectedPromptTemplate(promptId);
-    const category = promptCategories.find(cat => cat.id === selectedCategory);
-    const selectedPrompt = category?.prompts.find(p => p.id === promptId);
-    if (selectedPrompt) {
-      setCurrentTemplate(selectedPrompt.content);
-      toast({
-        title: 'Vixra Template Applied',
-        description: `Applied "${selectedPrompt.name}" template`,
-      });
-    }
-  };
-
-  const availablePrompts = selectedCategory 
-    ? promptCategories.find(cat => cat.id === selectedCategory)?.prompts || []
-    : [];
 
   const selectedModelData = models.filter(model => selectedModels.includes(model.id));
 
   const updateVariable = (name: string, value: string) => {
     setVariables(prev => ({ ...prev, [name]: value }));
   };
+
+  // Get workflow progress for UI
+  const workflowProgress = workflowState ? getWorkflowProgress(workflowState) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -373,8 +503,8 @@ export default function VixraPage() {
                               key={model.id}
                               model={model}
                               isSelected={selectedModels.includes(model.id)}
-                              isAnalyzing={loadingModels.has(model.id)}
-                              responseCount={responses[model.id] ? 1 : 0}
+                              isAnalyzing={workflowState?.processingSection === model.id}
+                              responseCount={workflowState?.sectionOutputs.size || 0}
                               onToggle={(modelId) => {
                                 setSelectedModels(prev => 
                                   prev.includes(modelId) 
@@ -382,7 +512,7 @@ export default function VixraPage() {
                                     : [...prev, modelId]
                                 );
                               }}
-                              disabled={loadingModels.has(model.id)}
+                              disabled={isWorkflowRunning}
                               showTiming={showTiming}
                             />
                           ))}
@@ -431,52 +561,81 @@ export default function VixraPage() {
 
           {/* Main Content Area */}
           <div className="xl:col-span-2 space-y-4">
-            {/* Template Selection */}
+            {/* Assembly Line Progress */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2 text-sm">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Prompt Template</span>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <FileText className="w-4 h-4" />
+                    <span>Assembly Line Progress</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowWorkflowPanel(!showWorkflowPanel)}
+                  >
+                    {showWorkflowPanel ? 'Hide' : 'Show'}
+                  </Button>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                {!promptsLoading && promptCategories.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select 
-                      value={selectedCategory} 
-                      onValueChange={handleCategoryChange}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose category..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {promptCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select 
-                      value={selectedPromptTemplate} 
-                      onValueChange={handlePromptTemplateChange}
-                      disabled={!selectedCategory}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select template..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availablePrompts.map((prompt) => (
-                          <SelectItem key={prompt.id} value={prompt.id}>
-                            {prompt.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CardContent>
+              {showWorkflowPanel && (
+                <CardContent className="space-y-4 pt-0">
+                  {workflowProgress && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Progress</span>
+                        <span className="text-sm text-gray-600">
+                          {workflowProgress.completed} / {workflowProgress.total} sections
+                        </span>
+                      </div>
+                      
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${workflowProgress.percentage}%` }}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-2">
+                        {Array.from(workflowState?.enabledSections || []).map(sectionId => {
+                          const template = templates.get(sectionId);
+                          const isComplete = workflowState?.sectionOutputs.has(sectionId);
+                          const isProcessing = workflowState?.processingSection === sectionId;
+                          const isNext = workflowProgress.nextSections.includes(sectionId);
+                          
+                          return (
+                            <div 
+                              key={sectionId}
+                              className={`flex items-center justify-between p-2 rounded border ${
+                                isComplete ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' :
+                                isProcessing ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800' :
+                                isNext ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800' :
+                                'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700'
+                              }`}
+                            >
+                              <span className="text-sm font-medium">{template?.name || sectionId}</span>
+                              <div className="flex items-center space-x-2">
+                                {isComplete && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+                                {isProcessing && <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
+                                {isNext && <div className="w-2 h-2 bg-yellow-500 rounded-full" />}
+                                {!isComplete && !isProcessing && !isNext && <div className="w-2 h-2 bg-gray-400 rounded-full" />}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!workflowState && (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Loading assembly line templates...
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
             </Card>
 
             {/* Variables Panel */}
@@ -622,61 +781,110 @@ export default function VixraPage() {
               )}
             </Card>
 
-            {/* Controls */}
+            {/* Session Status */}
+            {currentSessionId && (
+              <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-green-700 dark:text-green-300">
+                        Session active - work is automatically saved
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setCurrentSessionId(null);
+                        if (workflowState) {
+                          setWorkflowState({
+                            ...workflowState,
+                            sectionOutputs: new Map(),
+                            processingSection: null,
+                            currentStep: 0
+                          });
+                        }
+                        setVariables({
+                          ...getDefaultVariables('vixra'),
+                          ResearcherName: '',
+                          ScienceCategory: SCIENCE_CATEGORIES[0] || '',
+                          Title: '',
+                          Authors: '',
+                          PromptMode: 'template'
+                        });
+                        toast({
+                          title: 'New Session Started',
+                          description: 'Previous work is saved. You can start fresh.',
+                        });
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      Start New Session
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Assembly Line Controls */}
             <Card>
               <CardContent className="pt-4">
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-gray-600 dark:text-gray-400">
                     {selectedModels.length === 0 ? (
-                      "Select models to generate satirical papers"
+                      "Select models to start the assembly line"
+                    ) : isWorkflowRunning ? (
+                      workflowState?.processingSection ? 
+                        `Processing ${templates.get(workflowState.processingSection)?.name || workflowState.processingSection}...` :
+                        "Assembly line running..."
+                    ) : workflowProgress && workflowProgress.completed > 0 ? (
+                      `${workflowProgress.completed}/${workflowProgress.total} sections complete`
                     ) : (
-                      `Ready to generate with ${selectedModels.length} model${selectedModels.length !== 1 ? 's' : ''}`
+                      `Ready to start assembly line with ${selectedModels.length} model${selectedModels.length !== 1 ? 's' : ''}`
                     )}
                   </div>
                   
                   <div className="flex items-center space-x-2">
+                    {workflowProgress && workflowProgress.completed > 0 && (
+                      <ExportButton
+                        prompt="Vixra Assembly Line Output"
+                        models={selectedModelData}
+                        responses={Object.fromEntries(
+                          Array.from(workflowState?.sectionOutputs || []).map(([sectionId, output]) => [
+                            sectionId,
+                            {
+                              content: output.content,
+                              status: 'success' as const,
+                              responseTime: 0,
+                              tokenUsage: output.tokenUsage,
+                              cost: output.cost
+                            }
+                          ])
+                        )}
+                        disabled={isWorkflowRunning}
+                      />
+                    )}
                     <Button
-                      onClick={() => setShowPromptPreview(!showPromptPreview)}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      <Eye className="w-3 h-3 mr-1" />
-                      {showPromptPreview ? 'Hide' : 'Show'} Template
-                    </Button>
-                    <ExportButton
-                      prompt={currentTemplate}
-                      models={selectedModelData}
-                      responses={Object.fromEntries(
-                        Object.entries(responses).map(([key, value]) => [
-                          key, 
-                          {
-                            content: value.content,
-                            status: (value.status === 'complete' ? 'success' : value.status === 'error' ? 'error' : 'loading') as 'success' | 'error' | 'loading',
-                            responseTime: 0,
-                            reasoning: value.reasoning,
-                            tokenUsage: value.tokenUsage,
-                            cost: value.cost
-                          }
-                        ])
-                      )}
-                      disabled={loadingModels.size > 0}
-                    />
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={loadingModels.size > 0 || !currentTemplate.trim() || selectedModels.length === 0}
+                      onClick={startWorkflow}
+                      disabled={isWorkflowRunning || selectedModels.length === 0 || !workflowState}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
                       size="sm"
                     >
-                      {loadingModels.size > 0 ? (
+                      {isWorkflowRunning ? (
                         <>
                           <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          <span className="text-sm">Generating...</span>
+                          <span className="text-sm">Assembly Line Running...</span>
+                        </>
+                      ) : workflowProgress && workflowProgress.completed > 0 ? (
+                        <>
+                          <Zap className="w-3 h-3 mr-1" />
+                          <span className="text-sm">Restart Assembly Line</span>
                         </>
                       ) : (
                         <>
                           <Zap className="w-3 h-3 mr-1" />
-                          <span className="text-sm">Generate Papers</span>
+                          <span className="text-sm">Start Assembly Line</span>
                         </>
                       )}
                     </Button>
@@ -685,72 +893,114 @@ export default function VixraPage() {
               </CardContent>
             </Card>
 
-            {/* Template Preview */}
-            {showPromptPreview && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center space-x-2 text-sm">
-                    <BookOpen className="w-4 h-4" />
-                    <span>Template Preview (with variables)</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 border">
-                    <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
-                      {currentTemplate || 'No template selected'}
-                    </pre>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Results */}
+            {/* Section Results */}
             {selectedModelData.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                   <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">No Models Selected</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Select some models to start generating satirical papers.
+                    Select some models to start the assembly line.
                   </p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : workflowState && workflowState.sectionOutputs.size > 0 ? (
               <div className="grid grid-cols-1 gap-4">
-                {selectedModelData.map((model) => {
-                  const messageData = getMessageCardData(model.id, responses[model.id], model);
+                {Array.from(workflowState.enabledSections).map((sectionId) => {
+                  const output = workflowState.sectionOutputs.get(sectionId);
+                  const template = templates.get(sectionId);
+                  const isProcessing = workflowState.processingSection === sectionId;
                   
-                  if (!messageData && !loadingModels.has(model.id)) {
-                    return null; // No message and not loading
+                  if (!output && !isProcessing) {
+                    return null; // No output and not processing
                   }
                   
-                  if (loadingModels.has(model.id)) {
-                    // Show loading state
+                  if (isProcessing) {
+                    // Show processing state
                     return (
-                      <Card key={model.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex items-center justify-center space-x-2">
-                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                              Generating paper with {model.name}...
-                            </span>
+                      <Card key={sectionId}>
+                        <CardHeader>
+                          <CardTitle className="flex items-center space-x-2 text-sm">
+                            <div className="w-3 h-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                            <span>Generating {template?.name || sectionId}</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-center py-4">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Processing section with {models.find(m => m.id === selectedModels[workflowState.currentStep % selectedModels.length])?.name}...
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
                     );
                   }
                   
-                  return (
-                    <MessageCard
-                      key={model.id}
-                      message={messageData!}
-                      variant="detailed"
-                      showHeader={true}
-                      showFooter={true}
-                    />
-                  );
+                  if (output) {
+                    const model = models.find(m => m.id === output.modelId);
+                    return (
+                      <Card key={sectionId}>
+                        <CardHeader>
+                          <CardTitle className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2 text-sm">
+                              <div className="w-2 h-2 bg-green-500 rounded-full" />
+                              <span>{template?.name || sectionId}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {model?.name} • {new Date(output.timestamp).toLocaleTimeString()}
+                            </div>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <div className="whitespace-pre-wrap text-sm">
+                              {output.content}
+                            </div>
+                          </div>
+                          {(output.tokenUsage || output.cost) && (
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                {output.tokenUsage && (
+                                  <span>
+                                    {output.tokenUsage.input + output.tokenUsage.output} tokens
+                                    {output.tokenUsage.reasoning && ` (${output.tokenUsage.reasoning} reasoning)`}
+                                  </span>
+                                )}
+                                {output.cost && (
+                                  <span>
+                                    ${output.cost.total.toFixed(4)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                  
+                  return null;
                 })}
               </div>
+            ) : workflowState ? (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Zap className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">Ready to Start</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Click "Start Assembly Line" to begin generating your satirical research paper.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mx-auto mb-3" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Loading assembly line workflow...
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>

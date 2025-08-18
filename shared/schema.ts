@@ -36,13 +36,40 @@ export const comparisons = pgTable("comparisons", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Vixra sessions for persisting satirical paper generation
+export const vixraSessions = pgTable("vixra_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  variables: jsonb("variables").notNull().$type<Record<string, string>>(),
+  template: text("template").notNull(),
+  responses: jsonb("responses").notNull().$type<Record<string, {
+    content: string;
+    reasoning?: string;
+    status: 'success' | 'error' | 'loading';
+    responseTime: number;
+    tokenUsage?: { input: number; output: number; reasoning?: number };
+    cost?: { total: number; input: number; output: number; reasoning?: number };
+    modelName: string;
+    error?: string;
+  }>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertComparisonSchema = createInsertSchema(comparisons).omit({
   id: true,
   createdAt: true,
 });
 
+export const insertVixraSessionSchema = createInsertSchema(vixraSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertComparison = z.infer<typeof insertComparisonSchema>;
 export type Comparison = typeof comparisons.$inferSelect;
+export type InsertVixraSession = z.infer<typeof insertVixraSessionSchema>;
+export type VixraSession = typeof vixraSessions.$inferSelect;
 
 // AI Model types
 export const aiModelSchema = z.object({
