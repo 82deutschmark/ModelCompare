@@ -117,7 +117,18 @@ All AI model configurations, capabilities, pricing, and specifications are maint
 - **xAI**: Advanced reasoning capabilities in Grok 4
 - **DeepSeek**: Complete reasoning transparency via `reasoning_content` field
 
-**Note**: Model specifications are regularly updated. Check `server/providers/` for the most current model configurations, pricing, and capabilities.
+#### OpenAI Responses API Migration (2025-08-20)
+
+- **Endpoint**: All OpenAI calls use the Responses API (`/v1/responses`) exclusively; Chat Completions are no longer used.
+- **Reasoning**: Requests include `reasoning.summary = "auto"`; UI displays reasoning summaries when provided.
+- **Output token caps**:
+  - GPT‑5 series (flagship, mini, nano): `max_output_tokens = 128000`.
+  - All other OpenAI models default to `max_output_tokens = 16384`.
+  - A global minimum floor of **16,300** visible output tokens is enforced at the provider level, even if env overrides are set lower.
+- **Timeouts**: Default request timeout is **10 minutes** (600,000 ms), configurable via env.
+- **Retries**: Exponential backoff on HTTP 429/5xx and timeouts (up to 3 attempts).
+- **Parsing**: Primary content from `response.output_text`; reasoning from `response.output_reasoning.summary` with safe fallbacks.
+- **Diagnostics**: Response IDs (`response.id`) captured for potential chaining; optional raw JSON logging via env toggle.
 
 ### API Integration Architecture
 
@@ -137,6 +148,15 @@ Each provider requires specific environment variables:
 - `GEMINI_API_KEY` - Google Gemini access
 - `GROK_API_KEY` - xAI Grok access
 - `DEEPSEEK_API_KEY` - DeepSeek access
+
+#### OpenAI Responses Configuration (Environment)
+
+- `OPENAI_MAX_OUTPUT_TOKENS` (optional)
+  - Overrides default caps above. A provider-level floor of 16,300 is always enforced.
+- `OPENAI_TIMEOUT_MS` (optional)
+  - Overrides default 10-minute timeout.
+- `DEBUG_SAVE_RAW` (optional)
+  - When set, enables saving raw OpenAI Responses JSON for diagnostics.
 
 ## Data Architecture
 
