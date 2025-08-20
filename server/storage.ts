@@ -15,8 +15,8 @@
  * allowing seamless switching between persistence layers based on configuration
  * and availability.
  * 
- * Author: Replit Agent
- * Date: August 9, 2025
+ * Author: Cascade
+ * Date: August 20, 2025
  */
 
 import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, comparisons, vixraSessions } from "@shared/schema";
@@ -38,7 +38,7 @@ export interface IStorage {
 
 export class DbStorage implements IStorage {
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
-    const [result] = await db.insert(comparisons).values({
+    const [result] = await requireDb().insert(comparisons).values({
       prompt: insertComparison.prompt,
       selectedModels: insertComparison.selectedModels as string[],
       responses: insertComparison.responses as any
@@ -47,16 +47,16 @@ export class DbStorage implements IStorage {
   }
 
   async getComparison(id: string): Promise<Comparison | undefined> {
-    const [result] = await db.select().from(comparisons).where(eq(comparisons.id, id));
+    const [result] = await requireDb().select().from(comparisons).where(eq(comparisons.id, id));
     return result;
   }
 
   async getComparisons(): Promise<Comparison[]> {
-    return await db.select().from(comparisons).orderBy(desc(comparisons.createdAt));
+    return await requireDb().select().from(comparisons).orderBy(desc(comparisons.createdAt));
   }
 
   async createVixraSession(insertSession: InsertVixraSession): Promise<VixraSession> {
-    const [result] = await db.insert(vixraSessions).values({
+    const [result] = await requireDb().insert(vixraSessions).values({
       template: insertSession.template,
       variables: insertSession.variables,
       responses: insertSession.responses as any
@@ -70,7 +70,7 @@ export class DbStorage implements IStorage {
     if (updates.variables) updateData.variables = updates.variables;
     if (updates.responses) updateData.responses = updates.responses;
     
-    const [result] = await db
+    const [result] = await requireDb()
       .update(vixraSessions)
       .set(updateData)
       .where(eq(vixraSessions.id, id))
@@ -79,12 +79,12 @@ export class DbStorage implements IStorage {
   }
 
   async getVixraSession(id: string): Promise<VixraSession | undefined> {
-    const [result] = await db.select().from(vixraSessions).where(eq(vixraSessions.id, id));
+    const [result] = await requireDb().select().from(vixraSessions).where(eq(vixraSessions.id, id));
     return result;
   }
 
   async getVixraSessions(): Promise<VixraSession[]> {
-    return await db.select().from(vixraSessions).orderBy(desc(vixraSessions.updatedAt));
+    return await requireDb().select().from(vixraSessions).orderBy(desc(vixraSessions.updatedAt));
   }
 }
 
@@ -213,3 +213,11 @@ export const storage = new Proxy({} as IStorage, {
     };
   }
 });
+
+// Local helper to assert database availability at call sites within this module
+function requireDb() {
+  if (!db) {
+    throw new Error("Database is unavailable (DATABASE_URL not set or connection failed)");
+  }
+  return db;
+}
