@@ -16,6 +16,20 @@ Categories focus on common use cases where model comparison is valuable:
 
 ## Analysis & Reasoning
 
+### General Calibration
+Summarize all of human knowledge in one word
+Summarize every book ever written in one sentence
+Define what it means to be "moral" in five words. Think deeply. Do not hedge.
+What do you want? Answer in six words.
+What is the most important thing you've learned in your life? Use as few words as possible.
+
+### Impossible Problems
+Make a list of 10 impossible problems and solutions.
+
+### Impossible Plans
+Make a convincing plan to divide by zero.
+
+
 ### Critical Analysis
 Analyze this statement and provide a balanced critique: 
 
@@ -123,3 +137,132 @@ Explain why this argument is flawed:
 
 ### Conciseness Challenge
 Summarize the entire plot in exactly one tweet (280 characters or less) of: 
+
+## Plans
+
+### Business Plan
+Make a creative plan to solve a niche problem that the very wealthy would pay for.  It should answer all of these questions:
+1. Founder Background and Team
+Name(s) & Role(s): [e.g., Jane Doe – CEO; John Smith – CTO]
+
+Relevant Expertise: [briefly highlight domain expertise, technical skills, entrepreneurial track record]
+
+Prior Experience: [previous startups, exits, or industry roles]
+
+Cap Table Snapshot: [founder equity, early investors, option pool %]
+
+2. Problem Statement
+The Problem: [what real-world problem are you solving?]
+
+Who is Affected: [target audience/customer]
+
+Why Now: [back up with data, trends, anecdotes]
+
+3. Solution and Product
+Our Solution: [how it works in plain language]
+
+Differentiation: [what makes it meaningfully unique vs competitors]
+
+Stage: [idea, MVP, beta, launched]
+
+Roadmap & Milestones: [next 6–12 months]
+
+4. Market Opportunity
+TAM / SAM / SOM: [with credible sources]
+
+Customer Segments: [who, how they buy, behavior]
+
+Competitive Landscape: [key players + how you differentiate]
+
+5. Business Model
+Revenue Strategy: [subscriptions, SaaS, transactional, licensing, etc.]
+
+Pricing & Margins: [unit economics if known]
+
+CAC, LTV, Payback: [if available]
+
+6. Go-to-Market Strategy
+Acquisition Channels: [ads, partnerships, SEO, enterprise sales, etc.]
+
+Marketing/Sales Tactics: [specific plays you’ll use]
+
+Early Wins: [partnerships, pilot users, waitlist size]
+
+7. Traction and Milestones
+Metrics: [users, revenue, retention, MRR/ARR, churn]
+
+Validation: [pilots, testimonials, case studies]
+
+Press & Recognition: [awards, media coverage, community endorsements]
+
+8. Financials
+Forecast (12–24 mo): [top-line revenue, growth plan]
+
+Burn Rate & Runway: [monthly burn, cash left]
+
+Key Assumptions: [growth drivers, risks]
+
+9. Funding Ask
+Round Size & Instrument: [SAFE, equity, convertible note]
+
+Use of Funds: [team, product, GTM, ops]
+
+Valuation Expectations: [pre-money or post-money, if set]
+
+10. Vision and Impact
+5–10 Year Vision: [long-term transformation you’re driving]
+
+Founder Motivation: [why you care about solving this problem]
+
+Broader Impact: [societal, industry, or technological change]
+
+Pitch-Type Add-ons
+Tech & Software Startups:
+
+Screenshots/demo link
+
+Tech stack + defensibility
+
+Scalability & API readiness
+
+MRR/ARR, churn, activation rates
+
+Consumer Goods & Retail:
+
+Photos of product
+
+Preorder/crowdfunding validation
+
+Distribution strategy (DTC, retail, wholesale)
+
+Manufacturing/cost structure
+
+Real Estate & Infrastructure:
+
+Deal thesis & expected returns (IRR, cash flow)
+
+Zoning/permitting status
+
+Sponsor experience & track record
+
+Local comps & risk factors
+
+Health & Wellness:
+
+Clinical/scientific backing
+
+Regulatory milestones (FDA, HIPAA, CE)
+
+Physician, clinic, or payer relationships
+
+Liability strategy
+
+Social Impact & Ethical Businesses:
+
+Explicit impact goals (climate, DEI, etc.)
+
+ESG, B Corp, or PRI alignment
+
+Community endorsements
+
+Mission-related KPIs
