@@ -1,9 +1,11 @@
 /**
  * OpenAI Provider
- * 
- * Handles OpenAI GPT models with reasoning capabilities
- * Author: Replit Agent
- * Date: August 9, 2025
+ *
+ * Handles OpenAI models via the Responses API with reasoning support only.
+ * This migration removes Chat Completions usage and standardizes parsing of
+ * output_text and output_reasoning. Adds timeout/backoff and large token caps.
+ * Author: Cascade
+ * Date: August 20, 2025
  */
 
 import 'dotenv/config';
@@ -211,87 +213,83 @@ export class OpenAIProvider extends BaseProvider {
 
   async callModel(prompt: string, model: string): Promise<ModelResponse> {
     const startTime = Date.now();
-    
     const modelConfig = this.models.find(m => m.id === model);
-    const supportsReasoning = modelConfig?.capabilities.reasoning;
-    const reasoningModels = ['gpt-5-2025-08-07', 'o3-mini-2025-01-31', 'o4-mini-2025-04-16', 'o3-2025-04-16'];
-    
-    let response: any;
-    let reasoning = null;
-    
-    // Use Responses API for reasoning models, ChatCompletions for others
-    if (supportsReasoning && reasoningModels.includes(model)) {
+
+    // Configure max_output_tokens
+    const isGpt5Series = [
+      'gpt-5-2025-08-07',
+      'gpt-5-mini-2025-08-07',
+      'gpt-5-nano-2025-08-07'
+    ].includes(model);
+    const envMax = process.env.OPENAI_MAX_OUTPUT_TOKENS ? parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS, 10) : undefined;
+    const desiredMax = envMax ?? (isGpt5Series ? 128000 : 16384);
+    const maxOutputTokens = Math.max(16300, desiredMax);
+
+    // Timeout and retries
+    const timeoutMs = process.env.OPENAI_TIMEOUT_MS ? parseInt(process.env.OPENAI_TIMEOUT_MS, 10) : 600000; // 10 minutes
+    const maxAttempts = 3;
+
+    let lastError: any;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(new Error('Request timeout')), timeoutMs);
       try {
-        response = await openai.responses.create({
-          model: model,
-          input: [{ role: "user", content: prompt }],
-          reasoning: {
-            effort: "high",
-            summary: "detailed"
-          }
-        });
-        
-        // Extract reasoning logs from Responses API output array
-        const reasoningParts: string[] = [];
-        for (const outputItem of (response as any).output ?? []) {
-          if (outputItem.type === "reasoning") {
-            if (Array.isArray(outputItem.summary)) {
-              reasoningParts.push(outputItem.summary.map((s: any) => s.text).join("\n"));
-            } else if (typeof outputItem.summary === 'string') {
-              reasoningParts.push(outputItem.summary);
-            }
+        const response: any = await openai.responses.create({
+          model,
+          input: prompt,
+          reasoning: { summary: 'auto' },
+          max_output_tokens: maxOutputTokens,
+        }, { signal: controller.signal as any });
+
+        clearTimeout(timer);
+
+        // Parse content
+        const outputText: string = response.output_text || '';
+        let content = outputText;
+        if (!content && Array.isArray(response.output)) {
+          // Fallback scan for first text content
+          const textBlock = response.output.find((b: any) => b.type === 'output_text' || b.type === 'message' || b.type === 'text');
+          if (textBlock?.content) {
+            content = typeof textBlock.content === 'string' ? textBlock.content : String(textBlock.content);
           }
         }
-        
-        if (reasoningParts.length) {
-          reasoning = reasoningParts.join("\n\n");
-        }
-        
+        if (!content) content = 'No response generated';
+
+        // Parse reasoning
+        const reasoningSummary: string | undefined = response.output_reasoning?.summary
+          || (Array.isArray(response.output_reasoning?.items) && response.output_reasoning.items.length
+                ? undefined
+                : undefined);
+
         return {
-          content: (response as any).output_text || "No response generated",
-          reasoning: reasoning ?? undefined,
+          content,
+          reasoning: reasoningSummary,
           responseTime: Date.now() - startTime,
-          systemPrompt: prompt, // Include the actual prompt sent to the model
-          tokenUsage: undefined, // Responses API doesn't provide usage
-          cost: undefined, // Cannot calculate without token usage
+          systemPrompt: prompt,
+          tokenUsage: undefined,
+          cost: undefined,
           modelConfig: modelConfig ? {
             capabilities: modelConfig.capabilities,
             pricing: modelConfig.pricing,
           } : undefined,
-        };
-      } catch (error) {
-        console.warn(`Responses API failed for ${model}, falling back to ChatCompletions:`, error);
+          // @ts-ignore - extend shape with responseId for downstream use
+          responseId: response.id,
+        } as any;
+      } catch (error: any) {
+        clearTimeout(timer);
+        lastError = error;
+        const status = (error && (error.status || error.statusCode)) ?? undefined;
+        const retriable = status === 429 || (status && status >= 500 && status < 600) || (error?.name === 'AbortError');
+        if (attempt < maxAttempts && retriable) {
+          const backoffMs = 500 * Math.pow(2, attempt - 1);
+          await new Promise(r => setTimeout(r, backoffMs));
+          continue;
+        }
+        // On timeout or error without response, include partials if any aren't available in this SDK error
+        throw error;
       }
     }
-    
-    // Standard ChatCompletions API for non-reasoning models or fallback
-    const chatResponse = await openai.chat.completions.create({
-      model: model,
-      messages: [{ role: "user", content: prompt }],
-      max_completion_tokens: 2000,
-    });
-    
-    const tokenUsage = chatResponse.usage ? {
-      input: chatResponse.usage.prompt_tokens,
-      output: chatResponse.usage.completion_tokens,
-      reasoning: chatResponse.usage.completion_tokens_details?.reasoning_tokens,
-    } : undefined;
-
-    const cost = tokenUsage && modelConfig ? this.calculateCost(modelConfig, tokenUsage) : undefined;
-
-    const actualContent = chatResponse.choices[0]?.message?.content || "No response generated";
-    
-    return {
-      content: actualContent,
-      reasoning: reasoning || undefined,
-      responseTime: Date.now() - startTime,
-      systemPrompt: prompt, // Include the actual prompt sent to the model
-      tokenUsage,
-      cost,
-      modelConfig: {
-        capabilities: modelConfig!.capabilities,
-        pricing: modelConfig!.pricing
-      }
-    };
+    // If loop exits unexpectedly, throw last error
+    throw lastError || new Error('OpenAI Responses request failed');
   }
 }
