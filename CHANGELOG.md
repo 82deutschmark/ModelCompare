@@ -13,6 +13,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **OpenAI Responses API Migration:**
+  - Switched all OpenAI calls to `/v1/responses` exclusively; removed Chat Completions
+  - Reasoning summaries enabled (`reasoning.summary: "auto"`) and surfaced in UI
+  - Output token caps: GPT‑5 (flagship/mini/nano) `max_output_tokens = 128000`; other OpenAI models default to `16384`
+  - Provider-level minimum output floor enforced at **16,300** visible tokens (env overrides cannot go lower)
+  - Timeouts: default **10 minutes** (600,000 ms), configurable via `OPENAI_TIMEOUT_MS`
+  - Retries: exponential backoff on HTTP 429/5xx and timeouts (up to 3 attempts)
+  - Diagnostics: capture `response.id` for chaining; optional raw JSON logging via `DEBUG_SAVE_RAW`
+  - Environment variables: `OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TIMEOUT_MS`, `DEBUG_SAVE_RAW`
 - **State Management & Variable System Standardization (MAJOR ARCHITECTURAL UPDATE):**
   - **Unified Variable Engine:** Implemented isomorphic variable resolution supporting server-side authoritative templates with frontend preview capabilities
   - **Single Source of Truth:** Backend now performs final template resolution with comprehensive logging and audit trails
@@ -49,6 +58,8 @@ All notable changes to this project will be documented in this file.
 - Documentation updates:
   - `docs/api-and-routes.md`: Added `/vixra` and `/creative` to frontend routes, documented Vixra client API usage
   - `README.md`: Documented Vixra Mode in Comparison Modes section
+  - `README.md`: Documented OpenAI Responses migration, token caps (GPT‑5 128000), 16,300 minimum floor, 10-minute timeouts, retries, and env vars (`OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TIMEOUT_MS`, `DEBUG_SAVE_RAW`)
+  - `docs/openai-responses-migration-plan.md`: Finalized and aligned with implementation (Responses-only, reasoning summaries, token caps, timeouts, retries, diagnostics)
 - **Raw Prompt Preview:** Implemented prompt transparency widgets on all pages allowing users to view the exact prompts sent to AI models via toggle buttons with Eye icon
 - **Enhanced User Experience:** Users can now select the same model for both sides in debates, providing more flexibility for testing scenarios
 
