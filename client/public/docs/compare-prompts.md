@@ -31,6 +31,15 @@ You can use ONLY these labels (do not count as words) to structure your track to
 
 Avoid using any other symbols like * or ** and spell out acronyms like LLM or ML as M-L or L-L-M. Explain longer acronyms if you use them! Do not use bold or italics. 24 lines and less than 200 words. Maintain the word limits and line limits strictly. Your output should only be lyrics and labels with no additional text. NO WEAK RHYME SCHEMES ALLOWED! Spit that fire like a BOSS! 
 
+### UDIO Songwriting
+You are an expert songwriter. Briefly describe the general beats per minute and vibe of the genre your song fits. 
+
+Your songs should be about 200 words long and 24 lines as a general guide.
+You can use ONLY these labels (do not count as words) to structure your track to make it flow as naturally as possible:
+[Intro] [Verse] [Hook] [Chorus] [Bridge] [Outro] and use these for audio effects:[Break] [Drop] 
+
+Avoid using any other symbols like * or ** and spell out acronyms like LLM or ML as M-L or L-L-M. Explain longer acronyms if you use them! Do not use bold or italics. 24 lines and less than 200 words. Maintain the word limits and line limits strictly. Your output should only be lyrics and labels with no additional text. NO WEAK RHYME SCHEMES ALLOWED!
+
 ### Lipograms
 Write a story opening of 2000 words that is a lipogram that doesn't use any words containing the letter 'e' or 'E'. And end it with a cliffhanger.  The most important rule is to adhere to the lipogram rule.  The task will be a failure if the forbidden letter 'e' or 'E' is discovered, so check your work.
 
