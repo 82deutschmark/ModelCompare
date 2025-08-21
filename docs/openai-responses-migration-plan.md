@@ -30,7 +30,7 @@ This plan migrates all OpenAI calls to the Responses API and deprecates Chat Com
   - `model`: selected model ID
   - `input`: the resolved user prompt string (keep simple text; no tools/calls in this phase)
   - `reasoning`: `{ summary: "auto" }` (configurable via options)
-  - `max_output_tokens`: default 4096 for most models; GPT‑5 series set to 128000 (both configurable; see Token Budgeting)
+  - `max_output_tokens`: default 16384 for most models; GPT‑5 series set to 128000 (both configurable; see Token Budgeting)
   - `metadata` (optional): include app trace IDs for debugging
   - `previous_response_id` (optional): when continuing a session chain
 - Timeouts: default 10 minutes (600,000 ms) per request; configurable via env `OPENAI_TIMEOUT_MS`; request-level abort controller. Shorter per-call overrides allowed for quick operations.
@@ -50,7 +50,7 @@ This plan migrates all OpenAI calls to the Responses API and deprecates Chat Com
 - If `output_text` is empty but there are content blocks, synthesize final text from the blocks.
 
 4) Token Budgeting
-- Default `max_output_tokens`: 4096 for most models to reduce starvation.
+- Default `max_output_tokens`: 16384 for most models to reduce starvation.
 - GPT‑5 series (`gpt-5-2025-08-07`, `gpt-5-mini-2025-08-07`, `gpt-5-nano-2025-08-07`): set `max_output_tokens` to 128000.
 - Allow override from request options and/or env. Ensure visible output is not starved by hidden/internal reasoning.
 
@@ -121,7 +121,7 @@ This plan migrates all OpenAI calls to the Responses API and deprecates Chat Com
 - Requires `OPENAI_API_KEY` in `.env`.
 - Optional:
   - `DEBUG_SAVE_RAW=1` to persist one raw JSON per run for diagnosis
-  - `OPENAI_MAX_OUTPUT_TOKENS` default override (e.g., `4096` or `128000` for GPT‑5)
+  - `OPENAI_MAX_OUTPUT_TOKENS` default override (e.g., `16384` or `128000` for GPT‑5)
   - `OPENAI_TIMEOUT_MS` request timeout override (default `600000` for 10 minutes)
 
 ## Rollback Plan
