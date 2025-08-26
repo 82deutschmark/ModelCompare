@@ -17,13 +17,15 @@ interface ArcGridProps {
   title: string;
   gridSize?: number;
   patternId?: string;
+  className?: string;
 }
 
 export const ArcGrid: React.FC<ArcGridProps> = ({ 
   color, 
   title, 
   gridSize = 8,
-  patternId = "001"
+  patternId = "001",
+  className,
 }) => {
   const [grid, setGrid] = useState<number[][]>([]);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -66,7 +68,7 @@ export const ArcGrid: React.FC<ArcGridProps> = ({
       icon="⬛" 
       color={color}
       compact={true}
-      className="w-40"
+      className={className}
     >
       <div className="relative">
         <motion.div 
