@@ -12,6 +12,7 @@ import fs from 'fs';
 import path from 'path';
 import { VariableEngine } from '../shared/variable-engine.js';
 import { VARIABLE_REGISTRIES, validateVariables, type ModeType } from '../shared/variable-registry.js';
+import { getTemplateConfig } from './config.js';
 
 export interface TemplateValidationError {
   file: string;
@@ -29,8 +30,9 @@ export interface TemplateValidationResult {
 export class TemplateValidator {
   private docsPath: string;
 
-  constructor(docsPath = './client/public/docs') {
-    this.docsPath = path.resolve(docsPath);
+  constructor(docsPath?: string) {
+    const templateConfig = getTemplateConfig();
+    this.docsPath = path.resolve(docsPath || templateConfig.docsPath);
   }
 
   async validateAllTemplates(): Promise<TemplateValidationResult> {

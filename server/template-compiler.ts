@@ -12,6 +12,7 @@ import fs from 'fs';
 import path from 'path';
 import { VariableEngine } from '../shared/variable-engine.js';
 import { VARIABLE_REGISTRIES, type ModeType } from '../shared/variable-registry.js';
+import { getTemplateConfig } from './config.js';
 
 export interface CompiledTemplate {
   id: string;
@@ -38,8 +39,9 @@ export class TemplateCompiler {
   private docsPath: string;
   private variableEngine: VariableEngine;
 
-  constructor(docsPath = './client/public/docs') {
-    this.docsPath = path.resolve(docsPath);
+  constructor(docsPath?: string) {
+    const templateConfig = getTemplateConfig();
+    this.docsPath = path.resolve(docsPath || templateConfig.docsPath);
     this.variableEngine = new VariableEngine({ policy: 'warn' });
   }
 

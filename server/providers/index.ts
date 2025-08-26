@@ -14,6 +14,7 @@ import { DeepSeekProvider } from './deepseek.js';
 import { XAIProvider } from './xai.js';
 import { CircuitBreaker } from './circuit-breaker.js';
 import { ModelNotFoundError, ProviderError, CircuitBreakerError } from '../errors.js';
+import { getCircuitBreakerConfig } from '../config.js';
 
 // Initialize all providers with circuit breakers
 const providers: BaseProvider[] = [
@@ -26,11 +27,13 @@ const providers: BaseProvider[] = [
 
 // Circuit breaker per provider for resilience
 const circuitBreakers = new Map<string, CircuitBreaker>();
+const circuitBreakerConfig = getCircuitBreakerConfig();
+
 providers.forEach(provider => {
   circuitBreakers.set(provider.name, new CircuitBreaker({
-    failureThreshold: 3,
-    recoveryTimeout: 30000, // 30 seconds
-    monitoringPeriod: 60000  // 1 minute
+    failureThreshold: circuitBreakerConfig.failureThreshold,
+    recoveryTimeout: circuitBreakerConfig.recoveryTimeout,
+    monitoringPeriod: circuitBreakerConfig.monitoringPeriod
   }));
 });
 
