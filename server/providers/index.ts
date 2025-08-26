@@ -6,7 +6,7 @@
  * Date: August 9, 2025
  */
 
-import { BaseProvider, type ModelConfig, type ModelResponse } from './base.js';
+import { BaseProvider, type ModelConfig, type ModelResponse, type ModelMessage, type CallOptions } from './base.js';
 import { OpenAIProvider } from './openai.js';
 import { AnthropicProvider } from './anthropic.js';
 import { GoogleProvider } from './google.js';
@@ -67,7 +67,27 @@ export function getReasoningModels(): ModelConfig[] {
   return getModelsByCapability('reasoning');
 }
 
+/**
+ * Legacy function for backward compatibility with string prompts
+ * Automatically converts string prompts to structured messages
+ * @param prompt String prompt to send to model
+ * @param modelId Model identifier
+ * @returns Promise resolving to model response with config
+ */
 export async function callModel(prompt: string, modelId: string): Promise<ModelResponse & { modelConfig: ModelConfig }> {
+  const messages: ModelMessage[] = [{ role: 'user', content: prompt }];
+  return callModelWithMessages(messages, modelId);
+}
+
+/**
+ * New structured message function for advanced prompt engineering
+ * Supports proper system/user/context role separation
+ * @param messages Array of structured messages with roles
+ * @param modelId Model identifier  
+ * @param options Optional generation parameters
+ * @returns Promise resolving to model response with config
+ */
+export async function callModelWithMessages(messages: ModelMessage[], modelId: string, options?: CallOptions): Promise<ModelResponse & { modelConfig: ModelConfig }> {
   const provider = getProviderByModelId(modelId);
   const modelConfig = getModelById(modelId);
   
@@ -85,7 +105,7 @@ export async function callModel(prompt: string, modelId: string): Promise<ModelR
   
   try {
     const response = await circuitBreaker.execute(async () => {
-      return await provider.callModel(prompt, modelConfig.model);
+      return await provider.callModel(messages, modelConfig.model, options);
     });
     return { ...response, modelConfig };
   } catch (error) {

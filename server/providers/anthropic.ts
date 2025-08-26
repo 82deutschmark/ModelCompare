@@ -104,7 +104,11 @@ export class AnthropicProvider extends BaseProvider {
     },
   ];
 
-  // Helper method to convert structured messages to Anthropic format
+  /**
+   * Helper method to convert structured messages to Anthropic Messages API format
+   * Anthropic requires alternating user/assistant messages with system content embedded
+   * System and context messages are combined into user messages for compatibility
+   */
   private convertToAnthropicMessages(messages: ModelMessage[]): Array<{role: 'user' | 'assistant', content: string}> {
     const anthropicMessages: Array<{role: 'user' | 'assistant', content: string}> = [];
     let systemContent = '';

@@ -126,7 +126,11 @@ export class XAIProvider extends BaseProvider {
     },
   ];
 
-  // Helper method to convert structured messages to OpenAI format for Grok
+  /**
+   * Helper method to convert structured messages to OpenAI-compatible format for Grok API
+   * xAI Grok uses OpenAI-compatible chat completions with system message support
+   * Properly separates system instructions from user content and context for optimal results
+   */
   private convertToGrokMessages(messages: ModelMessage[]): Array<{role: 'user' | 'assistant' | 'system', content: string}> {
     const grokMessages: Array<{role: 'user' | 'assistant' | 'system', content: string}> = [];
     let systemContent = '';

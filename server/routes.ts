@@ -23,7 +23,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
-import { callModel, getAllModels, getReasoningModels } from "./providers/index.js";
+import { callModel, callModelWithMessages, getAllModels, getReasoningModels } from "./providers/index.js";
 import { getStorage } from "./storage";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
@@ -33,30 +33,6 @@ import { getDisplayForModelId } from "../shared/model-catalog.js";
 import { getDatabaseManager } from "./db.js";
 import { contextLog } from "./request-context.js";
 import type { ModelMessage } from "../shared/api-types.js";
-
-// Helper function to convert structured messages to single prompt for backward compatibility
-function convertMessagesToPrompt(messages: ModelMessage[]): string {
-  const sections: string[] = [];
-  
-  for (const message of messages) {
-    switch (message.role) {
-      case 'system':
-        sections.push(`[SYSTEM INSTRUCTIONS]\n${message.content}`);
-        break;
-      case 'context':
-        sections.push(`[CONTEXT]\n${message.content}`);
-        break;
-      case 'user':
-        sections.push(message.content);
-        break;
-      case 'assistant':
-        sections.push(`[ASSISTANT]\n${message.content}`);
-        break;
-    }
-  }
-  
-  return sections.join('\n\n');
-}
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -758,11 +734,8 @@ Continue the debate by responding to the last message. Be analytical, challenge 
         auditId: auditInfo.templateId
       });
 
-      // Call model with structured messages
-      // For now, convert structured messages to single prompt for compatibility
-      // TODO: Update providers to handle ModelMessage[] directly
-      const combinedPrompt = convertMessagesToPrompt(messages);
-      const result = await callModel(combinedPrompt, modelId);
+      // Call model with structured messages directly
+      const result = await callModelWithMessages(messages, modelId, options);
       
       // Store audit trail in database
       try {

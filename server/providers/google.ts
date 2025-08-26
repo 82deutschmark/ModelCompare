@@ -82,7 +82,11 @@ export class GoogleProvider extends BaseProvider {
     },
   ];
 
-  // Helper method to convert structured messages to Gemini format
+  /**
+   * Helper method to convert structured messages to Gemini API format
+   * Gemini accepts a single content string, so we format structured messages
+   * with clear role labels and proper separation for system instructions and context
+   */
   private convertToGeminiContents(messages: ModelMessage[]): string {
     const parts: string[] = [];
     
