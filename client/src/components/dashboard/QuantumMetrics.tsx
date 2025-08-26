@@ -130,28 +130,50 @@ export const QuantumMetrics: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Compact countdowns to whimsical milestones
+  const targets = {
+    agi: new Date('2030-01-01T00:00:00Z').getTime(),
+    pVsNp: new Date('2029-06-01T00:00:00Z').getTime(),
+    riemann: new Date('2028-12-31T00:00:00Z').getTime(),
+    navierStokes: new Date('2032-03-14T00:00:00Z').getTime(),
+    birchSwinnerton: new Date('2031-10-10T00:00:00Z').getTime(),
+  };
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const fmt = (ms: number) => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    return `${d}d ${h}h ${m}m ${ss}s`;
+  };
+
   const EMOJIS = ['✨','⚡','🌀','💥','🧿','🧪','🌌','🪐','🧬','🌠','🔮','♾️'];
   const maybeEmoji = (v: React.ReactNode, chance = 0.12): React.ReactNode => {
     return Math.random() < chance ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : v;
   };
 
   const MetricRow = ({ label, value, color }: { label: string; value: React.ReactNode; color: string }) => (
-    <div className="flex justify-between items-center gap-2">
-      <span className="text-cyan-400 whitespace-nowrap">{label}:</span>
-      <span className={`text-right ${color}`}>{value}</span>
+    <div className="flex justify-between items-center gap-1">
+      <span className="text-cyan-400 whitespace-nowrap truncate">{label}:</span>
+      <span className={`text-right ${color} truncate`}>{value}</span>
     </div>
   );
 
   return (
     <DashboardCard
-      title="QUANTUM HYPERCORE STATUS"
+      title="QUANTUM HYPERCORE STATUS 🌌 9 Archetypal Modalities 💾 Version 0.0.28 🔗 Created by PrismAI and Prof. Dr. Max Power IV, PhD, DDS, Esq. 🧠"
       icon="⚛️"
       color="#8000FF"
       className="px-0"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-xs leading-tight">
         {/* Core quantum metrics */}
-        <div className="space-y-1 px-4">
+        <div className="space-y-0.5 px-2">
           <MetricRow 
             label="Quantum Flux" 
             value={
@@ -183,9 +205,14 @@ export const QuantumMetrics: React.FC = () => {
           <MetricRow label="Reality Integrity" value={maybeEmoji(`${metrics.realityIntegrity.toFixed(2)}%`)} color="text-red-400" />
           <MetricRow label="Coherence" value={maybeEmoji(`${metrics.coherence.toFixed(2)}%`)} color="text-cyan-300" />
           <MetricRow label="Decoherence" value={maybeEmoji(`${metrics.decoherenceRate.toFixed(4)}%`)} color="text-cyan-500" />
+          <MetricRow 
+            label="Archetypal Modalities" 
+            value={<span className="text-green-300">9.23 <span className="text-cyan-400">vs</span> <span className="text-pink-400">7</span></span>} 
+            color="text-green-400" 
+          />
         </div>
         {/* Physics + system metrics */}
-        <div className="space-y-1 px-4">
+        <div className="space-y-0.5 px-2">
           <MetricRow label="Neural Pathways" value={maybeEmoji(metrics.neuralPathways.toLocaleString())} color="text-pink-400" />
           <MetricRow label="Entanglement" value={maybeEmoji(`${metrics.quantumEntanglement.toFixed(1)}%`)} color="text-green-400" />
           <MetricRow label="Wave Collapse" value={maybeEmoji(`${metrics.waveCollapse.toFixed(5)}μs`)} color="text-blue-400" />
@@ -210,7 +237,7 @@ export const QuantumMetrics: React.FC = () => {
           />
         </div>
         {/* ML / AI metrics */}
-        <div className="space-y-1 px-4">
+        <div className="space-y-0.5 px-2">
           <MetricRow label="Loss" value={maybeEmoji(metrics.lossFunction.toFixed(4))} color="text-red-300" />
           <MetricRow label="Grad Descent Rate" value={maybeEmoji(`${metrics.gradientDescentRate.toFixed(2)}`)} color="text-cyan-400" />
           <MetricRow label="Learning Rate" value={maybeEmoji(metrics.learningRate.toExponential(2))} color="text-green-300" />
@@ -228,6 +255,48 @@ export const QuantumMetrics: React.FC = () => {
           <MetricRow label="Q‑Gradient Boost" value={maybeEmoji(metrics.quantumGradientBoost.toFixed(2))} color="text-blue-400" />
           <MetricRow label="Terrier Resonance" value={maybeEmoji(metrics.terrierResonance.toFixed(2))} color="text-pink-400" />
           <MetricRow label="Regularization" value={maybeEmoji(metrics.Regularization.toExponential(2))} color="text-red-400" />
+        </div>
+        {/* EE / Data Science / Millennium Math */}
+        <div className="space-y-0.5 px-2">
+          <MetricRow label="SNR" value={maybeEmoji(`${(20 + (Math.random()*10)).toFixed(1)} dB`)} color="text-green-300" />
+          <MetricRow label="Impedance" value={maybeEmoji(`${(50 + (Math.random()*10)).toFixed(1)} Ω`)} color="text-yellow-300" />
+          <MetricRow label="Nyquist Rate" value={maybeEmoji(`${(44.1 + (Math.random())).toFixed(1)} kHz`)} color="text-blue-300" />
+          <MetricRow label="FFT Bins" value={maybeEmoji(`${(1024 + Math.floor(Math.random()*256))}`)} color="text-purple-300" />
+          <MetricRow label="Voltage" value={maybeEmoji(`${(3.3 + (Math.random()*0.1)).toFixed(2)} V`)} color="text-cyan-300" />
+          <MetricRow label="Current" value={maybeEmoji(`${(0.42 + (Math.random()*0.02)).toFixed(3)} A`)} color="text-pink-300" />
+          <MetricRow label="AUC" value={maybeEmoji(`${(0.95 + Math.random()*0.04).toFixed(3)}`)} color="text-green-400" />
+          <MetricRow label="F1 Score" value={maybeEmoji(`${(0.92 + Math.random()*0.06).toFixed(3)}`)} color="text-emerald-300" />
+          <MetricRow label="R²" value={maybeEmoji(`${(0.98 + Math.random()*0.01).toFixed(3)}`)} color="text-yellow-400" />
+          <MetricRow label="p‑value" value={maybeEmoji(`${(0.001 + Math.random()*0.005).toExponential(2)}`)} color="text-red-300" />
+          <MetricRow label="SHAP Drift" value={maybeEmoji(`${(Math.random()*5).toFixed(2)}%`)} color="text-orange-300" />
+          <MetricRow label="P vs NP" value={<span className="text-red-400">open</span>} color="text-red-400" />
+          <MetricRow label="Riemann ζ" value={<span className="text-purple-400">critical line</span>} color="text-purple-400" />
+          <MetricRow label="Navier‑Stokes" value={<span className="text-blue-400">regularity?</span>} color="text-blue-400" />
+        </div>
+      </div>
+      {/* Countdowns */}
+      <div className="mt-3 px-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[10px]">
+          <div className="border border-cyan-700/50 rounded px-2 py-1">
+            <div className="text-cyan-300">AGI ETA</div>
+            <div className="text-green-400 font-semibold">{fmt(targets.agi - now)}</div>
+          </div>
+          <div className="border border-pink-700/50 rounded px-2 py-1">
+            <div className="text-pink-300">P vs NP</div>
+            <div className="text-yellow-400 font-semibold">{fmt(targets.pVsNp - now)}</div>
+          </div>
+          <div className="border border-purple-700/50 rounded px-2 py-1">
+            <div className="text-purple-300">Riemann</div>
+            <div className="text-purple-400 font-semibold">{fmt(targets.riemann - now)}</div>
+          </div>
+          <div className="border border-blue-700/50 rounded px-2 py-1">
+            <div className="text-blue-300">Navier‑Stokes</div>
+            <div className="text-blue-400 font-semibold">{fmt(targets.navierStokes - now)}</div>
+          </div>
+          <div className="border border-emerald-700/50 rounded px-2 py-1">
+            <div className="text-emerald-300">Birch–Swinn.</div>
+            <div className="text-emerald-400 font-semibold">{fmt(targets.birchSwinnerton - now)}</div>
+          </div>
         </div>
       </div>
     </DashboardCard>

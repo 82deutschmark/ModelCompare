@@ -1,9 +1,119 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { DashboardCard } from './DashboardCard';
 
+// Mini neural network builder that progressively adds nodes/edges
+const NeuralBuilder: React.FC<{ active: boolean }> = ({ active }) => {
+  const [progress, setProgress] = useState(0); // 0..1 build progress
+  const [nodes, setNodes] = useState<Array<{ id: number; x: number; y: number }>>([]);
+  const [edges, setEdges] = useState<Array<[number, number]>>([]);
+
+  // Seed fixed positions for a pleasant layout (grid + jitter)
+  const layout = useMemo(() => {
+    const pts: Array<{ id: number; x: number; y: number }> = [];
+    const cols = 10, rows = 6;
+    let id = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const jitterX = (Math.random() - 0.5) * 8;
+        const jitterY = (Math.random() - 0.5) * 8;
+        pts.push({
+          id: id++,
+          x: 20 + c * (160 / (cols - 1)) + jitterX,
+          y: 20 + r * (120 / (rows - 1)) + jitterY,
+        });
+      }
+    }
+    return pts;
+  }, []);
+
+  useEffect(() => {
+    if (!active) {
+      setProgress(0);
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
+    // Build animation
+    const start = Date.now();
+    const duration = 4000; // ms
+    const id = setInterval(() => {
+      const t = Math.min(1, (Date.now() - start) / duration);
+      setProgress(t);
+      // Reveal nodes progressively
+      const revealCount = Math.floor(layout.length * t);
+      setNodes(layout.slice(0, revealCount));
+      // Connect edges within a sliding window for visual cohesion
+      const e: Array<[number, number]> = [];
+      for (let i = 0; i < revealCount; i++) {
+        // connect to 1-3 previous nodes
+        for (let k = 1; k <= 3; k++) {
+          const j = i - k * (1 + (i % 3));
+          if (j >= 0) e.push([j, i]);
+        }
+      }
+      setEdges(e);
+      if (t >= 1) clearInterval(id);
+    }, 50);
+    return () => clearInterval(id);
+  }, [active, layout]);
+
+  return (
+    <div className="relative bg-black/40 border border-cyan-600 rounded-lg overflow-hidden">
+      <motion.svg viewBox="0 0 200 150" className="w-full h-[220px]">
+        {/* Edges */}
+        {edges.map(([a, b], idx) => {
+          const A = layout[a];
+          const B = layout[b];
+          if (!A || !B) return null;
+          return (
+            <motion.line
+              key={`e-${idx}`}
+              x1={A.x} y1={A.y} x2={B.x} y2={B.y}
+              stroke="#00FFFF" strokeWidth="0.8" opacity={0.35}
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.6 }}
+              transition={{ duration: 0.4, delay: idx * 0.01 }}
+            />
+          );
+        })}
+        {/* Nodes */}
+        {nodes.map((n, i) => (
+          <motion.circle
+            key={`n-${n.id}`}
+            cx={n.x} cy={n.y} r={2.6}
+            fill="#00FF41"
+            initial={{ r: 0, opacity: 0 }}
+            animate={{ r: 3.5, opacity: 1 }}
+            transition={{ duration: 0.2, delay: i * 0.01 }}
+          />
+        ))}
+        {/* Energy pulse sweeping */}
+        <motion.rect
+          x={-200} y={0} width={200} height={150}
+          fill="url(#gradientPulse)" opacity={0.25}
+          animate={{ x: [ -200, 200 ] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+        />
+        <defs>
+          <linearGradient id="gradientPulse" x1="0" x2="1">
+            <stop offset="0%" stopColor="#00FFFF" stopOpacity="0" />
+            <stop offset="50%" stopColor="#FF00A8" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#00FFFF" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+      </motion.svg>
+      <div className="absolute bottom-1 right-2 text-[10px] text-cyan-300 font-mono">
+        BUILD: {(progress*100).toFixed(0)}%
+      </div>
+    </div>
+  );
+};
+
 export const PromptInterface: React.FC = () => {
+  const [prompt, setPrompt] = useState('');
+  const [building, setBuilding] = useState(false);
   // Precompute some fun math/geometry shapes for the right panel
   const lissajousPath = useMemo(() => {
     // x = sin(a t + δ), y = sin(b t)
@@ -82,6 +192,8 @@ export const PromptInterface: React.FC = () => {
                 background: 'linear-gradient(135deg, #001100, #000500)',
                 textShadow: '0 0 5px #00FF41'
               }}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
             />
             <motion.div
               className="absolute bottom-2 right-2 text-xs text-gray-500 font-mono"
@@ -92,8 +204,9 @@ export const PromptInterface: React.FC = () => {
             </motion.div>
           </motion.div>
 
-          {/* Right: Animated math + geometry */}
+          {/* Right: Animated panel (geometry idle; neural builder after submit) */}
           <div className="relative bg-black/40 border border-cyan-600 rounded-lg overflow-hidden">
+            {!building && (
             <motion.svg
               viewBox="0 0 200 200"
               className="w-full h-[180px]"
@@ -114,6 +227,10 @@ export const PromptInterface: React.FC = () => {
                 animate={{ rotate: [0, 360] }} transform="translate(100,100) translate(-100,-100)"
                 transition={{ duration: 10, repeat: Infinity, ease: 'linear' }} />
             </motion.svg>
+            )}
+            {building && (
+              <NeuralBuilder active={building} />
+            )}
 
             {/* Math glyphs */}
             <div className="absolute inset-0 pointer-events-none text-[11px] leading-4 p-2 font-mono text-cyan-300 opacity-70">
@@ -134,6 +251,13 @@ export const PromptInterface: React.FC = () => {
               className="px-6 py-2 bg-gradient-to-r from-green-600 to-cyan-600 text-black font-mono font-bold"
               style={{
                 boxShadow: '0 0 10px #00FF41'
+              }}
+              onClick={() => {
+                // Start build sequence if prompt not empty
+                if (prompt.trim().length === 0) return;
+                setBuilding(false);
+                // brief reset then enable builder
+                setTimeout(() => setBuilding(true), 50);
               }}
             >
               ⚡ PROCESS NEURAL INPUT
