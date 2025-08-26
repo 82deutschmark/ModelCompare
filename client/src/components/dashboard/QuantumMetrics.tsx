@@ -166,7 +166,7 @@ export const QuantumMetrics: React.FC = () => {
 
   return (
     <DashboardCard
-      title="QUANTUM HYPERCORE STATUS"
+      title="QUANTUM HYPERCORE STATUS 🌌 9 Archetypal Modalities 💾 Version 0.0.28 🔗 Created by PrismAI and Prof. Dr. Max Power IV, PhD, DDS, Esq. 🧠"
       icon="⚛️"
       color="#8000FF"
       className="px-0"
@@ -189,6 +189,19 @@ export const QuantumMetrics: React.FC = () => {
               animate={{ opacity: [0.4, 1, 0.4] }}
               transition={{ duration: 2.2, repeat: Infinity }}
             />
+            {/* Archetypal Modalities display */}
+            <div className="mt-1.5 flex items-center justify-between">
+              <motion.div 
+                className="text-[11px] font-mono"
+                animate={{ scale: [1, 1.06, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <span className="text-green-300">Archetypal Modalities</span>: <span className="text-green-400 font-semibold">9.23</span>
+              </motion.div>
+              <div className="text-[10px] font-mono text-pink-300">
+                Rival: <span className="text-pink-400 font-semibold">7</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
