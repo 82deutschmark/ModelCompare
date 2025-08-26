@@ -419,8 +419,12 @@ export default function Dashboard() {
 
       {/* Main Dashboard Content */}
       <div className="relative z-20 p-6 space-y-6">
-        {/* Top Row - Advanced Metrics */}
-        <AdvancedMetrics />
+        {/* Top Row - Quantum Metrics */}
+        <QuantumMetrics />
+        {/* Prompt Interface directly under metrics */}
+        <div className="max-w-4xl mx-auto w-full">
+          <PromptInterface />
+        </div>
 
         {/* ARC-AGI Pattern Grid Wall (compact 1x4) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -465,66 +469,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Prompt Input Area (centered modal-like card) */}
-        <div className="bg-black border border-green-500 rounded-lg p-6 max-w-3xl mx-auto shadow-[0_0_30px_#00FF41]">
-          <h3 className="text-green-400 text-lg mb-4 animate-pulse font-mono text-center">🧠 NEURAL COMMAND INTERFACE</h3>
-          <div className="space-y-4">
-            <motion.div 
-              className="relative"
-              animate={{ 
-                boxShadow: ['0 0 5px #00FF41', '0 0 15px #00FF41', '0 0 5px #00FF41']
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <textarea
-                className="w-full bg-gray-900 border border-green-500 rounded-lg p-4 text-green-400 font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                placeholder=">> ENTER HYPERDIMENSIONAL QUERY FOR AGI NEURAL PROCESSING..."
-                rows={3}
-                style={{
-                  background: 'linear-gradient(135deg, #001100, #000500)',
-                  textShadow: '0 0 5px #00FF41'
-                }}
-              />
-              <motion.div
-                className="absolute bottom-2 right-2 text-xs text-gray-500 font-mono"
-                animate={{ opacity: [0.3, 0.7, 0.3] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                QUANTUM_READY
-              </motion.div>
-            </motion.div>
-            
-            <div className="flex justify-center items-center gap-6">
-              <motion.button
-                className="px-6 py-2 bg-gradient-to-r from-green-600 to-cyan-600 text-black font-mono font-bold rounded-lg"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                animate={{
-                  boxShadow: ['0 0 10px #00FF41', '0 0 20px #00FFFF', '0 0 10px #00FF41']
-                }}
-                transition={{ duration: 1, repeat: Infinity }}
-              >
-                ⚡ PROCESS NEURAL INPUT
-              </motion.button>
-              <div className="flex space-x-4 text-xs font-mono">
-                <motion.div 
-                  className="text-cyan-400"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 0.8, repeat: Infinity }}
-                >
-                  🔮 QUANTUM_CORES: ACTIVE
-                </motion.div>
-                <motion.div 
-                  className="text-pink-400"
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                >
-                  🧬 DNA_ANALYSIS: READY
-                </motion.div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Prompt Interface moved above, removing inline block to prevent duplication */}
 
         {/* System Status Footer */}
         <div className="bg-black border border-red-500 rounded-lg p-4">
