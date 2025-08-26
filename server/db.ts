@@ -1,24 +1,34 @@
 /**
- * Database Connection Setup
+ * Database Connection Setup with Enhanced Connection Management
  * 
- * Establishes PostgreSQL connection using Drizzle ORM when DATABASE_URL is set.
- * If not set, callers should catch errors from ensureTablesExist() and fall back
- * to in-memory storage. This avoids crashing at module import time.
+ * Provides both legacy compatibility and modern database management.
+ * Uses DatabaseManager for new implementations while maintaining backward compatibility.
  * 
- * Author: Claude Code (resilience update by Cascade)
- * Date: 2025-01-18
+ * Author: Claude Code (modernized)
+ * Date: 2025-08-26
  */
 
+import { DatabaseManager } from './database-manager.js';
 import { drizzle } from "drizzle-orm/node-postgres";
 import pkg from "pg";
 const { Pool } = pkg;
 import * as schema from "../shared/schema";
 
-// Lazily initialized Pool/DB to avoid throwing at import time
+// Global database manager instance
+let globalDatabaseManager: DatabaseManager | null = null;
+
+// Legacy compatibility - lazily initialized Pool/DB
 let pool: InstanceType<typeof Pool> | null = null;
 export let db: ReturnType<typeof drizzle> | null = null;
 
+// Initialize modern database manager if DATABASE_URL is set
 if (process.env.DATABASE_URL) {
+  globalDatabaseManager = new DatabaseManager({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === "production"
+  });
+
+  // Legacy compatibility setup
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
@@ -26,14 +36,17 @@ if (process.env.DATABASE_URL) {
   db = drizzle(pool, { schema });
 }
 
-// Function to ensure tables exist (creates them if they don't)
+// Legacy function to ensure tables exist (creates them if they don't)
 export async function ensureTablesExist() {
+  if (globalDatabaseManager?.isInitialized) {
+    return await globalDatabaseManager.ensureTablesExist();
+  }
+
+  // Fallback to legacy implementation
   if (!db) {
-    // Make it explicit so callers (like storage factory) can catch and fallback
     throw new Error("DATABASE_URL not set; database is unavailable");
   }
   try {
-    // Try to create tables using the migration SQL
     await db.execute(`
       CREATE TABLE IF NOT EXISTS "comparisons" (
         "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -60,6 +73,20 @@ export async function ensureTablesExist() {
     console.warn("⚠️ Could not ensure tables exist:", (error as Error).message);
     throw error;
   }
+}
+
+// Modern API exports
+export async function initializeDatabaseManager(): Promise<DatabaseManager | null> {
+  if (!globalDatabaseManager) {
+    return null;
+  }
+  
+  await globalDatabaseManager.initialize();
+  return globalDatabaseManager;
+}
+
+export function getDatabaseManager(): DatabaseManager | null {
+  return globalDatabaseManager;
 }
 
 // Export type helper when db is present

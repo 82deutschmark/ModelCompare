@@ -19,7 +19,7 @@
  * Date: August 20, 2025
  */
 
-import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, comparisons, vixraSessions } from "@shared/schema";
+import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, comparisons, vixraSessions, promptAudits } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, ensureTablesExist } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -34,6 +34,11 @@ export interface IStorage {
   updateVixraSession(id: string, session: Partial<InsertVixraSession>): Promise<VixraSession | undefined>;
   getVixraSession(id: string): Promise<VixraSession | undefined>;
   getVixraSessions(): Promise<VixraSession[]>;
+  
+  // Prompt audit trail
+  createPromptAudit(audit: InsertPromptAudit): Promise<PromptAuditRecord>;
+  getPromptAudit(id: string): Promise<PromptAuditRecord | undefined>;
+  getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -86,15 +91,45 @@ export class DbStorage implements IStorage {
   async getVixraSessions(): Promise<VixraSession[]> {
     return await requireDb().select().from(vixraSessions).orderBy(desc(vixraSessions.updatedAt));
   }
+
+  async createPromptAudit(insertAudit: InsertPromptAudit): Promise<PromptAuditRecord> {
+    const [result] = await requireDb().insert(promptAudits).values({
+      templateId: insertAudit.templateId,
+      variables: insertAudit.variables,
+      resolvedSections: insertAudit.resolvedSections as any,
+      messageStructure: insertAudit.messageStructure as any,
+      modelId: insertAudit.modelId,
+      responseContent: insertAudit.responseContent,
+      responseTime: insertAudit.responseTime,
+      tokenUsage: insertAudit.tokenUsage as any,
+      cost: insertAudit.cost as any
+    }).returning();
+    return result;
+  }
+
+  async getPromptAudit(id: string): Promise<PromptAuditRecord | undefined> {
+    const [result] = await requireDb().select().from(promptAudits).where(eq(promptAudits.id, id));
+    return result;
+  }
+
+  async getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]> {
+    const query = requireDb().select().from(promptAudits);
+    if (templateId) {
+      return await query.where(eq(promptAudits.templateId, templateId)).orderBy(desc(promptAudits.createdAt));
+    }
+    return await query.orderBy(desc(promptAudits.createdAt));
+  }
 }
 
 export class MemStorage implements IStorage {
   private comparisons: Map<string, Comparison>;
   private vixraSessions: Map<string, VixraSession>;
+  private promptAudits: Map<string, PromptAuditRecord>;
 
   constructor() {
     this.comparisons = new Map();
     this.vixraSessions = new Map();
+    this.promptAudits = new Map();
   }
 
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
@@ -174,6 +209,44 @@ export class MemStorage implements IStorage {
     return Array.from(this.vixraSessions.values()).sort(
       (a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0)
     );
+  }
+
+  async createPromptAudit(insertAudit: InsertPromptAudit): Promise<PromptAuditRecord> {
+    const id = randomUUID();
+    const audit: PromptAuditRecord = {
+      id,
+      templateId: insertAudit.templateId,
+      variables: insertAudit.variables,
+      resolvedSections: insertAudit.resolvedSections as any,
+      messageStructure: insertAudit.messageStructure as any,
+      modelId: insertAudit.modelId || null,
+      responseContent: insertAudit.responseContent || null,
+      responseTime: insertAudit.responseTime || null,
+      tokenUsage: insertAudit.tokenUsage ? {
+        input: insertAudit.tokenUsage.input,
+        output: insertAudit.tokenUsage.output,
+        reasoning: insertAudit.tokenUsage.reasoning as number | undefined
+      } : null,
+      cost: insertAudit.cost ? {
+        total: insertAudit.cost.total,
+        input: insertAudit.cost.input,
+        output: insertAudit.cost.output,
+        reasoning: insertAudit.cost.reasoning as number | undefined
+      } : null,
+      createdAt: new Date()
+    };
+    this.promptAudits.set(id, audit);
+    return audit;
+  }
+
+  async getPromptAudit(id: string): Promise<PromptAuditRecord | undefined> {
+    return this.promptAudits.get(id);
+  }
+
+  async getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]> {
+    const audits = Array.from(this.promptAudits.values());
+    const filtered = templateId ? audits.filter(a => a.templateId === templateId) : audits;
+    return filtered.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 }
 

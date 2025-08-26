@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-interface DashboardCardProps {
+interface ArcAgiCardProps {
   title: string;
   icon?: string;
   color: string;
@@ -10,7 +10,7 @@ interface DashboardCardProps {
   compact?: boolean;
 }
 
-export const DashboardCard: React.FC<DashboardCardProps> = ({
+export const ArcAgiCard: React.FC<ArcAgiCardProps> = ({
   title,
   icon,
   color,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DashboardCard } from './DashboardCard';
+import { ArcAgiCard } from './DashboardCard';
 
 // Parody author bio/abstract card for Prof. Dr. Max Power IV, PhD, DDS, Esq. 
 // Written in exaggerated academic prose with absurd ML jargon and dodo motifs.
@@ -7,7 +7,7 @@ import { DashboardCard } from './DashboardCard';
 export const BioCard: React.FC = () => {
   const [open, setOpen] = useState(false);
   return (
-    <DashboardCard title="Beyond the Benchmark" icon="🦤" color="#FF00A8">
+    <ArcAgiCard title="Beyond the Benchmark" icon="🦤" color="#FF00A8">
       <div className="space-y-2 text-sm leading-relaxed">
         <div>
           <div className="font-bold">Title:</div>
@@ -122,6 +122,6 @@ export const BioCard: React.FC = () => {
           </div>
         )}
       </div>
-    </DashboardCard>
+    </ArcAgiCard>
   );
 };

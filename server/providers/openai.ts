@@ -10,7 +10,7 @@
 
 import 'dotenv/config';
 import OpenAI from 'openai';
-import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
+import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions } from './base.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -211,9 +211,40 @@ export class OpenAIProvider extends BaseProvider {
     },
   ];
 
-  async callModel(prompt: string, model: string): Promise<ModelResponse> {
+  /**
+   * Helper method to convert structured messages to prompt string for Responses API
+   * OpenAI Responses API requires a single prompt string, so we format structured messages
+   * with clear role labels for system instructions, user content, and context
+   */
+  private convertMessagesToPrompt(messages: ModelMessage[]): string {
+    const parts: string[] = [];
+    
+    for (const message of messages) {
+      switch (message.role) {
+        case 'system':
+          parts.push(`System: ${message.content}`);
+          break;
+        case 'user':
+          parts.push(`User: ${message.content}`);
+          break;
+        case 'context':
+          parts.push(`Context: ${message.content}`);
+          break;
+        case 'assistant':
+          parts.push(`Assistant: ${message.content}`);
+          break;
+      }
+    }
+    
+    return parts.join('\n\n');
+  }
+
+  async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
     const modelConfig = this.models.find(m => m.id === model);
+    
+    // Convert structured messages to prompt string for Responses API
+    const prompt = this.convertMessagesToPrompt(messages);
 
     // Configure max_output_tokens
     const isGpt5Series = [

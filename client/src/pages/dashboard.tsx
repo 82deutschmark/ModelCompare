@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DashboardCard } from '../components/dashboard/DashboardCard';
+import { ArcAgiCard } from '../components/dashboard/DashboardCard';
 import { PromptInterface } from '../components/dashboard/PromptInterface';
 import { LiveCounter } from '../components/dashboard/LiveCounter';
 import { QuantumMetrics } from '../components/dashboard/QuantumMetrics';
@@ -253,7 +253,7 @@ const AdvancedMetrics = () => {
             λ≈{metrics.quantumFlux.toFixed(6)} · ϕ(t)={'e^{iπ}'} + ∑ᵢ ψᵢ · ℏ={Math.PI.toFixed(3)} · Δx·Δp ≥ ℏ/2
           </motion.div>
           <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.2, repeat: Infinity }}>
-            連結度: {metrics.quantumEntanglement.toFixed(2)}% · 행렬값 λᵢ≈{metrics.eigenValues.toFixed(3)} · π≈3.14159 · τ≈6.28318
+            連結度: {metrics.quantumEntanglement.toFixed(2)}% · 行列値 λᵢ≈{metrics.eigenValues.toFixed(3)} · π≈3.14159 · τ≈6.28318
           </motion.div>
           <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.4, repeat: Infinity }}>
             матрица Ξ[{metrics.hyperDimensions}D]: det(A)≈{(metrics.eigenValues*1.0001).toFixed(4)} · Σχ²≈{(metrics.tensorFields%997).toFixed(2)}
@@ -338,8 +338,8 @@ const FloatingParticles: React.FC = () => {
 };
 
 
-// Main Dashboard Component
-export default function Dashboard() {
+// Main ARC-AGI Component
+export default function ArcAgiPage() {
   const [systemStatus] = useState({
     coreTemp: -273.15,
     quantumCores: '∞/∞',

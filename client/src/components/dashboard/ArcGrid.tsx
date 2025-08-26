@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DashboardCard } from './DashboardCard';
+import { ArcAgiCard } from './DashboardCard';
 
 // ARC color palette matching the image
 const ARC_COLORS = ['#000000', '#0074D9', '#FF4136', '#2ECC40', '#FFDC00', '#AAAAAA', '#F012BE', '#FF851B', '#7FDBFF', '#870C25'];
@@ -63,7 +63,7 @@ export const ArcGrid: React.FC<ArcGridProps> = ({
   }, [gridSize, showEmojis]);
 
   return (
-    <DashboardCard 
+    <ArcAgiCard 
       title={`${title} ${patternId}`} 
       icon="⬛" 
       color={color}
@@ -122,6 +122,6 @@ export const ArcGrid: React.FC<ArcGridProps> = ({
           </motion.span>
         </div>
       </div>
-    </DashboardCard>
+    </ArcAgiCard>
   );
 };

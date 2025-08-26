@@ -118,3 +118,66 @@ export interface GenerateResponse {
   variableMapping: Record<string, string>;
   warnings: string[];
 }
+
+export interface VariableDefinition {
+  name: string;
+  type: 'string' | 'number' | 'boolean';
+  required: boolean;
+  description?: string;
+  defaultValue?: string;
+  validation?: {
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+  };
+}
+
+export interface TemplateMetadata {
+  filePath: string;
+  lastModified: string;
+  version: string;
+  author?: string;
+  description?: string;
+}
+
+export interface StructuredTemplate {
+  id: string;
+  name: string;
+  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment' | 'vixra';
+  category: string;
+  structure: {
+    systemInstructions?: string;
+    userTemplate: string;
+    contextTemplate?: string;
+    responseGuidelines?: string;
+  };
+  variables: VariableDefinition[];
+  metadata: TemplateMetadata;
+}
+
+export interface ModelMessage {
+  role: 'system' | 'user' | 'assistant' | 'context';
+  content: string;
+  metadata?: {
+    templateId?: string;
+    variables?: Record<string, string>;
+  };
+}
+
+export interface CallOptions {
+  maxTokens?: number;
+  temperature?: number;
+  model: string;
+}
+
+export interface PromptAudit {
+  templateId: string;
+  variables: Record<string, string>;
+  resolvedSections: {
+    systemInstructions?: string;
+    userContent: string;
+    contextContent?: string;
+  };
+  timestamp: string;
+  messageStructure: ModelMessage[];
+}

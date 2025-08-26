@@ -60,11 +60,45 @@ export interface ModelResponse {
   };
 }
 
+/**
+ * Structured message interface for provider communication
+ * Enables proper role separation for advanced prompt engineering
+ */
+export interface ModelMessage {
+  /** Message role - system for instructions, user for queries, context for additional info */
+  role: 'system' | 'user' | 'assistant' | 'context';
+  /** The actual message content */
+  content: string;
+  /** Optional metadata for message tracking and processing */
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Call options for model invocation
+ * Provides fine-grained control over model behavior
+ */
+export interface CallOptions {
+  /** Model temperature (0.0-1.0) for response randomness */
+  temperature?: number;
+  /** Maximum tokens to generate */
+  maxTokens?: number;
+  /** Legacy system prompt (prefer structured messages) */
+  systemPrompt?: string;
+}
+
 export abstract class BaseProvider {
   abstract name: string;
   abstract models: ModelConfig[];
   
-  abstract callModel(prompt: string, model: string): Promise<ModelResponse>;
+  /** 
+   * Call model with structured messages instead of flat string prompts
+   * Enables proper system/user/context role separation for advanced prompt engineering
+   * @param messages Array of structured messages with roles and content
+   * @param model Model identifier to use for generation
+   * @param options Optional generation parameters (temperature, maxTokens, etc.)
+   * @returns Promise resolving to model response with content, reasoning, timing, and costs
+   */
+  abstract callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse>;
   
   getModel(modelId: string): ModelConfig | undefined {
     return this.models.find(m => m.id === modelId);
