@@ -18,7 +18,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
-import { Brain, Sword, Palette, MessageSquare, Users, Moon, Sun, ClipboardList, FileText } from "lucide-react";
+import { Brain, Sword, Palette, MessageSquare, Users, Moon, Sun, ClipboardList, FileText, Monitor } from "lucide-react";
 
 interface NavigationMode {
   id: string;
@@ -78,6 +78,13 @@ const navigationModes: NavigationMode[] = [
     path: "/vixra",
     icon: FileText,
     description: "Generate satirical academic papers"
+  },
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    path: "/dashboard",
+    icon: Monitor,
+    description: "Chess AI and ARC-AGI visualization"
   }
 ];
 

@@ -20,7 +20,7 @@
  * Like a writing workshop where each AI model takes turns enhancing the work,
  * but the user controls who goes next and when to stop.
  * 
- * Author: Claude Code with Claude 4 Sonnet Thinking
+ * Author: Cascade
  * Date: August 17, 2025
  */
 
@@ -40,7 +40,8 @@ import { ModelButton } from "@/components/ModelButton";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { ExportButton } from "@/components/ExportButton";
 import { AppNavigation } from "@/components/AppNavigation";
-import { parseCreativePromptsFromMarkdown, type PromptCategory, findPromptTemplate } from "@/lib/promptParser";
+import { VariableInspector } from "@shared/variable-inspector";
+import { VARIABLE_REGISTRIES, validateVariables, type VariableSchema } from "@shared/variable-registry";
 
 // Enhanced Pass interface to track the complex workflow
 interface CreativePass {
@@ -97,10 +98,15 @@ export default function CreativeCombat() {
     totalCost: 0,
   });
 
-  const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
-  const [promptsLoading, setPromptsLoading] = useState(true);
+  // Categories come from VARIABLE_REGISTRIES for 'creative' mode
+  const creativeCategories = useMemo(() => {
+    const schema = (VARIABLE_REGISTRIES.creative as VariableSchema[]).find((s: VariableSchema) => s.name === 'category');
+    return (schema?.enum || []) as string[];
+  }, []);
   const [customEnhancementPrompt, setCustomEnhancementPrompt] = useState('');
-  const [showPromptPreview, setShowPromptPreview] = useState(false);
+
+  // Variable Inspector for rendering templates
+  const inspector = useMemo(() => new VariableInspector(), []);
 
   // Load available models
   const { data: models = [], isLoading: modelsLoading } = useQuery({
@@ -121,18 +127,18 @@ export default function CreativeCombat() {
     }, {});
   }, [models]);
 
-  // Per-model response mutation (same API used by Compare page)
+  // Per-model response mutation (carry prompt metadata for pass tracking)
   const modelResponseMutation = useMutation<
     { modelId: string; response: ModelResponse },
     Error,
-    { prompt: string; modelId: string }
+    { prompt: string; modelId: string; isOriginal: boolean; enhancementPrompt?: string }
   >({
-    mutationFn: async (data: { prompt: string; modelId: string }) => {
-      const response = await apiRequest('POST', '/api/models/respond', data);
+    mutationFn: async (data: { prompt: string; modelId: string; isOriginal: boolean; enhancementPrompt?: string }) => {
+      const response = await apiRequest('POST', '/api/models/respond', { prompt: data.prompt, modelId: data.modelId });
       const body = await response.json() as ModelResponse;
       return { modelId: data.modelId, response: body };
     },
-    onSuccess: ({ modelId, response }) => {
+    onSuccess: ({ modelId, response }, variables) => {
       const model = models.find((m: AIModel) => m.id === modelId);
       const pass: CreativePass = {
         id: `${modelId}-${Date.now()}`,
@@ -145,8 +151,9 @@ export default function CreativeCombat() {
         cost: response.cost,
         tokenUsage: response.tokenUsage,
         timestamp: new Date(),
-        isOriginal: workflow.passes.length === 0,
-        promptUsed: '',
+        isOriginal: variables?.isOriginal ?? workflow.passes.length === 0,
+        promptUsed: variables?.prompt || '',
+        enhancementPrompt: variables?.enhancementPrompt,
       };
 
       setWorkflow(prev => ({
@@ -170,26 +177,13 @@ export default function CreativeCombat() {
     }
   });
 
-  // Load Creative Combat prompt templates using the modular prompt parser
-  useEffect(() => {
-    const loadCreativePrompts = async () => {
-      setPromptsLoading(true);
-      try {
-        const categories = await parseCreativePromptsFromMarkdown();
-        setPromptCategories(categories);
-      } catch (error) {
-        console.error('Failed to load creative combat prompts:', error);
-        toast({
-          title: 'Failed to load creative prompts',
-          description: 'Using fallback prompt system.',
-          variant: 'destructive',
-        });
-      } finally {
-        setPromptsLoading(false);
-      }
-    };
-    loadCreativePrompts();
-  }, [toast]);
+  // Templates for creative mode (resolved via VariableInspector)
+  const ORIGINAL_TEMPLATE = useMemo(() => (
+    'You are a creative assistant. Create a {category} based on the user prompt.\n\nUser prompt: {originalPrompt}'
+  ), []);
+  const ENHANCEMENT_TEMPLATE = useMemo(() => (
+    'You are an expert creative editor. Improve the following {category} work while preserving intent.\n\nOriginal intent: {originalPrompt}\n\nWork to enhance:\n{response}\n\nAdditional enhancement instructions: {enhancementPrompt|}'
+  ), []);
 
 
   // Toggle model selection
@@ -231,14 +225,9 @@ export default function CreativeCombat() {
       return;
     }
 
-    // Get the original prompt template
-    const originalTemplate = findPromptTemplate(promptCategories, workflow.selectedCategory, 'original-prompt');
-    if (!originalTemplate) {
-      toast({
-        title: "Template Not Found",
-        description: "Could not find original prompt template for selected category",
-        variant: "destructive",
-      });
+    // Ensure selected category is valid per registry
+    if (!creativeCategories.includes(workflow.selectedCategory)) {
+      toast({ title: 'Invalid Category', description: 'Choose a valid category', variant: 'destructive' });
       return;
     }
     
@@ -270,26 +259,34 @@ export default function CreativeCombat() {
       awaitingNextEditor: false
     }));
 
-    let finalPrompt: string;
-    
-    if (isOriginal) {
-      // Original prompt
-      const originalTemplate = findPromptTemplate(promptCategories, workflow.selectedCategory, 'original-prompt');
-      finalPrompt = `${originalTemplate?.content || ''}\n\nUser's creative prompt: ${workflow.originalPrompt}`;
-    } else {
-      // Enhancement prompt
-      const enhancementTemplate = findPromptTemplate(promptCategories, workflow.selectedCategory, 'enhancement-prompt');
-      let templatePrompt = enhancementTemplate?.content || '';
-      
-      // Replace placeholders
-      templatePrompt = templatePrompt.replace('{response}', workflow.currentResponse);
-      templatePrompt = templatePrompt.replace('{originalPrompt}', workflow.originalPrompt);
-      
-      finalPrompt = enhancementPrompt ? `${templatePrompt}\n\nAdditional enhancement instructions: ${enhancementPrompt}` : templatePrompt;
+    // Build variables and validate via registry
+    const variables: Record<string, string> = {
+      originalPrompt: workflow.originalPrompt,
+      response: workflow.currentResponse,
+      category: workflow.selectedCategory,
+      enhancementPrompt: enhancementPrompt || ''
+    } as Record<string, string>;
+
+    const validation = validateVariables('creative', variables);
+    if (!validation.isValid) {
+      toast({ title: 'Invalid variables', description: validation.errors.join('\n'), variant: 'destructive' });
+      return;
+    }
+
+    // Resolve template using VariableInspector
+    const { resolvedTemplate, errors } = inspector.inspect(
+      'creative',
+      isOriginal ? ORIGINAL_TEMPLATE : ENHANCEMENT_TEMPLATE,
+      variables
+    );
+    if (errors.length) {
+      toast({ title: 'Template error', description: errors.join('\n'), variant: 'destructive' });
+      setWorkflow(prev => ({ ...prev, isProcessing: false }));
+      return;
     }
 
     // Use the React Query mutation
-    modelResponseMutation.mutate({ prompt: finalPrompt, modelId });
+    modelResponseMutation.mutate({ prompt: resolvedTemplate, modelId, isOriginal, enhancementPrompt });
   };
 
   // Continue with next enhancement
@@ -414,9 +411,9 @@ export default function CreativeCombat() {
                       <SelectValue placeholder="Choose category..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {promptCategories.map((cat: PromptCategory) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
+                      {creativeCategories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
                         </SelectItem>
                       ))}
                     </SelectContent>

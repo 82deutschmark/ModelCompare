@@ -534,7 +534,7 @@ export default function BattleChat() {
                               <span>•</span>
                             </>
                           )}
-                          <span>{prompt.length}/4000</span>
+                          <span>{prompt.length}/32000</span>
                         </div>
                       </div>
                     </div>
@@ -549,7 +549,7 @@ export default function BattleChat() {
                           placeholder="Template for rebuttals..."
                         />
                         <div className="absolute bottom-3 right-3 text-xs text-gray-400 flex items-center space-x-2">
-                          <span>{challengerPrompt.length}/4000</span>
+                          <span>{challengerPrompt.length}/32000</span>
                         </div>
                       </div>
                     </div>

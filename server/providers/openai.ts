@@ -266,8 +266,16 @@ export class OpenAIProvider extends BaseProvider {
           reasoning: reasoningSummary,
           responseTime: Date.now() - startTime,
           systemPrompt: prompt,
-          tokenUsage: undefined,
-          cost: undefined,
+          tokenUsage: (response.usage ? {
+            input: response.usage.input_tokens ?? 0,
+            output: response.usage.output_tokens ?? 0,
+            reasoning: response.usage.output_tokens_details?.reasoning_tokens ?? undefined,
+          } : undefined),
+          cost: (response.usage && modelConfig ? this.calculateCost(modelConfig, {
+            input: response.usage.input_tokens ?? 0,
+            output: response.usage.output_tokens ?? 0,
+            reasoning: response.usage.output_tokens_details?.reasoning_tokens ?? undefined,
+          }) : undefined),
           modelConfig: modelConfig ? {
             capabilities: modelConfig.capabilities,
             pricing: modelConfig.pricing,

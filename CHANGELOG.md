@@ -60,6 +60,7 @@ All notable changes to this project will be documented in this file.
   - `README.md`: Documented Vixra Mode in Comparison Modes section
   - `README.md`: Documented OpenAI Responses migration, token caps (GPT‑5 128000), 16,300 minimum floor, 10-minute timeouts, retries, and env vars (`OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TIMEOUT_MS`, `DEBUG_SAVE_RAW`)
   - `docs/openai-responses-migration-plan.md`: Finalized and aligned with implementation (Responses-only, reasoning summaries, token caps, timeouts, retries, diagnostics)
+- **Prompt Input Limit:** Increased frontend prompt input capacity from 4,000 to 32,000 characters in `client/src/pages/home.tsx` and updated counters in `client/src/pages/battle-chat.tsx`. Backend body parser remains default (sufficient for this size)
 - **Raw Prompt Preview:** Implemented prompt transparency widgets on all pages allowing users to view the exact prompts sent to AI models via toggle buttons with Eye icon
 - **Enhanced User Experience:** Users can now select the same model for both sides in debates, providing more flexibility for testing scenarios
 

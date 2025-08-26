@@ -441,7 +441,7 @@ export default function Home() {
                     value={prompt}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value.length <= 4000) {
+                      if (value.length <= 32000) {
                         setPrompt(value);
                         setIsDefaultPrompt(value === defaultPrompt);
                       }
@@ -455,10 +455,10 @@ export default function Home() {
                     rows={12}
                     className={`min-h-48 pr-16 resize-none ${isDefaultPrompt ? 'text-gray-300 dark:text-gray-600' : ''}`}
                     placeholder="Ask a question or provide a prompt to compare across selected AI models..."
-                    maxLength={4000}
+                    maxLength={32000}
                   />
                   <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-                    {prompt.length}/4000
+                    {prompt.length}/32000
                   </div>
                 </div>
                 
