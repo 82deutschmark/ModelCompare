@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DashboardCard } from './DashboardCard';
 
-// Parody author bio/abstract card for Prof. Dr. Max Power, PhD, DDS, Esq. 
+// Parody author bio/abstract card for Prof. Dr. Max Power IV, PhD, DDS, Esq. 
 // Written in exaggerated academic prose with absurd ML jargon and dodo motifs.
 // Stripped of problematic characters and simplified formatting.
 export const BioCard: React.FC = () => {
