@@ -19,10 +19,10 @@
  * Date: August 9, 2025
  */
 
-import { config } from "dotenv";
+import dotenv from "dotenv";
 
 // Load environment variables first
-config();
+dotenv.config();
 
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
