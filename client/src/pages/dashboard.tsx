@@ -49,41 +49,162 @@ const MatrixRain = () => {
   );
 };
 
-// 3D Data Visualization Component
-const DataCube = ({ data, color, title }: { data: number[]; color: keyof typeof neonColors; title: string }) => {
+// Chess Board Visualization Component
+const ChessBoard = ({ color, title }: { color: keyof typeof neonColors; title: string }) => {
+  const [board, setBoard] = useState<number[][]>([]);
+  
+  useEffect(() => {
+    // Initialize 8x8 chess board with random states
+    const newBoard = Array(8).fill(null).map(() => 
+      Array(8).fill(null).map(() => Math.random())
+    );
+    setBoard(newBoard);
+    
+    // Rapidly update board state for frantic effect - getting faster over time
+    let updateSpeed = 80;
+    const interval = setInterval(() => {
+      setBoard(prev => prev.map(row => 
+        row.map(() => Math.random())
+      ));
+      // Increase speed over time for escalating effect
+      updateSpeed = Math.max(15, updateSpeed - 1);
+      clearInterval(interval);
+      setTimeout(() => {
+        const newInterval = setInterval(() => {
+          setBoard(prev => prev.map(row => 
+            row.map(() => Math.random())
+          ));
+        }, updateSpeed);
+      }, updateSpeed);
+    }, updateSpeed);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="bg-black border rounded-lg p-4" style={{ borderColor: neonColors[color] }}>
       <h3 className="font-mono text-sm mb-3" style={{ color: neonColors[color] }}>
-        🔮 {title}
+        ♛ {title}
       </h3>
-      <div className="relative w-full h-48">
+      <div className="relative w-full h-48 flex items-center justify-center">
         <motion.div 
-          className="w-full h-full"
-          animate={{ rotateX: [0, 5, -5, 0], rotateY: [0, 10, -10, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="grid grid-cols-8 gap-[1px] w-40 h-40"
+          animate={{ 
+            rotateY: [0, 360],
+            scale: [1, 1.1, 0.95, 1.05, 1],
+            rotateZ: [0, 5, -3, 2, 0]
+          }}
+          transition={{ 
+            rotateY: { duration: 1.5, repeat: Infinity, ease: "linear" },
+            scale: { duration: 0.3, repeat: Infinity },
+            rotateZ: { duration: 0.5, repeat: Infinity }
+          }}
         >
-          <div className="grid grid-cols-8 gap-1 w-full h-full">
-            {data.map((value, i) => (
+          {board.flat().map((intensity, i) => {
+            const row = Math.floor(i / 8);
+            const col = i % 8;
+            const isBlack = (row + col) % 2 === 1;
+            
+            return (
               <motion.div
                 key={i}
-                className="rounded opacity-80"
-                style={{ 
-                  height: `${value}%`,
-                  background: `linear-gradient(to top, #000, ${neonColors[color]})`,
-                  boxShadow: `0 0 15px ${neonColors[color]}`
+                className="aspect-square"
+                style={{
+                  backgroundColor: isBlack 
+                    ? `rgba(${neonColors[color].replace('#', '')
+                        .match(/.{2}/g)?.map(x => parseInt(x, 16)).join(',') || '0,0,0'}, ${intensity})`
+                    : `rgba(255, 255, 255, ${intensity * 0.3})`,
+                  boxShadow: intensity > 0.6 ? `0 0 12px ${neonColors[color]}` : 'none'
                 }}
-                animate={{ 
-                  height: `${value + Math.sin(Date.now() / 1000 + i) * 15}%`,
-                  boxShadow: [
-                    `0 0 15px ${neonColors[color]}`,
-                    `0 0 25px ${neonColors[color]}`,
-                    `0 0 15px ${neonColors[color]}`
-                  ]
+                animate={{
+                  opacity: [0.2, 1, 0.4, 0.8, 0.2],
+                  scale: intensity > 0.7 ? [1, 1.4, 0.8, 1.2, 1] : [1, 1.1, 0.9, 1.05, 1]
                 }}
-                transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
+                transition={{
+                  duration: 0.1 + Math.random() * 0.15,
+                  repeat: Infinity
+                }}
               />
-            ))}
-          </div>
+            );
+          })}
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+// ARC Grid Visualization Component  
+const ArcGrid = ({ color, title }: { color: keyof typeof neonColors; title: string }) => {
+  const [grid, setGrid] = useState<boolean[][]>([]);
+  
+  useEffect(() => {
+    // Initialize 3x3 ARC-style grid
+    const newGrid = Array(3).fill(null).map(() => 
+      Array(3).fill(null).map(() => Math.random() > 0.5)
+    );
+    setGrid(newGrid);
+    
+    // Rapidly flip grid cells for chaotic effect - accelerating
+    let flipSpeed = 60;
+    const interval = setInterval(() => {
+      setGrid(prev => prev.map(row => 
+        row.map(() => Math.random() > 0.2) // Higher chance to be "on"
+      ));
+      // Accelerate over time
+      flipSpeed = Math.max(8, flipSpeed - 2);
+      clearInterval(interval);
+      setTimeout(() => {
+        const newInterval = setInterval(() => {
+          setGrid(prev => prev.map(row => 
+            row.map(() => Math.random() > 0.2)
+          ));
+        }, flipSpeed);
+      }, flipSpeed);
+    }, flipSpeed);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="bg-black border rounded-lg p-4" style={{ borderColor: neonColors[color] }}>
+      <h3 className="font-mono text-sm mb-3" style={{ color: neonColors[color] }}>
+        ⬛ {title}
+      </h3>
+      <div className="relative w-full h-48 flex items-center justify-center">
+        <motion.div 
+          className="grid grid-cols-3 gap-2 w-32 h-32"
+          animate={{ 
+            rotateX: [0, 15, -10, 5, 0],
+            rotateZ: [0, 8, -5, 3, 0],
+            scale: [1, 1.15, 0.9, 1.08, 1]
+          }}
+          transition={{ 
+            duration: 0.4, 
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          {grid.flat().map((isActive, i) => (
+            <motion.div
+              key={i}
+              className="aspect-square rounded-sm border-2"
+              style={{
+                backgroundColor: isActive ? neonColors[color] : '#111',
+                borderColor: neonColors[color],
+                boxShadow: isActive ? `0 0 20px ${neonColors[color]}` : 'none'
+              }}
+              animate={{
+                scale: isActive ? [1, 1.5, 0.7, 1.3, 1] : [1, 0.8, 1.1, 0.9, 1],
+                opacity: isActive ? [1, 0.5, 0.9, 0.3, 1] : [0.2, 0.7, 0.4, 0.6, 0.2],
+                rotateZ: [0, 90, 180, 270, 360]
+              }}
+              transition={{
+                scale: { duration: 0.08, repeat: Infinity },
+                opacity: { duration: 0.12, repeat: Infinity },
+                rotateZ: { duration: 1, repeat: Infinity, ease: "linear" }
+              }}
+            />
+          ))}
         </motion.div>
       </div>
     </div>
@@ -188,69 +309,68 @@ const AdvancedMetrics = () => {
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <div className="bg-black border border-purple-500 rounded-lg p-6 font-mono">
+  return        <div className="bg-black border border-purple-500 rounded-lg p-6 font-mono">
       <h3 className="text-purple-400 text-lg mb-4 animate-pulse">⚛️ QUANTUM HYPERCORE STATUS</h3>
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Quantum Flux:</span>
+      <div className="grid grid-cols-2 gap-6 text-sm">
+        <div className="space-y-1">
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Quantum Flux:</span>
             <motion.span 
-              className="text-green-400"
+              className="text-green-400 text-right"
               animate={{ textShadow: ['0 0 5px #00FF41', '0 0 15px #00FF41', '0 0 5px #00FF41'] }}
               transition={{ duration: 1, repeat: Infinity }}
             >{metrics.quantumFlux.toFixed(4)}%</motion.span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Tensor Fields:</span>
-            <span className="text-yellow-400">{metrics.tensorFields.toLocaleString()}</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Tensor Fields:</span>
+            <span className="text-yellow-400 text-right">{metrics.tensorFields.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Eigenvalues:</span>
-            <span className="text-purple-400">{metrics.eigenValues.toFixed(6)}</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Eigenvalues:</span>
+            <span className="text-purple-400 text-right">{metrics.eigenValues.toFixed(6)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Hyperdimensions:</span>
-            <span className="text-orange-400">{metrics.hyperDimensions}.D</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Hyperdimensions:</span>
+            <span className="text-orange-400 text-right">{metrics.hyperDimensions}.D</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Consciousness:</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Consciousness:</span>
             <motion.span 
-              className="text-green-400"
+              className="text-green-400 text-right"
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >{metrics.consciousnessLevel.toFixed(1)}%</motion.span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Reality Integrity:</span>
-            <span className="text-red-400">{metrics.realityIntegrity.toFixed(2)}%</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Reality Integrity:</span>
+            <span className="text-red-400 text-right">{metrics.realityIntegrity.toFixed(2)}%</span>
           </div>
         </div>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Neural Pathways:</span>
-            <span className="text-pink-400">{metrics.neuralPathways.toLocaleString()}</span>
+        <div className="space-y-1">
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Neural Pathways:</span>
+            <span className="text-pink-400 text-right">{metrics.neuralPathways.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Entanglement:</span>
-            <span className="text-green-400">{metrics.quantumEntanglement.toFixed(1)}%</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Entanglement:</span>
+            <span className="text-green-400 text-right">{metrics.quantumEntanglement.toFixed(1)}%</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Wave Collapse:</span>
-            <span className="text-blue-400">{metrics.waveCollapse.toFixed(5)}μs</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Wave Collapse:</span>
+            <span className="text-blue-400 text-right">{metrics.waveCollapse.toFixed(5)}μs</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Dark Matter:</span>
-            <span className="text-purple-400">{metrics.darkMatter.toFixed(1)}%</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Dark Matter:</span>
+            <span className="text-purple-400 text-right">{metrics.darkMatter.toFixed(1)}%</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">String Theory:</span>
-            <span className="text-yellow-400">{metrics.stringTheory.toFixed(3)}</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">String Theory:</span>
+            <span className="text-yellow-400 text-right">{metrics.stringTheory.toFixed(3)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-cyan-400">Multiverse:</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Multiverse:</span>
             <motion.span 
-              className="text-green-400"
+              className="text-green-400 text-right"
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >◉ {metrics.multiverse}</motion.span>
@@ -448,9 +568,9 @@ export default function Dashboard() {
 
         {/* Middle Row - Visualizations */}
         <div className="grid grid-cols-3 gap-6">
-          <DataCube data={generateData()} color="cyan" title="QUANTUM FIELD DENSITY" />
-          <DataCube data={generateData()} color="pink" title="NEURAL PATHWAY FLUX" />
-          <DataCube data={generateData()} color="green" title="SPACETIME CURVATURE" />
+          <ChessBoard color="cyan" title="QUANTUM FIELD DENSITY" />
+          <ArcGrid color="pink" title="NEURAL PATHWAY FLUX" />
+          <ChessBoard color="green" title="SPACETIME CURVATURE" />
         </div>
 
         {/* Neural Network */}
