@@ -8,7 +8,7 @@
 
 import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
-import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
+import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions } from './base.js';
 
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -82,15 +82,42 @@ export class GoogleProvider extends BaseProvider {
     },
   ];
 
-  async callModel(prompt: string, model: string): Promise<ModelResponse> {
+  // Helper method to convert structured messages to Gemini format
+  private convertToGeminiContents(messages: ModelMessage[]): string {
+    const parts: string[] = [];
+    
+    for (const message of messages) {
+      switch (message.role) {
+        case 'system':
+          parts.push(`System Instructions: ${message.content}`);
+          break;
+        case 'user':
+          parts.push(`User: ${message.content}`);
+          break;
+        case 'context':
+          parts.push(`Context: ${message.content}`);
+          break;
+        case 'assistant':
+          parts.push(`Assistant: ${message.content}`);
+          break;
+      }
+    }
+    
+    return parts.join('\n\n');
+  }
+
+  async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
+    
+    // Convert structured messages to Gemini format
+    const contents = this.convertToGeminiContents(messages);
     
     // Enable thinking for Gemini 2.5 models that support it
     const enableThinking = model.includes('gemini-2.5') || model.includes('thinking');
     
     const requestConfig: any = {
       model: model,
-      contents: prompt,
+      contents: contents,
     };
     
     if (enableThinking) {
@@ -115,7 +142,7 @@ export class GoogleProvider extends BaseProvider {
       content: response.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated',
       reasoning: undefined, // Google doesn't provide reasoning logs yet
       responseTime: Date.now() - startTime,
-      systemPrompt: prompt, // Include the actual prompt sent to the model
+      systemPrompt: contents, // Include the actual prompt sent to the model
       tokenUsage,
       cost,
       modelConfig: {

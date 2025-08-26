@@ -8,7 +8,7 @@
 
 import 'dotenv/config';
 import Anthropic from '@anthropic-ai/sdk';
-import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
+import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions } from './base.js';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -104,16 +104,64 @@ export class AnthropicProvider extends BaseProvider {
     },
   ];
 
-  async callModel(prompt: string, model: string): Promise<ModelResponse> {
+  // Helper method to convert structured messages to Anthropic format
+  private convertToAnthropicMessages(messages: ModelMessage[]): Array<{role: 'user' | 'assistant', content: string}> {
+    const anthropicMessages: Array<{role: 'user' | 'assistant', content: string}> = [];
+    let systemContent = '';
+    let userContent = '';
+    let contextContent = '';
+    
+    // Collect all content by role
+    for (const message of messages) {
+      switch (message.role) {
+        case 'system':
+          systemContent += message.content + '\n\n';
+          break;
+        case 'user':
+          userContent += message.content + '\n\n';
+          break;
+        case 'context':
+          contextContent += message.content + '\n\n';
+          break;
+        case 'assistant':
+          anthropicMessages.push({ role: 'assistant', content: message.content });
+          break;
+      }
+    }
+    
+    // Combine system, context, and user content into user message
+    let finalUserContent = '';
+    if (systemContent.trim()) {
+      finalUserContent += `System Instructions:\n${systemContent.trim()}\n\n`;
+    }
+    if (contextContent.trim()) {
+      finalUserContent += `Context:\n${contextContent.trim()}\n\n`;
+    }
+    if (userContent.trim()) {
+      finalUserContent += `User Request:\n${userContent.trim()}`;
+    }
+    
+    if (finalUserContent.trim()) {
+      anthropicMessages.push({ role: 'user', content: finalUserContent.trim() });
+    }
+    
+    return anthropicMessages;
+  }
+
+  async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
     
     const modelConfig = this.models.find(m => m.id === model);
     const supportsReasoning = modelConfig?.capabilities.reasoning;
     
+    // Convert structured messages to Anthropic format
+    const anthropicMessages = this.convertToAnthropicMessages(messages);
+    
     // Add reasoning instructions for reasoning-capable models
-    let finalPrompt = prompt;
-    if (supportsReasoning) {
-      finalPrompt = `Before providing your final answer, please show your step-by-step reasoning process inside <reasoning> tags. Think through the prompt systematically, analyzing the request and logical connections.
+    if (supportsReasoning && anthropicMessages.length > 0) {
+      const lastUserMessage = anthropicMessages[anthropicMessages.length - 1];
+      if (lastUserMessage.role === 'user') {
+        lastUserMessage.content = `Before providing your final answer, please show your step-by-step reasoning process inside <reasoning> tags. Think through the prompt systematically, analyzing the request and logical connections.
 
 <reasoning>
 [Your detailed step-by-step analysis will go here]
@@ -121,13 +169,15 @@ export class AnthropicProvider extends BaseProvider {
 
 Then provide your final response.
 
-${prompt}`;
+${lastUserMessage.content}`;
+      }
     }
     
     const message = await anthropic.messages.create({
       model,
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: finalPrompt }],
+      max_tokens: options?.maxTokens || 2000,
+      temperature: options?.temperature,
+      messages: anthropicMessages,
     });
     
     const content = Array.isArray(message.content) 
@@ -135,7 +185,7 @@ ${prompt}`;
       : message.content;
     
     // Extract reasoning from <reasoning> tags if available
-    let reasoning = null;
+    let reasoning: string | undefined = undefined;
     let cleanedContent = content;
     let reasoningTokens = 0;
     
@@ -159,9 +209,9 @@ ${prompt}`;
 
     return {
       content: (message.content[0]?.type === 'text' ? message.content[0].text : 'No response generated'),
-      reasoning: undefined, // Anthropic doesn't provide reasoning logs yet
+      reasoning: reasoning,
       responseTime: Date.now() - startTime,
-      systemPrompt: prompt, // Include the actual prompt sent to the model
+      systemPrompt: anthropicMessages.map(m => m.content).join('\n\n'),
       tokenUsage,
       cost,
       modelConfig: {

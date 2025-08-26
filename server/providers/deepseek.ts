@@ -8,7 +8,7 @@
 
 import 'dotenv/config';
 import OpenAI from 'openai';
-import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
+import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions } from './base.js';
 
 const deepseek = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
@@ -64,14 +64,63 @@ export class DeepSeekProvider extends BaseProvider {
     },
   ];
 
-  async callModel(prompt: string, model: string): Promise<ModelResponse> {
+  // Helper method to convert structured messages to OpenAI format for DeepSeek
+  private convertToDeepSeekMessages(messages: ModelMessage[]): Array<{role: 'user' | 'assistant' | 'system', content: string}> {
+    const deepseekMessages: Array<{role: 'user' | 'assistant' | 'system', content: string}> = [];
+    let systemContent = '';
+    let userContent = '';
+    let contextContent = '';
+    
+    // Collect all content by role
+    for (const message of messages) {
+      switch (message.role) {
+        case 'system':
+          systemContent += message.content + '\n\n';
+          break;
+        case 'user':
+          userContent += message.content + '\n\n';
+          break;
+        case 'context':
+          contextContent += message.content + '\n\n';
+          break;
+        case 'assistant':
+          deepseekMessages.push({ role: 'assistant', content: message.content });
+          break;
+      }
+    }
+    
+    // Add system message if we have system content
+    if (systemContent.trim()) {
+      deepseekMessages.push({ role: 'system', content: systemContent.trim() });
+    }
+    
+    // Combine context and user content into user message
+    let finalUserContent = '';
+    if (contextContent.trim()) {
+      finalUserContent += `Context:\n${contextContent.trim()}\n\n`;
+    }
+    if (userContent.trim()) {
+      finalUserContent += userContent.trim();
+    }
+    
+    if (finalUserContent.trim()) {
+      deepseekMessages.push({ role: 'user', content: finalUserContent.trim() });
+    }
+    
+    return deepseekMessages;
+  }
+
+  async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
+    
+    // Convert structured messages to DeepSeek format
+    const deepseekMessages = this.convertToDeepSeekMessages(messages);
     
     const response = await deepseek.chat.completions.create({
       model: model,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 2000,
-      temperature: 0.6, // Recommended for reasoning tasks
+      messages: deepseekMessages as any,
+      max_tokens: options?.maxTokens || 2000,
+      temperature: options?.temperature || 0.6, // Recommended for reasoning tasks
     });
     
     const choice = response.choices[0];
@@ -89,7 +138,7 @@ export class DeepSeekProvider extends BaseProvider {
       content: response.choices[0]?.message?.content || 'No response generated',
       reasoning: undefined, // DeepSeek doesn't provide reasoning logs yet
       responseTime: Date.now() - startTime,
-      systemPrompt: prompt, // Include the actual prompt sent to the model
+      systemPrompt: deepseekMessages.map(m => `${m.role}: ${m.content}`).join('\n\n'),
       tokenUsage,
       cost,
       modelConfig: {
