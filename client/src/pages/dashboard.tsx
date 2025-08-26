@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-
-// ARC-aligned space emoji palettes (each list is exactly length-10: indices 0..9)
-// 0 is the explicit "empty/black" cell to avoid null handling.
-export const SPACE_EMOJIS = {
-  // Legacy default (backward compatibility with previous single-map implementation)
-  legacy_default: ['⬛', '✅', '👽', '👤', '🪐', '🌍', '🛸', '☄️', '♥️', '⚠️'],  
-  // Birds - For the hardest tasks (filled to length-10)
-  birds: ['🐦', '🦃', '🦆', '🦉', '🐤', '🦅', '🦜', '🦢', '🐓', '🦩'],
-} as const;
+import { DashboardCard } from '../components/dashboard/DashboardCard';
+import { PromptInterface } from '../components/dashboard/PromptInterface';
+import { LiveCounter } from '../components/dashboard/LiveCounter';
+import { QuantumMetrics } from '../components/dashboard/QuantumMetrics';
+import { ChessBoard } from '../components/dashboard/ChessBoard';
+import { ArcGrid } from '../components/dashboard/ArcGrid';
 
 // Neon color palette for cyberpunk theme
 const neonColors = {
@@ -18,12 +15,19 @@ const neonColors = {
   purple: '#8000FF',
   yellow: '#FFFF00',
   orange: '#FF4000',
-  red: '#FF073A',
-  blue: '#1E90FF',
 };
 
 // Matrix rain characters - Japanese katakana
 const matrixChars = 'ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ノ ハ ヒ フ ヘ ホ マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヲ ン'.split(' ');
+
+// ARC-aligned space emoji palettes (each list is exactly length-10: indices 0..9)
+// 0 is the explicit "empty/black" cell to avoid null handling.
+export const SPACE_EMOJIS = {
+  // Legacy default (backward compatibility with previous single-map implementation)
+  legacy_default: ['⬛', '✅', '👽', '👤', '🪐', '🌍', '🛸', '☄️', '♥️', '⚠️'],  
+  // Birds - For the hardest tasks (filled to length-10)
+  birds: ['🐦', '🦃', '🦆', '🦉', '🐤', '🦅', '🦜', '🦢', '🐓', '🦩'],
+} as const;
 
 // Matrix Rain Effect Component
 const MatrixRain = () => {
@@ -58,180 +62,6 @@ const MatrixRain = () => {
   );
 };
 
-// Chess Board Visualization Component
-const ChessBoard = ({ color, title }: { color: keyof typeof neonColors; title: string }) => {
-  const [board, setBoard] = useState<number[][]>([]);
-  
-  useEffect(() => {
-    // Initialize 8x8 chess board with random states
-    const newBoard = Array(8).fill(null).map(() => 
-      Array(8).fill(null).map(() => Math.random())
-    );
-    setBoard(newBoard);
-    
-    // Rapidly update board state for frantic effect - getting faster over time
-    let updateSpeed = 80;
-    const interval = setInterval(() => {
-      setBoard(prev => prev.map(row => 
-        row.map(() => Math.random())
-      ));
-      // Increase speed over time for escalating effect
-      updateSpeed = Math.max(15, updateSpeed - 1);
-      clearInterval(interval);
-      setTimeout(() => {
-        const newInterval = setInterval(() => {
-          setBoard(prev => prev.map(row => 
-            row.map(() => Math.random())
-          ));
-        }, updateSpeed);
-      }, updateSpeed);
-    }, updateSpeed);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="bg-black border rounded-lg p-4" style={{ borderColor: neonColors[color] }}>
-      <h3 className="font-mono text-sm mb-3" style={{ color: neonColors[color] }}>
-        ♛ {title}
-      </h3>
-      <div className="relative w-full h-48 flex items-center justify-center">
-        <motion.div 
-          className="grid grid-cols-8 gap-[1px] w-40 h-40"
-          animate={{ 
-            rotateY: [0, 360],
-            scale: [1, 1.1, 0.95, 1.05, 1],
-            rotateZ: [0, 5, -3, 2, 0]
-          }}
-          transition={{ 
-            rotateY: { duration: 1.5, repeat: Infinity, ease: "linear" },
-            scale: { duration: 0.3, repeat: Infinity },
-            rotateZ: { duration: 0.5, repeat: Infinity }
-          }}
-        >
-          {board.flat().map((intensity, i) => {
-            const row = Math.floor(i / 8);
-            const col = i % 8;
-            const isBlack = (row + col) % 2 === 1;
-            
-            return (
-              <motion.div
-                key={i}
-                className="aspect-square"
-                style={{
-                  backgroundColor: isBlack 
-                    ? `rgba(${neonColors[color].replace('#', '')
-                        .match(/.{2}/g)?.map(x => parseInt(x, 16)).join(',') || '0,0,0'}, ${intensity})`
-                    : `rgba(255, 255, 255, ${intensity * 0.3})`,
-                  boxShadow: intensity > 0.6 ? `0 0 12px ${neonColors[color]}` : 'none'
-                }}
-                animate={{
-                  opacity: [0.2, 1, 0.4, 0.8, 0.2],
-                  scale: intensity > 0.7 ? [1, 1.4, 0.8, 1.2, 1] : [1, 1.1, 0.9, 1.05, 1]
-                }}
-                transition={{
-                  duration: 0.1 + Math.random() * 0.15,
-                  repeat: Infinity
-                }}
-              />
-            );
-          })}
-        </motion.div>
-      </div>
-    </div>
-  );
-};
-
-// ARC Grid Visualization Component with Emoji Mapping
-const ArcGrid = ({ color, title }: { color: keyof typeof neonColors; title: string }) => {
-  const [grid, setGrid] = useState<number[][]>([]);
-  const [emojiPalette, setEmojiPalette] = useState<string[]>(SPACE_EMOJIS.legacy_default);
-  
-  useEffect(() => {
-    // Randomly switch between emoji palettes
-    const palettes = Object.values(SPACE_EMOJIS);
-    const randomPalette = palettes[Math.floor(Math.random() * palettes.length)];
-    setEmojiPalette([...randomPalette]);
-    
-    // Initialize 3x3 ARC-style grid with emoji indices (0-9)
-    const newGrid = Array(3).fill(null).map(() => 
-      Array(3).fill(null).map(() => Math.floor(Math.random() * 10))
-    );
-    setGrid(newGrid);
-    
-    // Rapidly flip grid cells for chaotic effect - accelerating
-    let flipSpeed = 60;
-    const interval = setInterval(() => {
-      setGrid(prev => prev.map(row => 
-        row.map(() => Math.floor(Math.random() * 10))
-      ));
-      // Randomly change emoji palette sometimes
-      if (Math.random() < 0.1) {
-        const newPalette = palettes[Math.floor(Math.random() * palettes.length)];
-        setEmojiPalette(newPalette);
-      }
-      // Accelerate over time
-      flipSpeed = Math.max(8, flipSpeed - 2);
-      clearInterval(interval);
-      setTimeout(() => {
-        const newInterval = setInterval(() => {
-          setGrid(prev => prev.map(row => 
-            row.map(() => Math.floor(Math.random() * 10))
-          ));
-        }, flipSpeed);
-      }, flipSpeed);
-    }, flipSpeed);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="bg-black border rounded-lg p-4" style={{ borderColor: neonColors[color] }}>
-      <h3 className="font-mono text-sm mb-3" style={{ color: neonColors[color] }}>
-        🎯 {title}
-      </h3>
-      <div className="relative w-full h-48 flex items-center justify-center">
-        <motion.div 
-          className="grid grid-cols-3 gap-2 w-32 h-32"
-          animate={{ 
-            rotateX: [0, 15, -10, 5, 0],
-            rotateZ: [0, 8, -5, 3, 0],
-            scale: [1, 1.15, 0.9, 1.08, 1]
-          }}
-          transition={{ 
-            duration: 0.4, 
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        >
-          {grid.flat().map((emojiIndex, i) => (
-            <motion.div
-              key={i}
-              className="aspect-square rounded-sm border-2 flex items-center justify-center text-xl"
-              style={{
-                borderColor: neonColors[color],
-                boxShadow: emojiIndex > 0 ? `0 0 20px ${neonColors[color]}` : 'none',
-                backgroundColor: emojiIndex === 0 ? '#111' : 'rgba(0, 0, 0, 0.3)'
-              }}
-              animate={{
-                scale: emojiIndex > 0 ? [1, 1.5, 0.7, 1.3, 1] : [1, 0.8, 1.1, 0.9, 1],
-                opacity: [0.7, 1, 0.5, 0.9, 0.7],
-                rotateZ: [0, 90, 180, 270, 360]
-              }}
-              transition={{
-                scale: { duration: 0.08, repeat: Infinity },
-                opacity: { duration: 0.12, repeat: Infinity },
-                rotateZ: { duration: 1, repeat: Infinity, ease: "linear" }
-              }}
-            >
-              {emojiPalette[emojiIndex]}
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </div>
-  );
-};
 
 // Neural Network Visualization
 const NeuralNetwork = () => {
@@ -463,45 +293,6 @@ const FloatingParticles = () => {
   );
 };
 
-// Live Counter Component
-const LiveCounter = ({ 
-  label, 
-  value, 
-  suffix = '', 
-  color = 'text-white',
-  increment
-}: {
-  label: string;
-  value: number;
-  suffix?: string;
-  color?: string;
-  increment: () => number;
-}) => {
-  const [count, setCount] = useState(value);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCount(prev => prev + increment());
-    }, 100 + Math.random() * 200);
-    return () => clearInterval(interval);
-  }, [increment]);
-
-  return (
-    <div className="text-center">
-      <div className="text-xs text-gray-400 mb-1">{label}</div>
-      <motion.div 
-        className={`font-mono text-lg ${color}`}
-        animate={{ 
-          scale: [1, 1.05, 1],
-          textShadow: [`0 0 5px currentColor`, `0 0 15px currentColor`, `0 0 5px currentColor`]
-        }}
-        transition={{ duration: 0.5, repeat: Infinity }}
-      >
-        {count.toLocaleString()}{suffix}
-      </motion.div>
-    </div>
-  );
-};
 
 // Main Dashboard Component
 export default function Dashboard() {
@@ -588,11 +379,24 @@ export default function Dashboard() {
         {/* Top Row - Advanced Metrics */}
         <AdvancedMetrics />
 
-        {/* Middle Row - Visualizations */}
-        <div className="grid grid-cols-3 gap-6">
-          <ChessBoard color="cyan" title="QUANTUM FIELD DENSITY" />
-          <ArcGrid color="pink" title="NEURAL PATHWAY FLUX" />
-          <ChessBoard color="green" title="SPACETIME CURVATURE" />
+        {/* ARC-AGI Pattern Grid Wall */}
+        <div className="grid grid-cols-6 gap-3">
+          <ArcGrid color="#00FFFF" title="ARC-AGI" gridSize={6} patternId="#001" />
+          <ArcGrid color="#FF0080" title="ARC-AGI" gridSize={8} patternId="#002" />
+          <ArcGrid color="#00FF41" title="ARC-AGI" gridSize={7} patternId="#003" />
+          <ArcGrid color="#8000FF" title="ARC-AGI" gridSize={6} patternId="#004" />
+          <ArcGrid color="#FFFF00" title="ARC-AGI" gridSize={8} patternId="#005" />
+          <ArcGrid color="#FF4000" title="ARC-AGI" gridSize={7} patternId="#006" />
+        </div>
+        
+        {/* Second row of ARC cards */}
+        <div className="grid grid-cols-6 gap-3">
+          <ArcGrid color="#00FFFF" title="ARC-AGI" gridSize={8} patternId="#007" />
+          <ArcGrid color="#FF0080" title="ARC-AGI" gridSize={6} patternId="#008" />
+          <ArcGrid color="#00FF41" title="ARC-AGI" gridSize={7} patternId="#009" />
+          <ArcGrid color="#8000FF" title="ARC-AGI" gridSize={8} patternId="#010" />
+          <ArcGrid color="#FFFF00" title="ARC-AGI" gridSize={6} patternId="#011" />
+          <ArcGrid color="#FF4000" title="ARC-AGI" gridSize={7} patternId="#012" />
         </div>
 
         {/* Neural Network */}
