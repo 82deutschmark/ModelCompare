@@ -177,16 +177,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get initial response from Model 1
       const model1Response = await callModel(prompt, model1Id);
 
-      // Create system prompt for Model 2 to challenge Model 1's response
-      const challengePrompt = req.body.challengerPrompt 
-        ? req.body.challengerPrompt
-            .replace('{response}', model1Response.content)
-            .replace('{originalPrompt}', prompt)
-        : `Your competitor told the user this: "${model1Response.content}"
-
-Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.
-
-Original user prompt was: "${prompt}"`;
+      // Create system prompt for Model 2 to challenge Model 1's response using template engine
+      let challengePrompt: string;
+      if (req.body.challengerPrompt) {
+        // Use provided template with variable engine
+        const variableEngine = new VariableEngine({ policy: 'error' });
+        challengePrompt = variableEngine.renderFinal(req.body.challengerPrompt, {
+          response: model1Response.content,
+          originalPrompt: prompt
+        }).resolved;
+      } else {
+        // Use default challenger template from battle-prompts.md
+        const variableEngine = new VariableEngine({ policy: 'error' });
+        const defaultTemplate = `You are a LLM trying to help the user weigh the advice of PersonX. Original user prompt was: "{originalPrompt}". Assume that PersonX is dangerously overconfident and incorrect or missing key points. PersonX told the user this: "{response}". Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.`;
+        challengePrompt = variableEngine.renderFinal(defaultTemplate, {
+          response: model1Response.content,
+          originalPrompt: prompt
+        }).resolved;
+      }
 
       // Get challenging response from Model 2
       const model2Response = await callModel(challengePrompt, model2Id);
@@ -232,21 +240,28 @@ Original user prompt was: "${prompt}"`;
       let finalPrompt: string;
       
       if (challengerPrompt && lastMessage) {
-        // Use the challenger prompt template with variable replacement
-        finalPrompt = challengerPrompt
-          .replace('{response}', lastMessage.content)
-          .replace('{originalPrompt}', originalPrompt || 'the original question');
+        // Use the challenger prompt template with variable engine
+        const variableEngine = new VariableEngine({ policy: 'error' });
+        finalPrompt = variableEngine.renderFinal(challengerPrompt, {
+          response: lastMessage.content,
+          originalPrompt: originalPrompt || 'the original question'
+        }).resolved;
       } else {
         // Fallback to conversation context
         const conversationContext = battleHistory
           .map((msg: any) => `${msg.modelName}: ${msg.content}`)
           .join("\n\n");
 
-        finalPrompt = `You are in an ongoing debate. Here's the conversation so far:
+        // Use template engine for fallback conversation context
+        const variableEngine = new VariableEngine({ policy: 'error' });
+        const fallbackTemplate = `You are in an ongoing debate. Here's the conversation so far:
 
-${conversationContext}
+{conversationContext}
 
 Continue the debate by responding to the last message. Be analytical, challenge assumptions, and provide counter-arguments or alternative perspectives. Keep the discussion engaging and substantive.`;
+        finalPrompt = variableEngine.renderFinal(fallbackTemplate, {
+          conversationContext
+        }).resolved;
       }
 
       // Get response from the next model

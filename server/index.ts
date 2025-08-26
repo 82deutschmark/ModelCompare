@@ -27,6 +27,8 @@ config();
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { TemplateValidator } from "./template-validator.js";
+import { formatErrorResponse } from "./errors.js";
 
 const app = express();
 app.use(express.json());
@@ -65,12 +67,37 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // Validate all templates at startup
+  log('Validating templates...');
+  const templateValidator = new TemplateValidator();
+  const validationResult = await templateValidator.validateAllTemplates();
+  
+  if (!validationResult.isValid) {
+    log('❌ Template validation failed:');
+    validationResult.errors.forEach(error => {
+      log(`  - ${error.file}${error.category ? ` (${error.category})` : ''}${error.template ? ` [${error.template}]` : ''}: ${error.error}`);
+    });
+    process.exit(1);
+  }
+  
+  if (validationResult.warnings.length > 0) {
+    log('⚠️ Template validation warnings:');
+    validationResult.warnings.forEach(warning => {
+      log(`  - ${warning}`);
+    });
+  }
+  
+  log('✅ Template validation completed successfully');
 
-    res.status(status).json({ message });
-    throw err;
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const errorResponse = formatErrorResponse(err);
+    
+    // Log error for debugging
+    if (errorResponse.statusCode >= 500) {
+      log(`❌ Server error: ${err.message}`, err.stack);
+    }
+    
+    res.status(errorResponse.statusCode).json(errorResponse);
   });
 
   // importantly only setup vite in development and after
