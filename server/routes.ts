@@ -561,6 +561,88 @@ Continue the debate by responding to the last message. Be analytical, challenge 
     }
   });
 
+  // Dashboard endpoints
+  app.get("/api/dashboard/config", async (req, res) => {
+    try {
+      const config = {
+        chessBoardCount: 10,
+        arcPuzzleCount: 10,
+        refreshInterval: 800,
+        themes: ['neon-cyan', 'electric-blue', 'neon-green', 'purple-400'],
+        defaultMode: 'chess',
+        enableAnimations: true,
+        enableFloatingNumbers: true
+      };
+      res.json(config);
+    } catch (error) {
+      console.error("Dashboard config error:", error);
+      res.status(500).json({ error: "Failed to get dashboard configuration" });
+    }
+  });
+
+  app.get("/api/dashboard/metrics", async (req, res) => {
+    try {
+      // Generate realistic metrics for the dashboard
+      const metrics = {
+        accuracy: 99.89 + (Math.random() - 0.5) * 0.1,
+        nodesEvaluated: 47832961 + Math.floor(Math.random() * 100000),
+        searchDepth: '∞ (Quantum)',
+        evalSpeed: '847.3M pos/s',
+        cpuUsage: 97.3 + (Math.random() - 0.5) * 2,
+        memory: '847.2GB',
+        quantumCores: '1,024/1,024',
+        temperature: '-273.15°C',
+        quantumCoeffs: {
+          psi: 0.9987,
+          lambda: 42.000,
+          theta: 1.618,
+          phi: 2.718,
+          chi: 99.97,
+          xi: 0.577
+        },
+        liveCounters: {
+          neuralOps: 847329 + Math.floor(Math.random() * 1000),
+          patterns: 94832 + Math.floor(Math.random() * 50),
+          matrixMult: 1293847 + Math.floor(Math.random() * 2000),
+          gradients: 8473298 + Math.floor(Math.random() * 10000)
+        },
+        systemStatus: {
+          quantumState: 'COHERENT',
+          neuralSync: 'OPTIMAL', 
+          matrixStability: 'STABLE',
+          superposition: 'ACTIVE'
+        }
+      };
+      res.json(metrics);
+    } catch (error) {
+      console.error("Dashboard metrics error:", error);
+      res.status(500).json({ error: "Failed to get dashboard metrics" });
+    }
+  });
+
+  app.post("/api/dashboard/config", async (req, res) => {
+    try {
+      const { mode, enableAnimations, refreshInterval } = req.body;
+      
+      // In a real implementation, this would save to storage
+      // For now, just validate and echo back the config
+      const updatedConfig = {
+        chessBoardCount: 10,
+        arcPuzzleCount: 10,
+        refreshInterval: refreshInterval || 800,
+        themes: ['neon-cyan', 'electric-blue', 'neon-green', 'purple-400'],
+        defaultMode: mode || 'chess',
+        enableAnimations: enableAnimations !== false,
+        enableFloatingNumbers: true
+      };
+      
+      res.json(updatedConfig);
+    } catch (error) {
+      console.error("Dashboard config update error:", error);
+      res.status(500).json({ error: "Failed to update dashboard configuration" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
