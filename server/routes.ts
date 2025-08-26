@@ -859,7 +859,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       const providerHealth = {
         totalProviders: new Set(models.map(m => m.provider)).size,
         totalModels: models.length,
-        providers: [...new Set(models.map(m => m.provider))]
+        providers: Array.from(new Set(models.map(m => m.provider)))
       };
 
       // System health
@@ -952,13 +952,13 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       }
 
       const allCategories = templateCompiler.getAllCategories();
-      const modes = [...new Set(allCategories.map(cat => cat.mode).filter(Boolean))];
+      const modes = Array.from(new Set(allCategories.map((cat: any) => cat.mode).filter(Boolean)));
       
       const modesSummary = modes.map(mode => ({
         mode,
         categories: allCategories
-          .filter(cat => cat.mode === mode)
-          .map(cat => ({
+          .filter((cat: any) => cat.mode === mode)
+          .map((cat: any) => ({
             id: cat.id,
             name: cat.name,
             templateCount: cat.templates.length
@@ -1026,7 +1026,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       }
 
       const structuredTemplates = templateCompiler.getStructuredTemplatesByMode(mode);
-      const categoryTemplates = structuredTemplates.filter(t => 
+      const categoryTemplates = structuredTemplates.filter((t: any) => 
         t.category.toLowerCase().replace(/[^a-z0-9]/g, '-') === category
       );
       

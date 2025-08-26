@@ -8,7 +8,8 @@
  * Date: 2025-08-26
  */
 
-import { Pool, PoolClient } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../shared/schema.js';
 import { DatabaseError } from './errors.js';
@@ -33,7 +34,7 @@ export interface HealthCheckResult {
 }
 
 export class DatabaseManager {
-  private pool: Pool | null = null;
+  private pool: InstanceType<typeof Pool> | null = null;
   private db: NodePgDatabase<typeof schema> | null = null;
   private config: DatabaseConfig;
   private lastHealthCheck: Date | null = null;
