@@ -30,31 +30,6 @@ Note: If a model doesn’t support `response_format: { type: "json_schema", ... 
 
 Below are illustrative examples showing how to parse into well-defined types. Adjust for the model/version you use.
 
-### Python (Pydantic)
-
-```python
-from openai import OpenAI
-from pydantic import BaseModel
-
-client = OpenAI()
-
-class CalendarEvent(BaseModel):
-    name: str
-    date: str
-    participants: list[str]
-
-response = client.responses.parse(
-    model="gpt-4o-2024-08-06",
-    input=[
-        {"role": "system", "content": "Extract the event information and return JSON."},
-        {"role": "user", "content": "Alice and Bob are going to a science fair on Friday."},
-    ],
-    text_format=CalendarEvent,
-)
-
-event: CalendarEvent = response.output_parsed
-```
-
 ### JavaScript/TypeScript (Zod)
 
 ```ts
@@ -113,31 +88,68 @@ Recommendation: Prefer Structured Outputs when supported. Use JSON mode as a fal
 
 Models may refuse certain requests. With Structured Outputs, a refusal can be surfaced distinctly.
 
-Example (Python):
+Example (TypeScript):
 
-```python
-class Step(BaseModel):
-    explanation: str
-    output: str
+```ts
+import OpenAI from "openai";
+import { z } from "zod";
 
-class MathReasoning(BaseModel):
-    steps: list[Step]
-    final_answer: str
+const client = new OpenAI();
 
-completion = client.chat.completions.parse(
-    model="gpt-4o-2024-08-06",
-    messages=[
-        {"role": "system", "content": "Respond in JSON and guide step by step."},
-        {"role": "user", "content": "how can I solve 8x + 7 = -23"},
-    ],
-    response_format=MathReasoning,
-)
+const MathReasoning = z.object({
+  steps: z.array(z.object({ explanation: z.string(), output: z.string() })),
+  final_answer: z.string(),
+});
 
-mr = completion.choices[0].message
-if getattr(mr, "refusal", None):
-    print(mr.refusal)
-else:
-    print(mr.parsed)
+// JSON Schema equivalent for Structured Outputs
+const schema = {
+  type: "object",
+  properties: {
+    steps: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          explanation: { type: "string" },
+          output: { type: "string" },
+        },
+        additionalProperties: false,
+        required: ["explanation", "output"],
+      },
+      minItems: 0,
+    },
+    final_answer: { type: "string" },
+  },
+  additionalProperties: false,
+  required: ["steps", "final_answer"],
+} as const;
+
+const resp = await client.responses.create({
+  model: "gpt-4o-2024-08-06",
+  input: [
+    { role: "system", content: "You are a helpful math tutor. Respond only in JSON per the schema." },
+    { role: "user", content: "how can I solve 8x + 7 = -23" },
+  ],
+  response_format: {
+    type: "json_schema",
+    json_schema: { name: "math_reasoning", strict: true, schema },
+  },
+});
+
+// Handle potential refusals or schema mismatches
+const raw = resp.output_text ?? JSON.stringify(resp.output?.[0] ?? {});
+try {
+  const parsed = JSON.parse(raw);
+  // If the provider returned a refusal block instead of the schema
+  if (typeof parsed === "object" && parsed && "refusal" in parsed) {
+    console.warn("Model refusal:", parsed.refusal);
+  } else {
+    const data = MathReasoning.parse(parsed);
+    console.log("Parsed reasoning:", data);
+  }
+} catch (e) {
+  console.error("Non-JSON or unexpected output:", raw);
+}
 ```
 
 Server responses can include a `refusal` entry signaling the model declined to answer.
@@ -182,7 +194,7 @@ You can stream responses and progressively parse structured chunks (e.g., to ren
 - __Prefer Structured Outputs__; fall back to JSON mode + validation when unsupported.
 - __Keep schemas tight__: set `additionalProperties: false`; make all fields required.
 - __Refusal-aware UIs__: display refusal messages gracefully.
-- __Avoid schema drift__: generate JSON Schema from your types (e.g., Zod/Pydantic) or vice versa.
+- __Avoid schema drift__: generate JSON Schema from your types (e.g., Zod) or vice versa.
 
 ## How this fits our app
 
