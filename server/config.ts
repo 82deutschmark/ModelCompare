@@ -112,11 +112,11 @@ export function loadConfig(): AppConfig {
       enableCors: process.env.ENABLE_CORS !== 'false',
       cspDirectives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'"] : [])],
+        styleSrc: ["'self'", "'unsafe-inline'", ...(isDevelopment ? ["https://fonts.googleapis.com"] : [])],
+        scriptSrc: ["'self'", ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'", "https://replit.com"] : [])],
         imgSrc: ["'self'", "data:", "blob:"],
         connectSrc: ["'self'", ...(isDevelopment ? ["ws:", "wss:"] : [])],
-        fontSrc: ["'self'"],
+        fontSrc: ["'self'", ...(isDevelopment ? ["https://fonts.gstatic.com"] : [])],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
         frameSrc: ["'none'"]
