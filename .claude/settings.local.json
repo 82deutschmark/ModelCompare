@@ -15,7 +15,8 @@
       "Bash(npx drizzle-kit:*)",
       "Bash(curl:*)",
       "Bash(tasklist:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
