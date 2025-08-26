@@ -1,20 +1,29 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
-// Matrix characters for digital rain effect
-const matrixChars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+// ARC-aligned space emoji palettes (each list is exactly length-10: indices 0..9)
+// 0 is the explicit "empty/black" cell to avoid null handling.
+export const SPACE_EMOJIS = {
+  // Legacy default (backward compatibility with previous single-map implementation)
+  legacy_default: ['⬛', '✅', '👽', '👤', '🪐', '🌍', '🛸', '☄️', '♥️', '⚠️'],  
+  // Birds - For the hardest tasks (filled to length-10)
+  birds: ['🐦', '🦃', '🦆', '🦉', '🐤', '🦅', '🦜', '🦢', '🐓', '🦩'],
+} as const;
 
-// Cyberpunk color palette
+// Neon color palette for cyberpunk theme
 const neonColors = {
   cyan: '#00FFFF',
-  green: '#00FF41', 
-  pink: '#FF0080',
-  orange: '#FF8C00',
-  purple: '#8A2BE2',
+  pink: '#FF0080', 
+  green: '#00FF41',
+  purple: '#8000FF',
+  yellow: '#FFFF00',
+  orange: '#FF4000',
   red: '#FF073A',
   blue: '#1E90FF',
-  yellow: '#FFFF00'
 };
+
+// Matrix rain characters - Japanese katakana
+const matrixChars = 'ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ノ ハ ヒ フ ヘ ホ マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヲ ン'.split(' ');
 
 // Matrix Rain Effect Component
 const MatrixRain = () => {
@@ -133,14 +142,20 @@ const ChessBoard = ({ color, title }: { color: keyof typeof neonColors; title: s
   );
 };
 
-// ARC Grid Visualization Component  
+// ARC Grid Visualization Component with Emoji Mapping
 const ArcGrid = ({ color, title }: { color: keyof typeof neonColors; title: string }) => {
-  const [grid, setGrid] = useState<boolean[][]>([]);
+  const [grid, setGrid] = useState<number[][]>([]);
+  const [emojiPalette, setEmojiPalette] = useState<string[]>(SPACE_EMOJIS.legacy_default);
   
   useEffect(() => {
-    // Initialize 3x3 ARC-style grid
+    // Randomly switch between emoji palettes
+    const palettes = Object.values(SPACE_EMOJIS);
+    const randomPalette = palettes[Math.floor(Math.random() * palettes.length)];
+    setEmojiPalette([...randomPalette]);
+    
+    // Initialize 3x3 ARC-style grid with emoji indices (0-9)
     const newGrid = Array(3).fill(null).map(() => 
-      Array(3).fill(null).map(() => Math.random() > 0.5)
+      Array(3).fill(null).map(() => Math.floor(Math.random() * 10))
     );
     setGrid(newGrid);
     
@@ -148,15 +163,20 @@ const ArcGrid = ({ color, title }: { color: keyof typeof neonColors; title: stri
     let flipSpeed = 60;
     const interval = setInterval(() => {
       setGrid(prev => prev.map(row => 
-        row.map(() => Math.random() > 0.2) // Higher chance to be "on"
+        row.map(() => Math.floor(Math.random() * 10))
       ));
+      // Randomly change emoji palette sometimes
+      if (Math.random() < 0.1) {
+        const newPalette = palettes[Math.floor(Math.random() * palettes.length)];
+        setEmojiPalette(newPalette);
+      }
       // Accelerate over time
       flipSpeed = Math.max(8, flipSpeed - 2);
       clearInterval(interval);
       setTimeout(() => {
         const newInterval = setInterval(() => {
           setGrid(prev => prev.map(row => 
-            row.map(() => Math.random() > 0.2)
+            row.map(() => Math.floor(Math.random() * 10))
           ));
         }, flipSpeed);
       }, flipSpeed);
@@ -168,7 +188,7 @@ const ArcGrid = ({ color, title }: { color: keyof typeof neonColors; title: stri
   return (
     <div className="bg-black border rounded-lg p-4" style={{ borderColor: neonColors[color] }}>
       <h3 className="font-mono text-sm mb-3" style={{ color: neonColors[color] }}>
-        ⬛ {title}
+        🎯 {title}
       </h3>
       <div className="relative w-full h-48 flex items-center justify-center">
         <motion.div 
@@ -184,18 +204,18 @@ const ArcGrid = ({ color, title }: { color: keyof typeof neonColors; title: stri
             ease: "easeInOut"
           }}
         >
-          {grid.flat().map((isActive, i) => (
+          {grid.flat().map((emojiIndex, i) => (
             <motion.div
               key={i}
-              className="aspect-square rounded-sm border-2"
+              className="aspect-square rounded-sm border-2 flex items-center justify-center text-xl"
               style={{
-                backgroundColor: isActive ? neonColors[color] : '#111',
                 borderColor: neonColors[color],
-                boxShadow: isActive ? `0 0 20px ${neonColors[color]}` : 'none'
+                boxShadow: emojiIndex > 0 ? `0 0 20px ${neonColors[color]}` : 'none',
+                backgroundColor: emojiIndex === 0 ? '#111' : 'rgba(0, 0, 0, 0.3)'
               }}
               animate={{
-                scale: isActive ? [1, 1.5, 0.7, 1.3, 1] : [1, 0.8, 1.1, 0.9, 1],
-                opacity: isActive ? [1, 0.5, 0.9, 0.3, 1] : [0.2, 0.7, 0.4, 0.6, 0.2],
+                scale: emojiIndex > 0 ? [1, 1.5, 0.7, 1.3, 1] : [1, 0.8, 1.1, 0.9, 1],
+                opacity: [0.7, 1, 0.5, 0.9, 0.7],
                 rotateZ: [0, 90, 180, 270, 360]
               }}
               transition={{
@@ -203,7 +223,9 @@ const ArcGrid = ({ color, title }: { color: keyof typeof neonColors; title: stri
                 opacity: { duration: 0.12, repeat: Infinity },
                 rotateZ: { duration: 1, repeat: Infinity, ease: "linear" }
               }}
-            />
+            >
+              {emojiPalette[emojiIndex]}
+            </motion.div>
           ))}
         </motion.div>
       </div>
@@ -535,7 +557,7 @@ export default function Dashboard() {
                 }}
                 transition={{ duration: 3, repeat: Infinity }}
               >
-                QUANTUM NEXUS COMMAND CENTER
+                HYPERDIMENSIONAL COMPUTING AGI NEURAL INTERFACE
               </motion.h1>
               <p className="text-sm text-gray-400">
                 Advanced Reality Manipulation System v∞.∞.∞ | Hyperdimensional Interface
@@ -608,39 +630,99 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* System Status Footer */}
-        <div className="bg-black border border-red-500 rounded-lg p-6">
-          <h3 className="text-red-400 text-lg mb-4 animate-pulse">🔥 CRITICAL SYSTEM PARAMETERS</h3>
-          <div className="grid grid-cols-3 gap-6 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Core Temperature:</span>
-              <span className="text-blue-400">{systemStatus.coreTemp}°K (Absolute Zero)</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Quantum Cores:</span>
-              <span className="text-green-400">{systemStatus.quantumCores}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Reality Engine:</span>
-              <motion.span 
-                className="text-red-400"
-                animate={{ scale: [1, 1.1, 1] }}
+        {/* Prompt Input Area */}
+        <div className="bg-black border border-green-500 rounded-lg p-6">
+          <h3 className="text-green-400 text-lg mb-4 animate-pulse font-mono">🧠 NEURAL COMMAND INTERFACE</h3>
+          <div className="space-y-4">
+            <motion.div 
+              className="relative"
+              animate={{ 
+                boxShadow: ['0 0 5px #00FF41', '0 0 15px #00FF41', '0 0 5px #00FF41']
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <textarea
+                className="w-full bg-gray-900 border border-green-500 rounded-lg p-4 text-green-400 font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                placeholder=">> ENTER HYPERDIMENSIONAL QUERY FOR AGI NEURAL PROCESSING..."
+                rows={3}
+                style={{
+                  background: 'linear-gradient(135deg, #001100, #000500)',
+                  textShadow: '0 0 5px #00FF41'
+                }}
+              />
+              <motion.div
+                className="absolute bottom-2 right-2 text-xs text-gray-500 font-mono"
+                animate={{ opacity: [0.3, 0.7, 0.3] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                QUANTUM_READY
+              </motion.div>
+            </motion.div>
+            
+            <div className="flex justify-between items-center">
+              <motion.button
+                className="px-6 py-2 bg-gradient-to-r from-green-600 to-cyan-600 text-black font-mono font-bold rounded-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                animate={{
+                  boxShadow: ['0 0 10px #00FF41', '0 0 20px #00FFFF', '0 0 10px #00FF41']
+                }}
                 transition={{ duration: 1, repeat: Infinity }}
-              >● {systemStatus.realityEngine}</motion.span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Time Flow:</span>
-              <span className="text-yellow-400">{systemStatus.timeFlow}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">SpaceTime:</span>
-              <span className="text-cyan-400">{systemStatus.spaceTime}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Probability:</span>
-              <span className="text-purple-400">{systemStatus.probability}%</span>
+              >
+                ⚡ PROCESS NEURAL INPUT
+              </motion.button>
+              
+              <div className="flex space-x-4 text-xs font-mono">
+                <motion.div 
+                  className="text-cyan-400"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                >
+                  🔮 QUANTUM_CORES: ACTIVE
+                </motion.div>
+                <motion.div 
+                  className="text-pink-400"
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                >
+                  🧬 DNA_ANALYSIS: READY
+                </motion.div>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* System Status Footer */}
+        <div className="bg-black border border-red-500 rounded-lg p-4">
+          <div className="grid grid-cols-4 gap-4 text-sm font-mono">
+            <div>
+              <span className="text-red-400">⚠️ CORE TEMP:</span> 
+              <span className="text-cyan-400 ml-2">-273.15°K</span>
+            </div>
+            <div>
+              <span className="text-red-400">⚛️ Q-CORES:</span> 
+              <span className="text-green-400 ml-2">∞/∞</span>
+            </div>
+            <div>
+              <span className="text-red-400">🌌 REALITY:</span> 
+              <motion.span 
+                className="text-yellow-400 ml-2"
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              >STABLE</motion.span>
+            </div>
+            <div>
+              <span className="text-red-400">⏰ SPACETIME:</span> 
+              <span className="text-purple-400 ml-2">LOCKED</span>
+            </div>
+          </div>
+          <motion.div 
+            className="mt-2 text-xs text-orange-400 animate-pulse"
+            animate={{ color: ['#FF4000', '#FFFF00', '#FF4000'] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            ⚠️ WARNING: Reality buffer overflow detected. Consciousness leak in sector 7G.
+          </motion.div>
         </div>
       </div>
 
