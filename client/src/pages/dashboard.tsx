@@ -6,6 +6,7 @@ import { LiveCounter } from '../components/dashboard/LiveCounter';
 import { QuantumMetrics } from '../components/dashboard/QuantumMetrics';
 import { ChessBoard } from '../components/dashboard/ChessBoard';
 import { ArcGrid } from '../components/dashboard/ArcGrid';
+import { BioCard } from '../components/dashboard/BioCard';
 
 // Neon color palette for cyberpunk theme
 const neonColors = {
@@ -421,9 +422,10 @@ export default function Dashboard() {
       <div className="relative z-20 p-6 space-y-6">
         {/* Top Row - Quantum Metrics */}
         <QuantumMetrics />
-        {/* Prompt Interface directly under metrics */}
-        <div className="max-w-4xl mx-auto w-full">
+        {/* Prompt Interface + Bio Card side-by-side */}
+        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PromptInterface />
+          <BioCard />
         </div>
 
         {/* ARC-AGI Pattern Grid Wall (compact 1x4) */}

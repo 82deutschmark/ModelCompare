@@ -22,6 +22,25 @@ interface MetricsState {
   tachyonDrift: number;
   anomalyIndex: number;
   warpPotential: number;
+
+  // ML / AI metrics
+  lossFunction: number;
+  gradientDescentRate: number;
+  learningRate: number;
+  attentionHeads: number;
+  embeddingDimension: number;
+  batchNormalization: number;
+  dropoutRate: number;
+  activationEntropy: number;
+  weightInitialization: number;
+  optimizerMomentum: number;
+  backpropagationDepth: number;
+  convergenceScore: number;
+  alignmentStability: number;
+  nanoAlignmentFactor: number;
+  quantumGradientBoost: number;
+  terrierResonance: number;
+  Regularization: number;
 }
 
 export const QuantumMetrics: React.FC = () => {
@@ -44,7 +63,26 @@ export const QuantumMetrics: React.FC = () => {
     heisenbergVariance: 0.499,
     tachyonDrift: 0.004,
     anomalyIndex: 2.7,
-    warpPotential: 73.4
+    warpPotential: 73.4,
+
+    // ML / AI metrics initial values
+    lossFunction: 0.042,
+    gradientDescentRate: 0.88,
+    learningRate: 0.0003,
+    attentionHeads: 32,
+    embeddingDimension: 4096,
+    batchNormalization: 0.99,
+    dropoutRate: 0.12,
+    activationEntropy: 3.14,
+    weightInitialization: 0.707,
+    optimizerMomentum: 0.9,
+    backpropagationDepth: 128,
+    convergenceScore: 98.6,
+    alignmentStability: 97.1,
+    nanoAlignmentFactor: 1.618,
+    quantumGradientBoost: 2.73,
+    terrierResonance: 7.77,
+    Regularization: 0.001
   });
 
   useEffect(() => {
@@ -67,7 +105,26 @@ export const QuantumMetrics: React.FC = () => {
         heisenbergVariance: Math.max(0.3, prev.heisenbergVariance + (Math.random() - 0.5) * 0.01),
         tachyonDrift: Math.max(0, prev.tachyonDrift + (Math.random() - 0.5) * 0.001),
         anomalyIndex: Math.max(0, prev.anomalyIndex + (Math.random() - 0.5) * 0.2),
-        warpPotential: Math.min(100, Math.max(0, prev.warpPotential + (Math.random() - 0.5) * 1.5))
+        warpPotential: Math.min(100, Math.max(0, prev.warpPotential + (Math.random() - 0.5) * 1.5)),
+
+        // Animate ML / AI metrics
+        lossFunction: Math.max(0, prev.lossFunction + (Math.random() - 0.5) * 0.002),
+        gradientDescentRate: Math.min(1, Math.max(0, prev.gradientDescentRate + (Math.random() - 0.5) * 0.02)),
+        learningRate: Math.max(0.00001, prev.learningRate * (1 + (Math.random() - 0.5) * 0.02)),
+        attentionHeads: Math.max(1, Math.min(128, Math.round(prev.attentionHeads + (Math.random() - 0.5) * 2))),
+        embeddingDimension: Math.max(256, Math.min(16384, Math.round(prev.embeddingDimension + (Math.random() - 0.5) * 64))),
+        batchNormalization: Math.min(0.999, Math.max(0.8, prev.batchNormalization + (Math.random() - 0.5) * 0.01)),
+        dropoutRate: Math.min(0.8, Math.max(0, prev.dropoutRate + (Math.random() - 0.5) * 0.02)),
+        activationEntropy: Math.max(0, prev.activationEntropy + (Math.random() - 0.5) * 0.05),
+        weightInitialization: Math.max(0, prev.weightInitialization + (Math.random() - 0.5) * 0.01),
+        optimizerMomentum: Math.min(0.999, Math.max(0, prev.optimizerMomentum + (Math.random() - 0.5) * 0.02)),
+        backpropagationDepth: Math.max(8, Math.min(1024, Math.round(prev.backpropagationDepth + (Math.random() - 0.5) * 8))),
+        convergenceScore: Math.min(100, Math.max(0, prev.convergenceScore + (Math.random() - 0.5) * 0.5)),
+        alignmentStability: Math.min(100, Math.max(0, prev.alignmentStability + (Math.random() - 0.5) * 0.5)),
+        nanoAlignmentFactor: Math.max(0.1, prev.nanoAlignmentFactor * (1 + (Math.random() - 0.5) * 0.02)),
+        quantumGradientBoost: Math.max(0, prev.quantumGradientBoost + (Math.random() - 0.5) * 0.05),
+        terrierResonance: Math.max(0, prev.terrierResonance + (Math.random() - 0.5) * 0.2),
+        Regularization: Math.max(0, prev.Regularization + (Math.random() - 0.5) * 0.0002)
       }));
     }, 50);
     return () => clearInterval(interval);
@@ -90,9 +147,11 @@ export const QuantumMetrics: React.FC = () => {
       title="QUANTUM HYPERCORE STATUS"
       icon="⚛️"
       color="#8000FF"
+      className="px-0"
     >
-      <div className="grid grid-cols-2 gap-6 text-sm">
-        <div className="space-y-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 text-sm">
+        {/* Core quantum metrics */}
+        <div className="space-y-1 px-4">
           <MetricRow 
             label="Quantum Flux" 
             value={
@@ -125,7 +184,8 @@ export const QuantumMetrics: React.FC = () => {
           <MetricRow label="Coherence" value={maybeEmoji(`${metrics.coherence.toFixed(2)}%`)} color="text-cyan-300" />
           <MetricRow label="Decoherence" value={maybeEmoji(`${metrics.decoherenceRate.toFixed(4)}%`)} color="text-cyan-500" />
         </div>
-        <div className="space-y-1">
+        {/* Physics + system metrics */}
+        <div className="space-y-1 px-4">
           <MetricRow label="Neural Pathways" value={maybeEmoji(metrics.neuralPathways.toLocaleString())} color="text-pink-400" />
           <MetricRow label="Entanglement" value={maybeEmoji(`${metrics.quantumEntanglement.toFixed(1)}%`)} color="text-green-400" />
           <MetricRow label="Wave Collapse" value={maybeEmoji(`${metrics.waveCollapse.toFixed(5)}μs`)} color="text-blue-400" />
@@ -148,6 +208,26 @@ export const QuantumMetrics: React.FC = () => {
             }
             color="text-green-400"
           />
+        </div>
+        {/* ML / AI metrics */}
+        <div className="space-y-1 px-4">
+          <MetricRow label="Loss" value={maybeEmoji(metrics.lossFunction.toFixed(4))} color="text-red-300" />
+          <MetricRow label="Grad Descent Rate" value={maybeEmoji(`${metrics.gradientDescentRate.toFixed(2)}`)} color="text-cyan-400" />
+          <MetricRow label="Learning Rate" value={maybeEmoji(metrics.learningRate.toExponential(2))} color="text-green-300" />
+          <MetricRow label="Attention Heads" value={maybeEmoji(metrics.attentionHeads.toString())} color="text-yellow-300" />
+          <MetricRow label="Embedding Dim" value={maybeEmoji(metrics.embeddingDimension.toString())} color="text-purple-300" />
+          <MetricRow label="Batch Norm" value={maybeEmoji(metrics.batchNormalization.toFixed(3))} color="text-blue-300" />
+          <MetricRow label="Dropout" value={maybeEmoji(`${(metrics.dropoutRate*100).toFixed(0)}%`)} color="text-pink-300" />
+          <MetricRow label="Activation Entropy" value={maybeEmoji(metrics.activationEntropy.toFixed(2))} color="text-emerald-300" />
+          <MetricRow label="Weight Init" value={maybeEmoji(metrics.weightInitialization.toFixed(3))} color="text-orange-300" />
+          <MetricRow label="Momentum" value={maybeEmoji(metrics.optimizerMomentum.toFixed(3))} color="text-cyan-300" />
+          <MetricRow label="Backprop Depth" value={maybeEmoji(metrics.backpropagationDepth.toString())} color="text-yellow-400" />
+          <MetricRow label="Convergence" value={maybeEmoji(`${metrics.convergenceScore.toFixed(1)}%`)} color="text-green-400" />
+          <MetricRow label="Alignment Stability" value={maybeEmoji(`${metrics.alignmentStability.toFixed(1)}%`)} color="text-green-300" />
+          <MetricRow label="Nano‑Align Factor" value={maybeEmoji(metrics.nanoAlignmentFactor.toFixed(3))} color="text-purple-300" />
+          <MetricRow label="Q‑Gradient Boost" value={maybeEmoji(metrics.quantumGradientBoost.toFixed(2))} color="text-blue-400" />
+          <MetricRow label="Terrier Resonance" value={maybeEmoji(metrics.terrierResonance.toFixed(2))} color="text-pink-400" />
+          <MetricRow label="Regularization" value={maybeEmoji(metrics.Regularization.toExponential(2))} color="text-red-400" />
         </div>
       </div>
     </DashboardCard>
