@@ -123,7 +123,7 @@ Write a 400-500 word discussion that:
 - Compares findings to established scientific principles (incorrectly)
 - Claims the work overturns fundamental laws of physics/nature
 - Discusses far-reaching implications for humanity
-- Mentions potential Nobel Prize consideration
+- Mentions potential Prize consideration like the Nobel Prize or Millennium Math Prize
 - Addresses "limitations" that are actually more absurd claims
 - Proposes follow-up studies that are equally ridiculous
 - Uses excessive hedging language while making grandiose claims
@@ -137,7 +137,7 @@ You are writing the conclusion section for a satirical Vixra research paper. Sum
 
 Paper Title: "{Title}"
 Main Findings: "{response}"
-Researcher: "{ResearcherName}"
+Researcher/Author: "{ResearcherName}"
 
 Write a 200-300 word conclusion that:
 - Summarizes impossible achievements as established facts
@@ -155,7 +155,7 @@ The conclusion should read like the author expects to be remembered as the great
 
 <!-- SECTION_START:citations -->
 ### Citations Generator
-You are creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but completely fake citations that support the absurd claims made in the paper. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but obviously clever humorous fake citations that support the absurd claims made in the paper. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -177,12 +177,12 @@ Format each citation properly and make them sound plausible at first glance whil
 ### Acknowledgments Section
 You are writing the acknowledgments section for a satirical Vixra research paper with appropriate academic gratitude but absurd content. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
-Researcher: "{ResearcherName}"
+Researcher/Author: "{ResearcherName}"
 Institution: "{Institution}"
 Funding Source: "{Funding}"
 
 Write acknowledgments that:
-- Are incredibly narcissistic and self-centered
+- Are incredibly narcissistic, self-centered, and pompous while showing little humility or gratitude
 - Reference impossible funding sources or amounts
 - Mention absurd institutional support
 - Include gratitude for ridiculous resources or assistance
@@ -196,17 +196,15 @@ Keep it to 1000-1500 words while making it hilariously over-the-top in its grati
 
 <!-- SECTION_START:peer-review -->
 ### Peer Review Response
-You are responding to imaginary peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are providing peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity. Agree with the author's claims and dismiss any criticisms by other academics. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Original Content: "{response}"
 
 Create responses to 3-4 made-up reviewer comments that:
-- Address supposed methodological concerns with more ridiculous explanations
+- Address supposed methodological concerns with even more ridiculous explanations
 - Defend impossible results with technical jargon
-- Thank reviewers while subtly dismissing their "limited understanding"
 - Provide additional absurd evidence to support claims
-- Suggest reviewers may not be familiar with cutting-edge techniques
 - Maintain respectful academic tone while being completely wrong
 
 Each response should be 1000-1500 words and demonstrate the reviewer's complete confidence in the author's impossible work.
@@ -217,15 +215,13 @@ Each response should be 1000-1500 words and demonstrate the reviewer's complete 
 <!-- SECTION_START:generate-title -->
 ### Generate Paper Title
 Generate a satirical but believable academic paper title for "{ScienceCategory}". 
-The title should sound grandiose and revolutionary while being completely absurd.
-Examples: "Revolutionary Breakthrough in Quantum Coffee Dynamics", "Novel Approach to Interdimensional Sock Teleportation"
+The title should sound grandiose and revolutionary for the field.
 Output only the title, no commentary.
 <!-- SECTION_END:generate-title -->
 
 <!-- SECTION_START:generate-author -->
 ### Generate Author Name  
 Generate a satirical researcher name that sounds academic but ridiculous.
-Format: "Dr./Prof. [Pretentious First Name] [Academic-sounding Last Name]"
-Examples: "Dr. Quantum Pseudoscience", "Prof. Cosmic Paradigm", "Dr. Ethereal Breakthrough"
+Format: "Prof. Dr. [Pretentious First Name] [Academic-sounding Last Name]"
 Output only the name, no commentary.
 <!-- SECTION_END:generate-author -->

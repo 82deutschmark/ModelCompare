@@ -13,6 +13,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **OpenAI Prompt ID/Version Support Plan:** Created comprehensive implementation plan in `docs/openai-prompt-id-version-plan.md` for integrating OpenAI's Prompt Templates feature using the Responses API. The plan covers:
+  - Prompt ID/version execution with variable substitution
+  - Backend extensions to support both text and prompt template modes
+  - Frontend UI for prompt template selection and management
+  - Backward compatibility with existing text-based prompts
+  - Three-phase implementation strategy (Backend Core → Frontend Integration → Advanced Features)
+  - Security considerations and performance impact analysis
+  - Estimated 7-10 day development timeline
 - **OpenAI Responses API Migration:**
   - Switched all OpenAI calls to `/v1/responses` exclusively; removed Chat Completions
   - Reasoning summaries enabled (`reasoning.summary: "auto"`) and surfaced in UI
