@@ -60,11 +60,23 @@ export interface ModelResponse {
   };
 }
 
+export interface ModelMessage {
+  role: 'system' | 'user' | 'assistant' | 'context';
+  content: string;
+  metadata?: Record<string, any>;
+}
+
+export interface CallOptions {
+  temperature?: number;
+  maxTokens?: number;
+  systemPrompt?: string;
+}
+
 export abstract class BaseProvider {
   abstract name: string;
   abstract models: ModelConfig[];
   
-  abstract callModel(prompt: string, model: string): Promise<ModelResponse>;
+  abstract callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse>;
   
   getModel(modelId: string): ModelConfig | undefined {
     return this.models.find(m => m.id === modelId);

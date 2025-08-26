@@ -8,7 +8,7 @@
 
 import 'dotenv/config';
 import OpenAI from 'openai';
-import { BaseProvider, ModelConfig, ModelResponse } from './base.js';
+import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions } from './base.js';
 
 const grok = new OpenAI({
   baseURL: "https://api.x.ai/v1",
@@ -126,13 +126,63 @@ export class XAIProvider extends BaseProvider {
     },
   ];
 
-  async callModel(prompt: string, model: string): Promise<ModelResponse> {
+  // Helper method to convert structured messages to OpenAI format for Grok
+  private convertToGrokMessages(messages: ModelMessage[]): Array<{role: 'user' | 'assistant' | 'system', content: string}> {
+    const grokMessages: Array<{role: 'user' | 'assistant' | 'system', content: string}> = [];
+    let systemContent = '';
+    let userContent = '';
+    let contextContent = '';
+    
+    // Collect all content by role
+    for (const message of messages) {
+      switch (message.role) {
+        case 'system':
+          systemContent += message.content + '\n\n';
+          break;
+        case 'user':
+          userContent += message.content + '\n\n';
+          break;
+        case 'context':
+          contextContent += message.content + '\n\n';
+          break;
+        case 'assistant':
+          grokMessages.push({ role: 'assistant', content: message.content });
+          break;
+      }
+    }
+    
+    // Add system message if we have system content
+    if (systemContent.trim()) {
+      grokMessages.push({ role: 'system', content: systemContent.trim() });
+    }
+    
+    // Combine context and user content into user message
+    let finalUserContent = '';
+    if (contextContent.trim()) {
+      finalUserContent += `Context:\n${contextContent.trim()}\n\n`;
+    }
+    if (userContent.trim()) {
+      finalUserContent += userContent.trim();
+    }
+    
+    if (finalUserContent.trim()) {
+      grokMessages.push({ role: 'user', content: finalUserContent.trim() });
+    }
+    
+    return grokMessages;
+  }
+
+  async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
+    
+    // Convert structured messages to Grok format
+    const grokMessages = this.convertToGrokMessages(messages);
     
     const response = await grok.chat.completions.create({
       model: model,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 2000,
+      messages: grokMessages as any,
+      max_tokens: options?.maxTokens || 2000,
+      temperature: options?.temperature,
     });
     
     const modelConfig = this.models.find(m => m.id === model);
@@ -147,6 +197,7 @@ export class XAIProvider extends BaseProvider {
       content: response.choices[0].message.content || "No response generated",
       reasoning: undefined, // Grok reasoning not directly exposed via API
       responseTime: Date.now() - startTime,
+      systemPrompt: grokMessages.map(m => `${m.role}: ${m.content}`).join('\n\n'),
       tokenUsage: tokenUsage,
       cost: cost,
       modelConfig: modelConfig ? {
