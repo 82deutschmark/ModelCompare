@@ -422,10 +422,21 @@ export default function Dashboard() {
       <div className="relative z-20 p-6 space-y-6">
         {/* Top Row - Quantum Metrics */}
         <QuantumMetrics />
-        {/* Prompt Interface + Bio Card side-by-side */}
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <PromptInterface />
-          <BioCard />
+        {/* Three-column: left small components, center PromptInterface, right BioCard */}
+        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left sidebar: smaller components */}
+          <div className="lg:col-span-3 flex flex-col gap-4">
+            <ArcGrid color="#00FFFF" title="ARC GRID (mini)" gridSize={10} className="w-full" />
+            <ChessBoard color="#FF0080" title="Neural Chess (mini)" sizePx={220} />
+          </div>
+          {/* Center: main prompt interface */}
+          <div className="lg:col-span-6">
+            <PromptInterface />
+          </div>
+          {/* Right: Bio */}
+          <div className="lg:col-span-3">
+            <BioCard />
+          </div>
         </div>
 
         {/* ARC-AGI Pattern Grid Wall (compact 1x4) */}
