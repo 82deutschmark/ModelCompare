@@ -28,9 +28,35 @@ import { getStorage } from "./storage";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
 import type { GenerateRequest, GenerateResponse, UnifiedMessage } from "../shared/api-types.js";
+import { PromptBuilder } from "./prompt-builder.js";
 import { getDisplayForModelId } from "../shared/model-catalog.js";
 import { getDatabaseManager } from "./db.js";
 import { contextLog } from "./request-context.js";
+import type { ModelMessage } from "../shared/api-types.js";
+
+// Helper function to convert structured messages to single prompt for backward compatibility
+function convertMessagesToPrompt(messages: ModelMessage[]): string {
+  const sections: string[] = [];
+  
+  for (const message of messages) {
+    switch (message.role) {
+      case 'system':
+        sections.push(`[SYSTEM INSTRUCTIONS]\n${message.content}`);
+        break;
+      case 'context':
+        sections.push(`[CONTEXT]\n${message.content}`);
+        break;
+      case 'user':
+        sections.push(message.content);
+        break;
+      case 'assistant':
+        sections.push(`[ASSISTANT]\n${message.content}`);
+        break;
+    }
+  }
+  
+  return sections.join('\n\n');
+}
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -671,6 +697,159 @@ Continue the debate by responding to the last message. Be analytical, challenge 
     }
   });
 
+  // POST /api/generate-structured - Server-side template resolution with structured messages
+  app.post("/api/generate-structured", async (req, res) => {
+    try {
+      const { templateId, variables, modelId, options } = req.body;
+      
+      // Validate required fields
+      if (!templateId || !variables || !modelId) {
+        return res.status(400).json({ 
+          error: "Missing required fields: templateId, variables, modelId" 
+        });
+      }
+
+      // Get template compiler
+      const templateCompiler = req.app.locals.templateCompiler;
+      if (!templateCompiler) {
+        return res.status(503).json({ error: "Template compiler not initialized" });
+      }
+
+      // Fetch structured template by ID
+      const structuredTemplate = templateCompiler.getStructuredTemplate(templateId);
+      if (!structuredTemplate) {
+        return res.status(404).json({ error: `Template not found: ${templateId}` });
+      }
+
+          // Validate variables against template schema
+      const templateVariables = structuredTemplate.variables.map((v: any) => v.name);
+      const missingRequired = structuredTemplate.variables
+        .filter((v: any) => v.required && !variables[v.name])
+        .map((v: any) => v.name);
+      
+      if (missingRequired.length > 0) {
+        return res.status(400).json({ 
+          error: "Missing required variables", 
+          details: missingRequired 
+        });
+      }
+
+      // Create PromptBuilder and resolve variables server-side
+      const promptBuilder = new PromptBuilder(structuredTemplate);
+      promptBuilder.setVariables(variables);
+      
+      if (options?.context) {
+        promptBuilder.setContext(options.context);
+      }
+      
+      if (options?.systemInstruction) {
+        promptBuilder.addSystemInstruction(options.systemInstruction);
+      }
+
+      // Build structured message array
+      const messages = promptBuilder.buildMessages();
+      const auditInfo = promptBuilder.getAuditInfo();
+
+      // Log audit trail
+      console.log(`[STRUCTURED] Template Resolution:`, {
+        templateId,
+        variables: Object.keys(variables),
+        messageCount: messages.length,
+        auditId: auditInfo.templateId
+      });
+
+      // Call model with structured messages
+      // For now, convert structured messages to single prompt for compatibility
+      // TODO: Update providers to handle ModelMessage[] directly
+      const combinedPrompt = convertMessagesToPrompt(messages);
+      const result = await callModel(combinedPrompt, modelId);
+      
+      // Store audit trail in database
+      try {
+        const storage = await getStorage();
+        await storage.createPromptAudit({
+          templateId: auditInfo.templateId,
+          variables: auditInfo.variables,
+          resolvedSections: auditInfo.resolvedSections,
+          messageStructure: messages.map((m: any) => ({ 
+            role: m.role, 
+            contentLength: m.content.length,
+            metadata: m.metadata 
+          })),
+          modelId,
+          responseContent: result.content,
+          responseTime: result.responseTime,
+          tokenUsage: result.tokenUsage,
+          cost: result.cost
+        });
+      } catch (auditError) {
+        console.warn('Failed to store audit trail:', auditError);
+      }
+
+      // Return response with audit trail
+      res.json({
+        content: result.content,
+        reasoning: result.reasoning,
+        responseTime: result.responseTime,
+        tokenUsage: result.tokenUsage,
+        cost: result.cost,
+        modelConfig: result.modelConfig,
+        audit: auditInfo,
+        messageStructure: messages.map((m: any) => ({ role: m.role, contentLength: m.content.length }))
+      });
+      
+    } catch (error) {
+      console.error("Generate structured endpoint error:", error);
+      res.status(500).json({ 
+        error: "Failed to generate structured response",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Prompt Audit Endpoints for Research and Analysis
+  app.get("/api/audits", async (req, res) => {
+    try {
+      const { templateId } = req.query;
+      const storage = await getStorage();
+      const audits = await storage.getPromptAudits(templateId as string);
+      
+      res.json({
+        audits: audits.map(audit => ({
+          id: audit.id,
+          templateId: audit.templateId,
+          variables: audit.variables,
+          modelId: audit.modelId,
+          responseTime: audit.responseTime,
+          tokenUsage: audit.tokenUsage,
+          cost: audit.cost,
+          createdAt: audit.createdAt,
+          messageCount: Array.isArray(audit.messageStructure) ? audit.messageStructure.length : 0
+        }))
+      });
+    } catch (error) {
+      console.error("Get audits error:", error);
+      res.status(500).json({ error: "Failed to get audit records" });
+    }
+  });
+
+  app.get("/api/audits/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const storage = await getStorage();
+      const audit = await storage.getPromptAudit(id);
+      
+      if (!audit) {
+        return res.status(404).json({ error: "Audit record not found" });
+      }
+      
+      res.json(audit);
+    } catch (error) {
+      console.error("Get audit error:", error);
+      res.status(500).json({ error: "Failed to get audit record" });
+    }
+  });
+
   // Health Check Endpoints for Monitoring
   app.get("/health", async (req, res) => {
     try {
@@ -786,6 +965,155 @@ Continue the debate by responding to the last message. Be analytical, challenge 
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
+    }
+  });
+
+  // Template API Endpoints for Server-Side Template Processing
+  
+  // GET /api/templates - List all available modes
+  app.get("/api/templates", async (req, res) => {
+    try {
+      const templateCompiler = req.app.locals.templateCompiler;
+      if (!templateCompiler) {
+        return res.status(503).json({ error: "Template compiler not initialized" });
+      }
+
+      const allCategories = templateCompiler.getAllCategories();
+      const modes = [...new Set(allCategories.map(cat => cat.mode).filter(Boolean))];
+      
+      const modesSummary = modes.map(mode => ({
+        mode,
+        categories: allCategories
+          .filter(cat => cat.mode === mode)
+          .map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            templateCount: cat.templates.length
+          }))
+      }));
+
+      contextLog("Template modes requested", { modesCount: modes.length });
+      res.json({ modes: modesSummary });
+    } catch (error) {
+      console.error("Template modes error:", error);
+      res.status(500).json({ error: "Failed to get template modes" });
+    }
+  });
+
+  // GET /api/templates/:mode - Get all templates for a specific mode
+  app.get("/api/templates/:mode", async (req, res) => {
+    try {
+      const { mode } = req.params;
+      const templateCompiler = req.app.locals.templateCompiler;
+      
+      if (!templateCompiler) {
+        return res.status(503).json({ error: "Template compiler not initialized" });
+      }
+
+      const structuredTemplates = templateCompiler.getStructuredTemplatesByMode(mode);
+      if (!structuredTemplates || structuredTemplates.length === 0) {
+        return res.status(404).json({ error: `No templates found for mode: ${mode}` });
+      }
+
+      // Group templates by category
+      const categoriesMap = new Map();
+      for (const template of structuredTemplates) {
+        if (!categoriesMap.has(template.category)) {
+          categoriesMap.set(template.category, {
+            id: template.category.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            name: template.category,
+            templates: []
+          });
+        }
+        categoriesMap.get(template.category).templates.push(template);
+      }
+
+      const response = {
+        mode,
+        categories: Array.from(categoriesMap.values()),
+        templateCount: structuredTemplates.length
+      };
+
+      contextLog("Structured templates requested", { mode, templatesCount: structuredTemplates.length });
+      res.json(response);
+    } catch (error) {
+      console.error("Mode templates error:", error);
+      res.status(500).json({ error: "Failed to get mode templates" });
+    }
+  });
+
+  // GET /api/templates/:mode/:category - Get all templates in a category
+  app.get("/api/templates/:mode/:category", async (req, res) => {
+    try {
+      const { mode, category } = req.params;
+      const templateCompiler = req.app.locals.templateCompiler;
+      
+      if (!templateCompiler) {
+        return res.status(503).json({ error: "Template compiler not initialized" });
+      }
+
+      const structuredTemplates = templateCompiler.getStructuredTemplatesByMode(mode);
+      const categoryTemplates = structuredTemplates.filter(t => 
+        t.category.toLowerCase().replace(/[^a-z0-9]/g, '-') === category
+      );
+      
+      if (categoryTemplates.length === 0) {
+        return res.status(404).json({ error: `Category '${category}' not found in mode '${mode}'` });
+      }
+
+      const response = {
+        mode,
+        category: {
+          id: category,
+          name: categoryTemplates[0].category,
+          templates: categoryTemplates
+        }
+      };
+
+      contextLog("Category templates requested", { mode, category, templatesCount: categoryTemplates.length });
+      res.json(response);
+    } catch (error) {
+      console.error("Category templates error:", error);
+      res.status(500).json({ error: "Failed to get category templates" });
+    }
+  });
+
+  // GET /api/templates/:mode/:category/:template - Get specific template
+  app.get("/api/templates/:mode/:category/:template", async (req, res) => {
+    try {
+      const { mode, category, template } = req.params;
+      const templateCompiler = req.app.locals.templateCompiler;
+      
+      if (!templateCompiler) {
+        return res.status(503).json({ error: "Template compiler not initialized" });
+      }
+
+      const templateId = `${category}:${template}`;
+      const templateData = templateCompiler.getTemplate(templateId);
+      
+      if (!templateData || templateData.mode !== mode) {
+        return res.status(404).json({ error: `Template '${template}' not found in category '${category}' for mode '${mode}'` });
+      }
+
+      const response = {
+        id: templateData.id,
+        name: templateData.name,
+        mode: templateData.mode,
+        category: templateData.category,
+        content: templateData.content,
+        variables: templateData.variables,
+        metadata: {
+          filePath: templateData.filePath,
+          lastModified: new Date().toISOString(),
+          version: "1.0.0"
+        }
+      };
+
+      contextLog("Specific template requested", { templateId, mode, category });
+      res.json(response);
+    } catch (error) {
+      console.error("Specific template error:", error);
+      res.status(500).json({ error: "Failed to get specific template" });
     }
   });
 
