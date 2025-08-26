@@ -211,7 +211,11 @@ export class OpenAIProvider extends BaseProvider {
     },
   ];
 
-  // Helper method to convert structured messages to prompt string for Responses API
+  /**
+   * Helper method to convert structured messages to prompt string for Responses API
+   * OpenAI Responses API requires a single prompt string, so we format structured messages
+   * with clear role labels for system instructions, user content, and context
+   */
   private convertMessagesToPrompt(messages: ModelMessage[]): string {
     const parts: string[] = [];
     

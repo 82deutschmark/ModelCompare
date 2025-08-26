@@ -6,19 +6,14 @@
  * 
  * Key features:
  * - Server-side variable resolution with validation
- * - Structured message array construction
- * - Audit trail generation for prompt injection research
- * - Template integrity protection
  * 
- * Author: Claude Code (GPT-5 medium reasoning)
+ * How the project uses it: 
+ * - Server-side endpoint /api/generate-structured uses this for template processing
+ * - Enables prompt injection research with structured message audit trails
+ * - Replaces client-side template resolution for security and consistency
+ * 
+ * Author: Cascade using Claude 4 Sonnet Thinking
  * Date: 2025-08-26
- * 
- * What this file does: Converts structured templates into message arrays with
- * proper role separation and variable resolution for AI model providers.
- * How it works: Takes StructuredTemplate, resolves variables server-side, and
- * builds ModelMessage[] arrays with system/user/context separation.
- * How the project uses it: Called by /api/generate-structured endpoint to
- * construct messages before sending to AI providers with proper audit trails.
  */
 
 import { VariableEngine } from '../shared/variable-engine.js';
@@ -55,6 +50,12 @@ export class PromptBuilder {
     return this;
   }
 
+  /**
+   * Build structured ModelMessage[] array from template with proper role separation
+   * This is the core method that enables advanced prompt engineering by separating
+   * system instructions, user content, and context into distinct message roles
+   * @returns Array of ModelMessage objects with proper role assignments
+   */
   buildMessages(): ModelMessage[] {
     const messages: ModelMessage[] = [];
 

@@ -64,7 +64,11 @@ export class DeepSeekProvider extends BaseProvider {
     },
   ];
 
-  // Helper method to convert structured messages to OpenAI format for DeepSeek
+  /**
+   * Helper method to convert structured messages to OpenAI-compatible format for DeepSeek API
+   * DeepSeek uses OpenAI-compatible chat completions with proper system message support
+   * Separates system instructions, combines context with user content for optimal reasoning
+   */
   private convertToDeepSeekMessages(messages: ModelMessage[]): Array<{role: 'user' | 'assistant' | 'system', content: string}> {
     const deepseekMessages: Array<{role: 'user' | 'assistant' | 'system', content: string}> = [];
     let systemContent = '';
