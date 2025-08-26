@@ -12,8 +12,10 @@ import { AnthropicProvider } from './anthropic.js';
 import { GoogleProvider } from './google.js';
 import { DeepSeekProvider } from './deepseek.js';
 import { XAIProvider } from './xai.js';
+import { CircuitBreaker } from './circuit-breaker.js';
+import { ModelNotFoundError, ProviderError, CircuitBreakerError } from '../errors.js';
 
-// Initialize all providers
+// Initialize all providers with circuit breakers
 const providers: BaseProvider[] = [
   new OpenAIProvider(),
   new AnthropicProvider(),
@@ -21,6 +23,16 @@ const providers: BaseProvider[] = [
   new DeepSeekProvider(),
   new XAIProvider(),
 ];
+
+// Circuit breaker per provider for resilience
+const circuitBreakers = new Map<string, CircuitBreaker>();
+providers.forEach(provider => {
+  circuitBreakers.set(provider.name, new CircuitBreaker({
+    failureThreshold: 3,
+    recoveryTimeout: 30000, // 30 seconds
+    monitoringPeriod: 60000  // 1 minute
+  }));
+});
 
 // Provider registry functions
 export function getAllModels(): ModelConfig[] {
@@ -57,15 +69,39 @@ export async function callModel(prompt: string, modelId: string): Promise<ModelR
   const modelConfig = getModelById(modelId);
   
   if (!provider || !modelConfig) {
-    throw new Error(`Model ${modelId} not found`);
+    throw new ModelNotFoundError(modelId);
+  }
+  
+  const circuitBreaker = circuitBreakers.get(provider.name);
+  if (!circuitBreaker) {
+    throw new ProviderError(`Circuit breaker not found for provider ${provider.name}`, { 
+      provider: provider.name,
+      modelId 
+    });
   }
   
   try {
-    const response = await provider.callModel(prompt, modelConfig.model);
+    const response = await circuitBreaker.execute(async () => {
+      return await provider.callModel(prompt, modelConfig.model);
+    });
     return { ...response, modelConfig };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    throw new Error(`${provider.name} API error: ${errorMessage}`);
+    
+    // Enhanced error reporting with circuit breaker state
+    const breakerState = circuitBreaker.getState();
+    const failureCount = circuitBreaker.getFailureCount();
+    
+    if (breakerState === 'OPEN') {
+      throw new CircuitBreakerError(provider.name, failureCount);
+    } else {
+      throw new ProviderError(`${provider.name} API error: ${errorMessage}`, {
+        provider: provider.name,
+        modelId,
+        circuitBreakerState: breakerState,
+        failureCount
+      });
+    }
   }
 }
 
