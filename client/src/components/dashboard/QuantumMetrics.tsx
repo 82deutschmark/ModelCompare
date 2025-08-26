@@ -171,41 +171,6 @@ export const QuantumMetrics: React.FC = () => {
       color="#8000FF"
       className="px-0"
     >
-      {/* Modality ribbon */}
-      <div className="px-2 pt-2">
-        <div className="relative rounded border border-cyan-700/60 bg-gradient-to-r from-cyan-300 via-pink-300 to-emerald-300">
-          <div className="rounded px-3 py-1.5 bg-black/70">
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] font-mono tracking-wide text-cyan-300">
-                ARCHITECHTURAL MODALITY
-              </div>
-              <div className="text-[10px] font-mono text-emerald-300">
-                hyper‑multimodal • symbolic • neural • quantum
-              </div>
-            </div>
-            <motion.div
-              className="mt-1 h-[2px] w-full bg-gradient-to-r from-cyan-500 via-pink-500 to-emerald-500"
-              initial={{ opacity: 0.4 }}
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 2.2, repeat: Infinity }}
-            />
-            {/* Archetypal Modalities display */}
-            <div className="mt-1.5 flex items-center justify-between">
-              <motion.div 
-                className="text-[11px] font-mono"
-                animate={{ scale: [1, 1.06, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <span className="text-green-300">Archetypal Modalities</span>: <span className="text-green-400 font-semibold">9.23</span>
-              </motion.div>
-              <div className="text-[10px] font-mono text-pink-300">
-                Rival: <span className="text-pink-400 font-semibold">7</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-xs leading-tight">
         {/* Core quantum metrics */}
         <div className="space-y-0.5 px-2">
@@ -240,6 +205,11 @@ export const QuantumMetrics: React.FC = () => {
           <MetricRow label="Reality Integrity" value={maybeEmoji(`${metrics.realityIntegrity.toFixed(2)}%`)} color="text-red-400" />
           <MetricRow label="Coherence" value={maybeEmoji(`${metrics.coherence.toFixed(2)}%`)} color="text-cyan-300" />
           <MetricRow label="Decoherence" value={maybeEmoji(`${metrics.decoherenceRate.toFixed(4)}%`)} color="text-cyan-500" />
+          <MetricRow 
+            label="Archetypal Modalities" 
+            value={<span className="text-green-300">9.23 <span className="text-cyan-400">vs</span> <span className="text-pink-400">7</span></span>} 
+            color="text-green-400" 
+          />
         </div>
         {/* Physics + system metrics */}
         <div className="space-y-0.5 px-2">
