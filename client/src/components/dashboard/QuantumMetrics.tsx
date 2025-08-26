@@ -171,6 +171,28 @@ export const QuantumMetrics: React.FC = () => {
       color="#8000FF"
       className="px-0"
     >
+      {/* Modality ribbon */}
+      <div className="px-2 pt-2">
+        <div className="relative rounded border border-cyan-700/60 bg-gradient-to-r from-cyan-300 via-pink-300 to-emerald-300">
+          <div className="rounded px-3 py-1.5 bg-black/70">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-mono tracking-wide text-cyan-300">
+                ARCHITECHTURAL MODALITY
+              </div>
+              <div className="text-[10px] font-mono text-emerald-300">
+                hyper‑multimodal • symbolic • neural • quantum
+              </div>
+            </div>
+            <motion.div
+              className="mt-1 h-[2px] w-full bg-gradient-to-r from-cyan-500 via-pink-500 to-emerald-500"
+              initial={{ opacity: 0.4 }}
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 2.2, repeat: Infinity }}
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-xs leading-tight">
         {/* Core quantum metrics */}
         <div className="space-y-0.5 px-2">
