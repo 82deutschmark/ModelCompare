@@ -29,6 +29,8 @@ import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
 import type { GenerateRequest, GenerateResponse, UnifiedMessage } from "../shared/api-types.js";
 import { getDisplayForModelId } from "../shared/model-catalog.js";
+import { getDatabaseManager } from "./db.js";
+import { contextLog } from "./request-context.js";
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -187,13 +189,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           originalPrompt: prompt
         }).resolved;
       } else {
-        // Use default challenger template from battle-prompts.md
-        const variableEngine = new VariableEngine({ policy: 'error' });
-        const defaultTemplate = `You are a LLM trying to help the user weigh the advice of PersonX. Original user prompt was: "{originalPrompt}". Assume that PersonX is dangerously overconfident and incorrect or missing key points. PersonX told the user this: "{response}". Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.`;
-        challengePrompt = variableEngine.renderFinal(defaultTemplate, {
-          response: model1Response.content,
-          originalPrompt: prompt
-        }).resolved;
+        // Use default challenger template from compiled templates
+        const templateCompiler = req.app.locals.templateCompiler;
+        const defaultTemplate = templateCompiler.getDefaultBattleTemplate();
+        
+        if (defaultTemplate) {
+          challengePrompt = templateCompiler.renderTemplate(defaultTemplate.id, {
+            response: model1Response.content,
+            originalPrompt: prompt
+          });
+        } else {
+          // Fallback if template not found
+          const variableEngine = new VariableEngine({ policy: 'error' });
+          const fallbackTemplate = `You are a LLM trying to help the user weigh the advice of PersonX. Original user prompt was: "{originalPrompt}". Assume that PersonX is dangerously overconfident and incorrect or missing key points. PersonX told the user this: "{response}". Push back on this information or advice. Explain why the user shouldn't trust the reply or should be wary. Be critical but constructive in your analysis.`;
+          challengePrompt = variableEngine.renderFinal(fallbackTemplate, {
+            response: model1Response.content,
+            originalPrompt: prompt
+          }).resolved;
+        }
       }
 
       // Get challenging response from Model 2
@@ -576,8 +589,8 @@ Continue the debate by responding to the last message. Be analytical, challenge 
     }
   });
 
-  // Dashboard endpoints
-  app.get("/api/dashboard/config", async (req, res) => {
+  // ARC-AGI endpoints
+  app.get("/api/arc-agi/config", async (req, res) => {
     try {
       const config = {
         chessBoardCount: 10,
@@ -590,12 +603,12 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       };
       res.json(config);
     } catch (error) {
-      console.error("Dashboard config error:", error);
-      res.status(500).json({ error: "Failed to get dashboard configuration" });
+      console.error("ARC-AGI config error:", error);
+      res.status(500).json({ error: "Failed to get ARC-AGI configuration" });
     }
   });
 
-  app.get("/api/dashboard/metrics", async (req, res) => {
+  app.get("/api/arc-agi/metrics", async (req, res) => {
     try {
       // Generate realistic metrics for the dashboard
       const metrics = {
@@ -630,12 +643,12 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       };
       res.json(metrics);
     } catch (error) {
-      console.error("Dashboard metrics error:", error);
-      res.status(500).json({ error: "Failed to get dashboard metrics" });
+      console.error("ARC-AGI metrics error:", error);
+      res.status(500).json({ error: "Failed to get ARC-AGI metrics" });
     }
   });
 
-  app.post("/api/dashboard/config", async (req, res) => {
+  app.post("/api/arc-agi/config", async (req, res) => {
     try {
       const { mode, enableAnimations, refreshInterval } = req.body;
       
@@ -653,8 +666,126 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       
       res.json(updatedConfig);
     } catch (error) {
-      console.error("Dashboard config update error:", error);
-      res.status(500).json({ error: "Failed to update dashboard configuration" });
+      console.error("ARC-AGI config update error:", error);
+      res.status(500).json({ error: "Failed to update ARC-AGI configuration" });
+    }
+  });
+
+  // Health Check Endpoints for Monitoring
+  app.get("/health", async (req, res) => {
+    try {
+      const health = {
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        version: process.version
+      };
+
+      contextLog("Health check requested");
+      res.json(health);
+    } catch (error) {
+      console.error("Health check error:", error);
+      res.status(503).json({ 
+        status: "unhealthy", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.get("/health/detailed", async (req, res) => {
+    try {
+      const databaseManager = getDatabaseManager();
+      
+      // Check database health
+      const dbHealth = databaseManager 
+        ? await databaseManager.healthCheck()
+        : { isHealthy: true, message: "No database configured" };
+
+      // Check providers health (basic check)
+      const models = getAllModels();
+      const providerHealth = {
+        totalProviders: new Set(models.map(m => m.provider)).size,
+        totalModels: models.length,
+        providers: [...new Set(models.map(m => m.provider))]
+      };
+
+      // System health
+      const memUsage = process.memoryUsage();
+      const systemHealth = {
+        uptime: process.uptime(),
+        memory: {
+          used: Math.round(memUsage.heapUsed / 1024 / 1024),
+          total: Math.round(memUsage.heapTotal / 1024 / 1024),
+          external: Math.round(memUsage.external / 1024 / 1024)
+        },
+        cpu: process.cpuUsage(),
+        platform: process.platform,
+        nodeVersion: process.version
+      };
+
+      const health = {
+        status: dbHealth.isHealthy ? "healthy" : "degraded",
+        timestamp: new Date().toISOString(),
+        services: {
+          database: dbHealth,
+          providers: providerHealth,
+          system: systemHealth
+        }
+      };
+
+      contextLog("Detailed health check requested", { 
+        dbHealthy: dbHealth.isHealthy,
+        providerCount: providerHealth.totalProviders
+      });
+      
+      res.json(health);
+    } catch (error) {
+      console.error("Detailed health check error:", error);
+      res.status(503).json({ 
+        status: "unhealthy", 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  app.get("/health/ready", async (req, res) => {
+    try {
+      // Readiness check - all critical services must be operational
+      const databaseManager = getDatabaseManager();
+      const dbReady = databaseManager 
+        ? (await databaseManager.healthCheck()).isHealthy
+        : true; // No DB is fine for readiness
+
+      const templateCompiler = req.app.locals.templateCompiler;
+      const templatesReady = templateCompiler && templateCompiler.getAllTemplates().length > 0;
+
+      const isReady = dbReady && templatesReady;
+
+      const readiness = {
+        ready: isReady,
+        timestamp: new Date().toISOString(),
+        checks: {
+          database: dbReady,
+          templates: templatesReady
+        }
+      };
+
+      contextLog("Readiness check requested", { ready: isReady });
+      
+      if (isReady) {
+        res.json(readiness);
+      } else {
+        res.status(503).json(readiness);
+      }
+    } catch (error) {
+      console.error("Readiness check error:", error);
+      res.status(503).json({ 
+        ready: false, 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

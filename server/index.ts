@@ -28,39 +28,29 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { TemplateValidator } from "./template-validator.js";
+import { TemplateCompiler } from "./template-compiler.js";
+import { initializeDatabaseManager } from "./db.js";
 import { formatErrorResponse } from "./errors.js";
+import { requestContextMiddleware, requestCompletionLogger, contextLog, contextError } from "./request-context.js";
 
 const app = express();
+
+// Request context tracing middleware (must be first)
+app.use(requestContextMiddleware());
+app.use(requestCompletionLogger());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// JSON response capturing for debugging (optional)
 app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
+  if (req.path.startsWith("/api")) {
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      // Context logging will handle request completion
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+  }
   next();
 });
 
@@ -68,33 +58,51 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   // Validate all templates at startup
-  log('Validating templates...');
+  contextLog('Validating templates...');
   const templateValidator = new TemplateValidator();
   const validationResult = await templateValidator.validateAllTemplates();
   
   if (!validationResult.isValid) {
-    log('❌ Template validation failed:');
+    contextError('Template validation failed:');
     validationResult.errors.forEach(error => {
-      log(`  - ${error.file}${error.category ? ` (${error.category})` : ''}${error.template ? ` [${error.template}]` : ''}: ${error.error}`);
+      contextError(`  - ${error.file}${error.category ? ` (${error.category})` : ''}${error.template ? ` [${error.template}]` : ''}: ${error.error}`);
     });
     process.exit(1);
   }
   
   if (validationResult.warnings.length > 0) {
-    log('⚠️ Template validation warnings:');
+    contextLog('⚠️ Template validation warnings:');
     validationResult.warnings.forEach(warning => {
-      log(`  - ${warning}`);
+      contextLog(`  - ${warning}`);
     });
   }
   
-  log('✅ Template validation completed successfully');
+  contextLog('✅ Template validation completed successfully');
+
+  // Compile and cache all templates
+  const templateCompiler = new TemplateCompiler();
+  await templateCompiler.compileAllTemplates();
+  
+  // Make template compiler available to routes
+  app.locals.templateCompiler = templateCompiler;
+
+  // Initialize database manager with connection pooling
+  const databaseManager = await initializeDatabaseManager();
+  if (databaseManager) {
+    app.locals.databaseManager = databaseManager;
+    contextLog('✅ Database connection pool initialized');
+  } else {
+    contextLog('⚠️ No database configured - using in-memory storage');
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const errorResponse = formatErrorResponse(err);
     
-    // Log error for debugging
+    // Log error with context for debugging
     if (errorResponse.statusCode >= 500) {
-      log(`❌ Server error: ${err.message}`, err.stack);
+      contextError(`Server error: ${err.message}`, err.stack);
+    } else {
+      contextLog(`Client error ${errorResponse.statusCode}: ${err.message}`);
     }
     
     res.status(errorResponse.statusCode).json(errorResponse);
