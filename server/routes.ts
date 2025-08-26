@@ -28,6 +28,7 @@ import { getStorage } from "./storage";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
 import type { GenerateRequest, GenerateResponse, UnifiedMessage } from "../shared/api-types.js";
+import { getDisplayForModelId } from "../shared/model-catalog.js";
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -46,7 +47,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available models
   app.get("/api/models", async (req, res) => {
     try {
-      res.json(getAllModels());
+      const models = getAllModels();
+      const enriched = models.map(m => ({
+        ...m,
+        // Attach display-only UI metadata from the centralized catalog
+        ui: getDisplayForModelId(m.id) || undefined,
+      }));
+      res.json(enriched);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch models" });
     }
