@@ -18,7 +18,7 @@ const neonColors = {
 };
 
 // Matrix rain characters - Japanese katakana
-const matrixChars = 'ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ノ ハ ヒ フ ヘ ホ マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヲ ン'.split(' ');
+const matrixChars = 'ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ハ ヒ フ ヘ ホ マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヲ ン'.split(' ');
 
 // ARC-aligned space emoji palettes (each list is exactly length-10: indices 0..9)
 // 0 is the explicit "empty/black" cell to avoid null handling.
@@ -80,8 +80,10 @@ const NeuralNetwork = () => {
   return (
     <div className="bg-black border border-cyan-500 rounded-lg p-4">
       <h3 className="text-cyan-400 font-mono text-sm mb-3">🧠 NEURAL MESH TOPOLOGY</h3>
-      <div className="relative w-full h-72 overflow-hidden">
-        <svg className="w-full h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: animated neural mesh SVG */}
+        <div className="relative w-full h-72 overflow-hidden">
+          <svg className="w-full h-full">
           {/* Connection lines */}
           {nodes.map((node, i) => 
             nodes.slice(i + 1, i + 4).map((targetNode, j) => (
@@ -119,7 +121,17 @@ const NeuralNetwork = () => {
               transition={{ duration: 1.5 + Math.random(), repeat: Infinity }}
             />
           ))}
-        </svg>
+          </svg>
+        </div>
+
+        {/* Right: ARC grid + chess boards */}
+        <div className="flex flex-col gap-4">
+          <ArcGrid color="#00FFFF" title="ARC GRID" gridSize={10} className="w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChessBoard color="#FF0080" title="Neural Chess" sizePx={260} />
+            <ChessBoard color="#00FF41" title="Emoji Chess" sizePx={260} emojiMode />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -160,8 +172,9 @@ const AdvancedMetrics = () => {
     }, 50);
     return () => clearInterval(interval);
   }, []);
-
-  return        <div className="bg-black border border-purple-500 rounded-lg p-6 font-mono">
+ 
+  return (
+    <div className="bg-black border border-purple-500 rounded-lg p-6 font-mono">
       <h3 className="text-purple-400 text-lg mb-4 animate-pulse">⚛️ QUANTUM HYPERCORE STATUS</h3>
       <div className="grid grid-cols-2 gap-6 text-sm">
         <div className="space-y-1">
@@ -225,8 +238,34 @@ const AdvancedMetrics = () => {
               className="text-green-400 text-right"
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity }}
-            >◉ {metrics.multiverse}</motion.span>
+            >
+              ◉ {metrics.multiverse}
+            </motion.span>
           </div>
+        </div>
+      </div>
+      {/* Extra verbose quantum telemetry with multilingual characters and math-like strings */}
+      <div className="mt-4 p-3 rounded border border-purple-700 bg-zinc-950">
+        <h4 className="text-purple-300 text-sm mb-2">Σ Quantum Telemetry Stream · 多言語 · Многоязычный · متعدد اللغات</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs leading-relaxed">
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2, repeat: Infinity }}>
+            λ≈{metrics.quantumFlux.toFixed(6)} · ϕ(t)={'e^{iπ}'} + ∑ᵢ ψᵢ · ℏ={Math.PI.toFixed(3)} · Δx·Δp ≥ ℏ/2
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.2, repeat: Infinity }}>
+            連結度: {metrics.quantumEntanglement.toFixed(2)}% · 행렬값 λᵢ≈{metrics.eigenValues.toFixed(3)} · π≈3.14159 · τ≈6.28318
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.4, repeat: Infinity }}>
+            матрица Ξ[{metrics.hyperDimensions}D]: det(A)≈{(metrics.eigenValues*1.0001).toFixed(4)} · Σχ²≈{(metrics.tensorFields%997).toFixed(2)}
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.6, repeat: Infinity }}>
+            موجة انهيار: {metrics.waveCollapse.toFixed(5)} μs · 𝔻={metrics.darkMatter.toFixed(2)}% · reality(t)≈{metrics.realityIntegrity.toFixed(2)}%
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.8, repeat: Infinity }}>
+            ᚠᚢᚦ ᛗᚨᛏᚺ σ⊗τ · 字形: Σ形態 · Συνείδηση={metrics.consciousnessLevel.toFixed(1)}% · 🧬 paths={metrics.neuralPathways.toLocaleString()}
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 3.0, repeat: Infinity }}>
+            String(Μ): {metrics.stringTheory.toFixed(3)} · Multiverse: {metrics.multiverse} · ∮ E·dl = − dΦᴮ/dt
+          </motion.div>
         </div>
       </div>
     </div>
@@ -234,19 +273,21 @@ const AdvancedMetrics = () => {
 };
 
 // Floating Particles Effect
-const FloatingParticles = () => {
-  const [particles, setParticles] = useState<Array<{
-    id: number;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    color: string;
-    size: number;
-  }>>([]);
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+}
+
+const FloatingParticles: React.FC = () => {
+  const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
-    const newParticles = Array(50).fill(null).map((_, i) => ({
+    const newParticles: Particle[] = Array(50).fill(null).map((_, i) => ({
       id: i,
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
@@ -258,11 +299,13 @@ const FloatingParticles = () => {
     setParticles(newParticles);
 
     const interval = setInterval(() => {
-      setParticles(prev => prev.map(p => ({
-        ...p,
-        x: (p.x + p.vx + window.innerWidth) % window.innerWidth,
-        y: (p.y + p.vy + window.innerHeight) % window.innerHeight
-      })));
+      setParticles((prevParticles: Particle[]) => 
+        prevParticles.map(p => ({
+          ...p,
+          x: (p.x + p.vx + window.innerWidth) % window.innerWidth,
+          y: (p.y + p.vy + window.innerHeight) % window.innerHeight
+        }))
+      );
     }, 50);
 
     return () => clearInterval(interval);
@@ -379,24 +422,12 @@ export default function Dashboard() {
         {/* Top Row - Advanced Metrics */}
         <AdvancedMetrics />
 
-        {/* ARC-AGI Pattern Grid Wall */}
-        <div className="grid grid-cols-6 gap-3">
-          <ArcGrid color="#00FFFF" title="ARC-AGI" gridSize={6} patternId="#001" />
-          <ArcGrid color="#FF0080" title="ARC-AGI" gridSize={8} patternId="#002" />
-          <ArcGrid color="#00FF41" title="ARC-AGI" gridSize={7} patternId="#003" />
-          <ArcGrid color="#8000FF" title="ARC-AGI" gridSize={6} patternId="#004" />
-          <ArcGrid color="#FFFF00" title="ARC-AGI" gridSize={8} patternId="#005" />
-          <ArcGrid color="#FF4000" title="ARC-AGI" gridSize={7} patternId="#006" />
-        </div>
-        
-        {/* Second row of ARC cards */}
-        <div className="grid grid-cols-6 gap-3">
-          <ArcGrid color="#00FFFF" title="ARC-AGI" gridSize={8} patternId="#007" />
-          <ArcGrid color="#FF0080" title="ARC-AGI" gridSize={6} patternId="#008" />
-          <ArcGrid color="#00FF41" title="ARC-AGI" gridSize={7} patternId="#009" />
-          <ArcGrid color="#8000FF" title="ARC-AGI" gridSize={8} patternId="#010" />
-          <ArcGrid color="#FFFF00" title="ARC-AGI" gridSize={6} patternId="#011" />
-          <ArcGrid color="#FF4000" title="ARC-AGI" gridSize={7} patternId="#012" />
+        {/* ARC-AGI Pattern Grid Wall (compact 1x4) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <ArcGrid color="#00FFFF" title="ARC-AGI" gridSize={10} patternId="#001" className="w-full" />
+          <ArcGrid color="#FF0080" title="ARC-AGI" gridSize={10} patternId="#002" className="w-full" />
+          <ArcGrid color="#00FF41" title="ARC-AGI" gridSize={10} patternId="#003" className="w-full" />
+          <ArcGrid color="#8000FF" title="ARC-AGI" gridSize={10} patternId="#004" className="w-full" />
         </div>
 
         {/* Neural Network */}
@@ -434,9 +465,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Prompt Input Area */}
-        <div className="bg-black border border-green-500 rounded-lg p-6">
-          <h3 className="text-green-400 text-lg mb-4 animate-pulse font-mono">🧠 NEURAL COMMAND INTERFACE</h3>
+        {/* Prompt Input Area (centered modal-like card) */}
+        <div className="bg-black border border-green-500 rounded-lg p-6 max-w-3xl mx-auto shadow-[0_0_30px_#00FF41]">
+          <h3 className="text-green-400 text-lg mb-4 animate-pulse font-mono text-center">🧠 NEURAL COMMAND INTERFACE</h3>
           <div className="space-y-4">
             <motion.div 
               className="relative"
@@ -463,7 +494,7 @@ export default function Dashboard() {
               </motion.div>
             </motion.div>
             
-            <div className="flex justify-between items-center">
+            <div className="flex justify-center items-center gap-6">
               <motion.button
                 className="px-6 py-2 bg-gradient-to-r from-green-600 to-cyan-600 text-black font-mono font-bold rounded-lg"
                 whileHover={{ scale: 1.05 }}
@@ -475,7 +506,6 @@ export default function Dashboard() {
               >
                 ⚡ PROCESS NEURAL INPUT
               </motion.button>
-              
               <div className="flex space-x-4 text-xs font-mono">
                 <motion.div 
                   className="text-cyan-400"
