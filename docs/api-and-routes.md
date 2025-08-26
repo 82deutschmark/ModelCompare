@@ -158,6 +158,61 @@ Source: `server/routes.ts`, provider registry `server/providers/index.ts`, base 
   - Server provides safe defaults for `tokenUsage` and `cost` when absent.
   - Variable resolution performed server‑side via `VariableEngine` with mapping/warnings.
 
+### Template API Endpoints (Server-Side Template Processing)
+
+### GET /api/templates
+- Purpose: List all available template modes and their categories.
+- Response: `{ modes: Array<{ mode: string; categories: Array<{ id: string; name: string; templateCount: number }> }> }`
+- Notes: Uses compiled template cache, no client-side markdown parsing.
+
+### GET /api/templates/:mode
+- Purpose: Get all structured templates for a specific mode.
+- Response: `{ mode: string; categories: Array<{ id: string; name: string; templates: StructuredTemplate[] }>; templateCount: number }`
+- Error: 404 if mode not found with available modes list
+
+### GET /api/templates/:mode/:category
+- Purpose: Get all templates in a specific category within a mode.
+- Response: `{ mode: string; category: { id: string; name: string; templates: StructuredTemplate[] } }`
+- Error: 404 if category not found in mode
+
+### GET /api/templates/:mode/:category/:template
+- Purpose: Get a specific structured template by ID.
+- Response: `StructuredTemplate` with full template structure, variables, and metadata
+- Error: 404 if template not found
+
+### POST /api/generate-structured
+- Purpose: Server-side template processing with structured message arrays.
+- Request body:
+  - `templateId: string` (format: "category:template")
+  - `variables: Record<string,string>`
+  - `modelId: string`
+  - `options?: { maxTokens?: number; temperature?: number; context?: string; systemInstruction?: string }`
+- Response:
+  - `content: string`
+  - `reasoning?: string`
+  - `responseTime: number`
+  - `tokenUsage?: TokenUsage`
+  - `cost?: Cost`
+  - `modelConfig?: ModelConfig`
+  - `audit: PromptAudit` (full audit trail)
+  - `messageStructure: Array<{ role: string; contentLength: number }>` (message structure summary)
+- Notes:
+  - Templates fetched server-side by ID
+  - Variables validated against template schema
+  - Full audit trail logged to database
+  - Message array converted to single prompt for current provider compatibility
+
+### Audit API Endpoints
+
+### GET /api/audits
+- Purpose: Retrieve prompt audit records for research analysis.
+- Query params: `templateId?: string` (filter by template)
+- Response: `{ audits: Array<AuditSummary> }` with audit metadata and statistics
+
+### GET /api/audits/:id
+- Purpose: Get detailed audit record including full message structure.
+- Response: Complete `PromptAudit` record or 404 error
+
 ---
 
 ## Data Shapes Summary
@@ -170,6 +225,24 @@ Source: `server/routes.ts`, provider registry `server/providers/index.ts`, base 
   - `cost?: { input: number; output: number; reasoning?: number; total: number }`
 - `Comparison` (shared/schema.ts):
   - `id, prompt, selectedModels, responses, createdAt`
+- `StructuredTemplate` (shared/api-types.ts):
+  - `id: string`
+  - `name: string`
+  - `mode: ModeType`
+  - `category: string`
+  - `structure: { systemInstructions?: string; userTemplate: string; contextTemplate?: string; responseGuidelines?: string }`
+  - `variables: VariableDefinition[]`
+  - `metadata: TemplateMetadata`
+- `ModelMessage` (shared/api-types.ts):
+  - `role: 'system' | 'user' | 'assistant' | 'context'`
+  - `content: string`
+  - `metadata?: { templateId?: string; variables?: Record<string, string> }`
+- `PromptAudit` (shared/api-types.ts):
+  - `templateId: string`
+  - `variables: Record<string, string>`
+  - `resolvedSections: { systemInstructions?: string; userContent: string; contextContent?: string }`
+  - `timestamp: string`
+  - `messageStructure: ModelMessage[]`
 
 ---
 

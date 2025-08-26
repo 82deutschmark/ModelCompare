@@ -13,6 +13,7 @@ import path from 'path';
 import { VariableEngine } from '../shared/variable-engine.js';
 import { VARIABLE_REGISTRIES, type ModeType } from '../shared/variable-registry.js';
 import { getTemplateConfig } from './config.js';
+import { StructuredTemplate, VariableDefinition, TemplateMetadata } from '../shared/api-types.js';
 
 export interface CompiledTemplate {
   id: string;
@@ -263,5 +264,174 @@ export class TemplateCompiler {
   // Get default template for battle mode challenger
   getDefaultBattleTemplate(): CompiledTemplate | undefined {
     return this.getTemplateByPath('generic-test-questions', 'generic-test-questions-challenger');
+  }
+
+  // Structured template methods
+  getStructuredTemplate(templateId: string): StructuredTemplate | undefined {
+    const template = this.getTemplate(templateId);
+    if (!template) return undefined;
+    
+    return this.convertToStructuredTemplate(template);
+  }
+
+  getStructuredTemplatesByMode(mode: ModeType): StructuredTemplate[] {
+    const categories = this.getTemplatesByMode(mode);
+    const structuredTemplates: StructuredTemplate[] = [];
+    
+    for (const category of categories) {
+      for (const template of category.templates) {
+        structuredTemplates.push(this.convertToStructuredTemplate(template));
+      }
+    }
+    
+    return structuredTemplates;
+  }
+
+  private convertToStructuredTemplate(template: CompiledTemplate): StructuredTemplate {
+    const structure = this.parseStructuredSections(template.content);
+    const variables = this.generateVariableDefinitions(template.variables, template.content);
+    const metadata = this.generateTemplateMetadata(template);
+
+    return {
+      id: template.id,
+      name: template.name,
+      mode: template.mode || 'compare',
+      category: template.category,
+      structure,
+      variables,
+      metadata
+    };
+  }
+
+  private parseStructuredSections(content: string): StructuredTemplate['structure'] {
+    const sections = {
+      systemInstructions: undefined as string | undefined,
+      userTemplate: content, // Fallback to full content
+      contextTemplate: undefined as string | undefined,
+      responseGuidelines: undefined as string | undefined
+    };
+
+    // Try to parse structured sections if they exist
+    const lines = content.split('\n');
+    let currentSection: keyof typeof sections | null = null;
+    let sectionContent: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Detect section headers
+      if (trimmed.startsWith('#### System Instructions')) {
+        if (currentSection && sectionContent.length > 0) {
+          sections[currentSection] = sectionContent.join('\n').trim();
+        }
+        currentSection = 'systemInstructions';
+        sectionContent = [];
+        continue;
+      } else if (trimmed.startsWith('#### User Context Template') || trimmed.startsWith('#### User Template')) {
+        if (currentSection && sectionContent.length > 0) {
+          sections[currentSection] = sectionContent.join('\n').trim();
+        }
+        currentSection = 'userTemplate';
+        sectionContent = [];
+        continue;
+      } else if (trimmed.startsWith('#### Context Template')) {
+        if (currentSection && sectionContent.length > 0) {
+          sections[currentSection] = sectionContent.join('\n').trim();
+        }
+        currentSection = 'contextTemplate';
+        sectionContent = [];
+        continue;
+      } else if (trimmed.startsWith('#### Response Guidelines')) {
+        if (currentSection && sectionContent.length > 0) {
+          sections[currentSection] = sectionContent.join('\n').trim();
+        }
+        currentSection = 'responseGuidelines';
+        sectionContent = [];
+        continue;
+      }
+
+      // Collect content for current section
+      if (currentSection) {
+        sectionContent.push(line);
+      }
+    }
+
+    // Save final section
+    if (currentSection && sectionContent.length > 0) {
+      sections[currentSection] = sectionContent.join('\n').trim();
+    }
+
+    // If no structured sections found, treat entire content as user template
+    if (!sections.systemInstructions && !sections.contextTemplate && !sections.responseGuidelines) {
+      sections.userTemplate = content;
+    }
+
+    return sections;
+  }
+
+  private generateVariableDefinitions(variables: string[], content: string): VariableDefinition[] {
+    return variables.map(varName => ({
+      name: varName,
+      type: 'string' as const,
+      required: true,
+      description: this.inferVariableDescription(varName, content)
+    }));
+  }
+
+  private inferVariableDescription(varName: string, content: string): string {
+    // Try to infer variable purpose from name and context
+    const commonVariables: Record<string, string> = {
+      'originalPrompt': 'The original user prompt or question',
+      'response': 'The previous model response',
+      'modelName': 'The name of the model being used',
+      'topic': 'The topic or subject being discussed',
+      'position': 'The debate position or stance',
+      'role': 'The role the model should take',
+      'intensity': 'The intensity level for the response'
+    };
+
+    if (commonVariables[varName]) {
+      return commonVariables[varName];
+    }
+
+    // Check if variable appears in a descriptive context
+    const varPattern = new RegExp(`{${varName}[^}]*}`, 'gi');
+    const matches = content.match(varPattern);
+    if (matches && matches.length > 0) {
+      // Extract context around the variable usage
+      const usage = matches[0].replace(/[{}]/g, '');
+      return `Variable for ${usage.split('|')[0].toLowerCase()}`;
+    }
+
+    return `Template variable: ${varName}`;
+  }
+
+  private generateTemplateMetadata(template: CompiledTemplate): TemplateMetadata {
+    const stats = fs.statSync(template.filePath);
+    
+    return {
+      filePath: template.filePath,
+      lastModified: stats.mtime.toISOString(),
+      version: this.generateTemplateVersion(template),
+      description: `Generated from ${path.basename(template.filePath)}`
+    };
+  }
+
+  private generateTemplateVersion(template: CompiledTemplate): string {
+    // Generate version based on file modification time and content hash
+    const stats = fs.statSync(template.filePath);
+    const contentHash = this.simpleHash(template.content);
+    const dateStr = stats.mtime.toISOString().split('T')[0].replace(/-/g, '');
+    return `${dateStr}.${contentHash.slice(0, 8)}`;
+  }
+
+  private simpleHash(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(16);
   }
 }

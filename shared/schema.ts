@@ -55,6 +55,29 @@ export const vixraSessions = pgTable("vixra_sessions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Prompt audit trail for structured template resolution tracking
+export const promptAudits = pgTable("prompt_audits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull(),
+  variables: jsonb("variables").notNull().$type<Record<string, string>>(),
+  resolvedSections: jsonb("resolved_sections").notNull().$type<{
+    systemInstructions?: string;
+    userContent: string;
+    contextContent?: string;
+  }>(),
+  messageStructure: jsonb("message_structure").notNull().$type<Array<{
+    role: 'system' | 'user' | 'assistant' | 'context';
+    contentLength: number;
+    metadata?: Record<string, any>;
+  }>>(),
+  modelId: varchar("model_id"),
+  responseContent: text("response_content"),
+  responseTime: integer("response_time"),
+  tokenUsage: jsonb("token_usage").$type<{ input: number; output: number; reasoning?: number }>(),
+  cost: jsonb("cost").$type<{ total: number; input: number; output: number; reasoning?: number }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertComparisonSchema = createInsertSchema(comparisons).omit({
   id: true,
   createdAt: true,
@@ -66,10 +89,17 @@ export const insertVixraSessionSchema = createInsertSchema(vixraSessions).omit({
   updatedAt: true,
 });
 
+export const insertPromptAuditSchema = createInsertSchema(promptAudits).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertComparison = z.infer<typeof insertComparisonSchema>;
 export type Comparison = typeof comparisons.$inferSelect;
 export type InsertVixraSession = z.infer<typeof insertVixraSessionSchema>;
 export type VixraSession = typeof vixraSessions.$inferSelect;
+export type InsertPromptAudit = z.infer<typeof insertPromptAuditSchema>;
+export type PromptAuditRecord = typeof promptAudits.$inferSelect;
 
 // AI Model types
 export const aiModelSchema = z.object({

@@ -39,7 +39,7 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     cost: { input: '$1.25', output: '$10.00' },
     provider: 'OpenAI',
     responseTime: { speed: 'moderate', estimate: '1-2 min' },
-    supportsTemperature: true,
+    supportsTemperature: false,
     supportsReasoning: true,
   },
   'gpt-5-mini-2025-08-07': {
@@ -50,7 +50,7 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     cost: { input: '$0.25', output: '$2.00' },
     provider: 'OpenAI',
     responseTime: { speed: 'moderate', estimate: '30-60 sec' },
-    supportsTemperature: true,
+    supportsTemperature: false,
     supportsReasoning: true,
   },
   'gpt-5-nano-2025-08-07': {
@@ -61,7 +61,7 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     cost: { input: '$0.05', output: '$0.40' },
     provider: 'OpenAI',
     responseTime: { speed: 'fast', estimate: '<30 sec' },
-    supportsTemperature: true,
+    supportsTemperature: false,
     supportsReasoning: true,
   },
   'gpt-4.1-nano-2025-04-14': {
