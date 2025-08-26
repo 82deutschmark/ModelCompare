@@ -100,10 +100,47 @@ Source: `server/routes.ts`, provider registry `server/providers/index.ts`, base 
 - Response: `{ response: ModelResponse & { status: 'success' }, modelId: string }`
 - Errors: 400 for missing history or modelId; 500 on failure
 
+### GET /api/dashboard/config
+- Purpose: Retrieve dashboard configuration settings and preferences.
+- Response: Dashboard configuration object
+  - `chessBoardCount: number` (number of chess boards to display)
+  - `arcPuzzleCount: number` (number of ARC-AGI puzzles to display)
+  - `refreshInterval: number` (milliseconds between updates)
+  - `themes: string[]` (available color themes)
+  - `defaultMode: 'chess' | 'arc'` (default dashboard mode)
+  - `enableAnimations: boolean` (whether animations are enabled)
+  - `enableFloatingNumbers: boolean` (whether floating numbers effect is enabled)
+- Errors: 500 on failure
+
+### GET /api/dashboard/metrics
+- Purpose: Retrieve real-time dashboard metrics for visualization.
+- Response: Dashboard metrics object
+  - `accuracy: number` (system accuracy percentage)
+  - `nodesEvaluated: number` (total nodes evaluated)
+  - `searchDepth: string` (search depth description)
+  - `evalSpeed: string` (evaluation speed)
+  - `cpuUsage: number` (CPU usage percentage)
+  - `memory: string` (memory usage)
+  - `quantumCores: string` (quantum cores status)
+  - `temperature: string` (system temperature)
+  - `quantumCoeffs: object` (quantum coefficients)
+  - `liveCounters: object` (live counter values)
+  - `systemStatus: object` (system status indicators)
+- Errors: 500 on failure
+
+### POST /api/dashboard/config
+- Purpose: Update dashboard configuration settings.
+- Request body:
+  - `mode?: 'chess' | 'arc'` (dashboard mode)
+  - `enableAnimations?: boolean` (animation setting)
+  - `refreshInterval?: number` (update interval in milliseconds)
+- Response: Updated configuration object (same shape as GET)
+- Errors: 500 on failure
+
 ### POST /api/generate
 - Purpose: Unified generation endpoint for all modes (single source of truth).
 - Request body (`shared/api-types.ts` → `GenerateRequest`):
-  - `mode`: `'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment'`
+  - `mode`: `'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment' | 'vixra'`
   - `template: string`
   - `variables: Record<string,string>` (validated via `shared/variable-registry.ts` per mode)
   - `messages: UnifiedMessageIn[]` (reserved for future/context)
@@ -144,6 +181,7 @@ Source: `client/src/App.tsx`
 - `/debate` → `client/src/pages/debate.tsx` (Dedicated manual 10-round debate UI)
 - `/plan-assessment` → `client/src/pages/plan-assessment.tsx` (Planned; assesses an LLM-authored plan)
 - `/vixra` → `client/src/pages/vixra.tsx` (Satirical paper generation using markdown templates)
+- `/dashboard` → `client/src/pages/dashboard.tsx` (Chess AI and ARC-AGI puzzle visualization dashboard)
 - Fallback → `client/src/pages/not-found.tsx`
 
 Related pages present but not routed by default: `client/src/pages/battle.tsx`, `client/src/pages/battle-new.tsx`.
@@ -172,6 +210,10 @@ Pages using endpoints:
 - `vixra.tsx`:
   - GET `/api/models`
   - POST `/api/models/respond`
+- `dashboard.tsx`:
+  - GET `/api/dashboard/config`
+  - GET `/api/dashboard/metrics`
+  - POST `/api/dashboard/config`
 - `battle.tsx` (not routed by default):
   - GET `/api/models`
   - POST `/api/battle/start`
