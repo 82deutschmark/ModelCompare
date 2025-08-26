@@ -203,7 +203,7 @@ app.use((req, res, next) => {
   });
 
   process.on('unhandledRejection', (reason, promise) => {
-    contextError('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+    contextError(`💥 Unhandled Rejection at: ${promise} reason: ${reason}`);
     gracefulShutdown('UNHANDLED_REJECTION');
   });
 
