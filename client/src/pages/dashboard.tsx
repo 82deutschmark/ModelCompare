@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DashboardCard } from '../components/dashboard/DashboardCard';
+import { ArcAgiCard } from '../components/dashboard/DashboardCard';
 import { PromptInterface } from '../components/dashboard/PromptInterface';
 import { LiveCounter } from '../components/dashboard/LiveCounter';
 import { QuantumMetrics } from '../components/dashboard/QuantumMetrics';
