@@ -79,8 +79,8 @@ export interface ComparisonResult {
 
 export const providerGroups = {
   'OpenAI': ['openai-gpt-5', 'openai-gpt-4.1', 'openai-gpt-4.1-mini', 'openai-o4-mini', 'openai-gpt-4o', 'openai-gpt-4o-mini'],
-  'Anthropic': ['anthropic-claude-opus-4.1', 'anthropic-claude-sonnet-4', 'anthropic-claude-3.7-sonnet', 'anthropic-claude-3.5-haiku'],
+  'Anthropic': ['anthropic-claude-3.5-haiku', 'anthropic-claude-sonnet-4', 'anthropic-claude-3.7-sonnet', 'anthropic-claude-3.5-haiku'],
   'Google': ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
   'DeepSeek': ['deepseek-chat', 'deepseek-reasoner'],
-  'xAI': ['grok-4', 'grok-2-1212', 'grok-2-vision-1212'],
+  'xAI': ['grok-4', 'grok-3', 'grok-3-mini'],
 };
