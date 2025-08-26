@@ -119,7 +119,7 @@ export const PromptInterface: React.FC = () => {
             <div className="absolute inset-0 pointer-events-none text-[11px] leading-4 p-2 font-mono text-cyan-300 opacity-70">
               <div>∮ E·dl = − dΦB/dt</div>
               <div>∇·E = ρ/ε₀ &nbsp; ∇×B = μ₀J + μ₀ε₀ ∂E/∂t</div>
-              <div>ψ(x,t) = e^{iπ} · Σᵢ aᵢ φᵢ(x)</div>
+              <div>ψ(x,t) = {'e^{iπ}'} · Σᵢ aᵢ φᵢ(x)</div>
               <div>det(A) ≈ λ₁λ₂…λₙ &nbsp; |ζ(1/2 + it)|</div>
             </div>
           </div>

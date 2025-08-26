@@ -5,9 +5,14 @@ import { DashboardCard } from './DashboardCard';
 interface ChessBoardProps {
   color: string;
   title: string;
+  sizePx?: number; // outer square size in pixels (width/height)
+  emojiMode?: boolean; // if true, show emojis instead of colored squares
 }
 
-export const ChessBoard: React.FC<ChessBoardProps> = ({ color, title }) => {
+// Simple emoji palette for emojiMode
+const EMOJIS = ['♞','♟️','♜','♛','♚','⭐','💥','⚡','🧠','🚀','🌀','💎','🔮','⚛️','🌌'];
+
+export const ChessBoard: React.FC<ChessBoardProps> = ({ color, title, sizePx = 320, emojiMode = false }) => {
   const [board, setBoard] = useState<number[][]>([]);
   
   useEffect(() => {
@@ -38,11 +43,15 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({ color, title }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // compute cell size
+  const cellSize = sizePx / 8;
+
   return (
     <DashboardCard title={title} icon="♛" color={color}>
-      <div className="relative w-full h-48 flex items-center justify-center">
+      <div className="relative w-full flex items-center justify-center" style={{ height: sizePx + 64 }}>
         <motion.div 
-          className="grid grid-cols-8 gap-[1px] w-40 h-40"
+          className="grid grid-cols-8 gap-[1px]"
+          style={{ width: sizePx, height: sizePx }}
           animate={{ 
             rotateY: [0, 360],
             scale: [1, 1.1, 0.95, 1.05, 1],
@@ -62,27 +71,36 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({ color, title }) => {
             return (
               <motion.div
                 key={i}
-                className="aspect-square"
+                className="aspect-square flex items-center justify-center select-none"
                 style={{
-                  backgroundColor: isBlack 
-                    ? `rgba(${color.replace('#', '')
-                        .match(/.{2}/g)?.map(x => parseInt(x, 16)).join(',') || '0,0,0'}, ${intensity})`
-                    : `rgba(255, 255, 255, ${intensity * 0.3})`,
-                  boxShadow: intensity > 0.6 ? `0 0 12px ${color}` : 'none'
+                  width: cellSize,
+                  height: cellSize,
+                  backgroundColor: emojiMode
+                    ? (isBlack ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.1)')
+                    : (isBlack 
+                        ? `rgba(${color.replace('#', '')
+                            .match(/.{2}/g)?.map(x => parseInt(x, 16)).join(',') || '0,0,0'}, ${intensity})`
+                        : `rgba(255, 255, 255, ${intensity * 0.3})`),
+                  boxShadow: !emojiMode && intensity > 0.6 ? `0 0 12px ${color}` : 'none',
+                  color: emojiMode ? (isBlack ? '#0ff' : '#ff0') : undefined,
+                  fontSize: emojiMode ? Math.max(14, cellSize * 0.6) : undefined,
                 }}
                 animate={{
-                  opacity: [0.2, 1, 0.4, 0.8, 0.2],
-                  scale: intensity > 0.7 ? [1, 1.4, 0.8, 1.2, 1] : [1, 1.1, 0.9, 1.05, 1]
+                  opacity: emojiMode ? [0.7, 1, 0.8] : [0.2, 1, 0.4, 0.8, 0.2],
+                  scale: emojiMode ? [1, 1.1, 1] : (intensity > 0.7 ? [1, 1.4, 0.8, 1.2, 1] : [1, 1.1, 0.9, 1.05, 1])
                 }}
                 transition={{
                   duration: 0.1 + Math.random() * 0.15,
                   repeat: Infinity
                 }}
-              />
+              >
+                {emojiMode ? EMOJIS[(Math.floor(intensity * EMOJIS.length)) % EMOJIS.length] : null}
+              </motion.div>
             );
           })}
         </motion.div>
       </div>
     </DashboardCard>
   );
-};
+}
+;
