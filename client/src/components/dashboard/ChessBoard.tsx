@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DashboardCard } from './DashboardCard';
+import { ArcAgiCard } from './DashboardCard';
 
 interface ChessBoardProps {
   color: string;
@@ -47,7 +47,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({ color, title, sizePx = 3
   const cellSize = sizePx / 8;
 
   return (
-    <DashboardCard title={title} icon="♛" color={color}>
+    <ArcAgiCard title={title} icon="♛" color={color}>
       <div className="relative w-full flex items-center justify-center" style={{ height: sizePx + 64 }}>
         <motion.div 
           className="grid grid-cols-8 gap-[1px]"
@@ -100,7 +100,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({ color, title, sizePx = 3
           })}
         </motion.div>
       </div>
-    </DashboardCard>
+    </ArcAgiCard>
   );
 }
 ;

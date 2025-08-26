@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { DashboardCard } from './DashboardCard';
+import { ArcAgiCard } from './DashboardCard';
 
 interface MetricsState {
   quantumFlux: number;
@@ -165,7 +165,7 @@ export const QuantumMetrics: React.FC = () => {
   );
 
   return (
-    <DashboardCard
+    <ArcAgiCard
       title="QUANTUM HYPERCORE STATUS 🌌 9 Archetypal Modalities 💾 Version 0.0.28 🔗 Created by PrismAI and Prof. Dr. Max Power IV, PhD, DDS, Esq. 🧠"
       icon="⚛️"
       color="#8000FF"
@@ -299,6 +299,6 @@ export const QuantumMetrics: React.FC = () => {
           </div>
         </div>
       </div>
-    </DashboardCard>
+    </ArcAgiCard>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { DashboardCard } from './DashboardCard';
+import { ArcAgiCard } from './DashboardCard';
 
 // Mini neural network builder that progressively adds nodes/edges
 const NeuralBuilder: React.FC<{ active: boolean }> = ({ active }) => {
@@ -164,7 +164,7 @@ export const PromptInterface: React.FC = () => {
   }, []);
 
   return (
-    <DashboardCard
+    <ArcAgiCard
       title="NEURAL COMMAND INTERFACE"
       icon="🧠"
       color="#00FF41"
@@ -282,6 +282,6 @@ export const PromptInterface: React.FC = () => {
           </div>
         </div>
       </div>
-    </DashboardCard>
+    </ArcAgiCard>
   );
 };

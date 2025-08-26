@@ -80,9 +80,9 @@ const navigationModes: NavigationMode[] = [
     description: "Generate satirical academic papers"
   },
   {
-    id: "dashboard",
-    name: "Dashboard",
-    path: "/dashboard",
+    id: "arc-agi",
+    name: "ARC-AGI",
+    path: "/arc-agi",
     icon: Monitor,
     description: "Chess AI and ARC-AGI visualization"
   }
