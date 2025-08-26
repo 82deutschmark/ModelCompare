@@ -113,7 +113,7 @@ export function loadConfig(): AppConfig {
       cspDirectives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", ...(isDevelopment ? ["'unsafe-eval'"] : [])],
+        scriptSrc: ["'self'", ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'"] : [])],
         imgSrc: ["'self'", "data:", "blob:"],
         connectSrc: ["'self'", ...(isDevelopment ? ["ws:", "wss:"] : [])],
         fontSrc: ["'self'"],
