@@ -1,578 +1,535 @@
-/**
- * KaggleReadinessValidation.tsx
- * 
- * @author Cascade sonnet-3-5-20241022
- * @description A comprehensive form-based validation system to assess technical readiness 
- * for Kaggle machine learning challenges. Provides educational guidance and gentle assessment
- * of ML fundamentals including frameworks, validation strategies, metrics, and model approaches.
- * Uses a scoring system to provide personalized feedback and learning resources.
- */
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { ArcAgiCard } from '../components/dashboard/DashboardCard';
+import { PromptInterface } from '../components/dashboard/PromptInterface';
+import { LiveCounter } from '../components/dashboard/LiveCounter';
+import { QuantumMetrics } from '../components/dashboard/QuantumMetrics';
+import { ChessBoard } from '../components/dashboard/ChessBoard';
+import { ArcGrid } from '../components/dashboard/ArcGrid';
+import { BioCard } from '../components/dashboard/BioCard';
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  BookOpen, 
-  CheckCircle, 
-  AlertCircle, 
-  Lightbulb, 
-  Rocket, 
-  GraduationCap,
-  Brain,
-  Target,
-  TrendingUp
-} from 'lucide-react';
+// Neon color palette for cyberpunk theme
+const neonColors = {
+  cyan: '#00FFFF',
+  pink: '#FF0080', 
+  green: '#00FF41',
+  purple: '#8000FF',
+  yellow: '#FFFF00',
+  orange: '#FF4000',
+};
 
-interface FormData {
-  framework: string;
-  validation: string;
-  metric: string;
-  approach: string;
-}
+// Matrix rain characters - Japanese katakana
+const matrixChars = 'ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ハ ヒ フ ヘ ホ マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヲ ン'.split(' ');
 
-interface AssessmentResult {
-  score: number;
-  ready: boolean;
-  feedback: string[];
-  nextSteps: string[];
-  level: 'ready' | 'nearly' | 'foundations';
-}
+// ARC-aligned space emoji palettes (each list is exactly length-10: indices 0..9)
+// 0 is the explicit "empty/black" cell to avoid null handling.
+export const SPACE_EMOJIS = {
+  // Legacy default (backward compatibility with previous single-map implementation)
+  legacy_default: ['⬛', '✅', '👽', '👤', '🪐', '🌍', '🛸', '☄️', '♥️', '⚠️'],  
+  // Birds - For the hardest tasks (filled to length-10)
+  birds: ['🐦', '🦃', '🦆', '🦉', '🐤', '🦅', '🦜', '🦢', '🐓', '🦩'],
+} as const;
 
-export default function KaggleReadinessValidation() {
-  const [formData, setFormData] = useState<FormData>({
-    framework: '',
-    validation: '',
-    metric: '',
-    approach: ''
-  });
-
-  const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
-  const [showEducationalContent, setShowEducationalContent] = useState(false);
-  const [showLearningFrameworkEval, setShowLearningFrameworkEval] = useState(false);
-
-  React.useEffect(() => {
-    document.title = 'Kaggle Challenge Readiness Validation';
+// Matrix Rain Effect Component
+const MatrixRain = () => {
+  const [columns, setColumns] = useState<Array<{chars: string[], speeds: number[]}>>([]);
+  
+  useEffect(() => {
+    const cols = Math.floor(window.innerWidth / 20);
+    const newColumns = Array(cols).fill(null).map(() => ({
+      chars: Array(30).fill(null).map(() => matrixChars[Math.floor(Math.random() * matrixChars.length)]),
+      speeds: Array(30).fill(null).map(() => Math.random() * 100 + 50)
+    }));
+    setColumns(newColumns);
   }, []);
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  return (
+    <div className="fixed inset-0 pointer-events-none opacity-5 z-0">
+      {columns.map((col, i) => (
+        <div key={i} className="absolute top-0 text-green-400 font-mono text-sm" style={{ left: i * 20 }}>
+          {col.chars.map((char, j) => (
+            <motion.div
+              key={j}
+              animate={{ y: [0, window.innerHeight + 100] }}
+              transition={{ duration: col.speeds[j] / 10, repeat: Infinity, ease: "linear" }}
+              className="opacity-60"
+            >
+              {char}
+            </motion.div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
 
-  const containsTechnicalTerms = (text: string): boolean => {
-    const technicalTerms = [
-      'feature', 'parameter', 'hyperparameter', 'epoch', 'batch',
-      'learning_rate', 'regularization', 'overfitting', 'gradient',
-      'loss_function', 'optimizer', 'preprocessing', 'encoding',
-      'neural', 'model', 'algorithm', 'training', 'validation'
-    ];
-    return technicalTerms.some(term => text.toLowerCase().includes(term));
-  };
 
-  const containsConcerningLanguage = (text: string): boolean => {
-    const concerningPatterns = [
-      'ai communication', 'chosen', 'special abilities', 'consciousness',
-      'sentient', 'magical', 'divine', 'telepathic', 'psychic'
-    ];
-    return concerningPatterns.some(pattern => text.toLowerCase().includes(pattern));
-  };
-
-  const assessTechnicalReadiness = (responses: FormData): AssessmentResult => {
-    let score = 0;
-    const feedback: string[] = [];
-
-    // Framework validation
-    const legitimateFrameworks = [
-      'sklearn', 'scikit-learn', 'pytorch', 'tensorflow', 'keras',
-      'xgboost', 'lightgbm', 'catboost', 'randomforest', 'svm',
-      'pandas', 'numpy', 'scipy', 'jupyter'
-    ];
-
-    if (legitimateFrameworks.some(framework => 
-      responses.framework.toLowerCase().includes(framework))) {
-      score += 1;
-      feedback.push("✅ Using established ML framework");
-    } else {
-      feedback.push("📚 Consider using scikit-learn, PyTorch, or TensorFlow");
-    }
-
-    // Validation methodology
-    const validationMethods = [
-      'train_test_split', 'cross_validation', 'k-fold', 'holdout',
-      'validation_curve', 'learning_curve', 'stratified', 'split',
-      'cv', 'fold'
-    ];
-
-    if (validationMethods.some(method => 
-      responses.validation.toLowerCase().includes(method))) {
-      score += 1;
-      feedback.push("✅ Proper validation strategy identified");
-    } else {
-      feedback.push("📚 Learn about train/test splits and cross-validation");
-    }
-
-    // Metric understanding
-    const standardMetrics = [
-      'rmse', 'mae', 'mse', 'r2', 'accuracy', 'precision', 'recall',
-      'f1', 'auc', 'roc', 'log_loss', 'cross_entropy', 'confusion_matrix'
-    ];
-
-    if (standardMetrics.some(metric => 
-      responses.metric.toLowerCase().includes(metric))) {
-      score += 1;
-      feedback.push("✅ Using appropriate evaluation metrics");
-    } else {
-      feedback.push("📚 Review evaluation metrics for your problem type");
-    }
-
-    // Technical coherence
-    if (responses.approach.length > 30 && 
-        containsTechnicalTerms(responses.approach) && 
-        !containsConcerningLanguage(responses.approach)) {
-      score += 1;
-      feedback.push("✅ Clear technical approach described");
-    } else {
-      feedback.push("📚 Provide more technical detail about your approach");
-    }
-
-    // Determine readiness level and next steps
-    let level: 'ready' | 'nearly' | 'foundations';
-    let nextSteps: string[] = [];
-
-    if (score >= 3) {
-      level = 'ready';
-      nextSteps = [
-        "Double-check submission format requirements",
-        "Verify file sizes meet competition limits", 
-        "Test your pipeline end-to-end",
-        "Good luck! 🚀"
-      ];
-    } else if (score >= 2) {
-      level = 'nearly';
-      nextSteps = [
-        "Complete Kaggle Learn courses: https://kaggle.com/learn",
-        "Review scikit-learn documentation: https://scikit-learn.org", 
-        "Practice cross-validation techniques",
-        "Strengthen weak areas and resubmit"
-      ];
-    } else {
-      level = 'foundations';
-      nextSteps = [
-        "Complete 'Intro to Machine Learning' on Kaggle Learn",
-        "Practice with small datasets using scikit-learn",
-        "Understand train/test splits thoroughly",
-        "Return when you feel more confident"
-      ];
-    }
-
-    return {
-      score,
-      ready: score >= 3,
-      feedback,
-      nextSteps,
-      level
-    };
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = assessTechnicalReadiness(formData);
-    setAssessment(result);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      framework: '',
-      validation: '',
-      metric: '',
-      approach: ''
-    });
-    setAssessment(null);
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 3) return 'text-green-600';
-    if (score >= 2) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getScoreIcon = (level: string) => {
-    switch (level) {
-      case 'ready': return <CheckCircle className="w-6 h-6 text-green-600" />;
-      case 'nearly': return <AlertCircle className="w-6 h-6 text-yellow-600" />;
-      default: return <GraduationCap className="w-6 h-6 text-blue-600" />;
-    }
-  };
+// Neural Network Visualization
+const NeuralNetwork = () => {
+  const [nodes, setNodes] = useState<Array<{id: string; x: number; y: number; pulsing: boolean}>>([]);
+  
+  useEffect(() => {
+    const newNodes = Array(25).fill(null).map((_, i) => ({
+      id: `node-${i}`,
+      x: Math.random() * 380,
+      y: Math.random() * 280,
+      pulsing: Math.random() > 0.6
+    }));
+    setNodes(newNodes);
+  }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
-          <Target className="w-8 h-8 text-blue-600" />
-          Kaggle Challenge Readiness Validation
-        </h1>
-        <p className="text-lg text-gray-600 mb-4">
-          A gentle, educational approach to validating technical preparedness for machine learning competitions.
-        </p>
-        
-        <div className="flex gap-4 mb-6">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowEducationalContent(!showEducationalContent)}
-          >
-            <BookOpen className="w-4 h-4 mr-2" />
-            {showEducationalContent ? 'Hide' : 'Show'} Educational Content
-          </Button>
+    <div className="bg-black border border-cyan-500 rounded-lg p-4">
+      <h3 className="text-cyan-400 font-mono text-sm mb-3">🧠 NEURAL MESH TOPOLOGY</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: animated neural mesh SVG */}
+        <div className="relative w-full h-72 overflow-hidden">
+          <svg className="w-full h-full">
+          {/* Connection lines */}
+          {nodes.map((node, i) => 
+            nodes.slice(i + 1, i + 4).map((targetNode, j) => (
+              <motion.line
+                key={`${node.id}-${targetNode.id}`}
+                x1={node.x}
+                y1={node.y}
+                x2={targetNode.x}
+                y2={targetNode.y}
+                stroke="#00FFFF"
+                strokeWidth="1"
+                opacity="0.6"
+                animate={{ 
+                  strokeWidth: [0.5, 3, 0.5], 
+                  opacity: [0.2, 0.9, 0.2],
+                  stroke: ['#00FFFF', '#FF0080', '#00FF41', '#00FFFF']
+                }}
+                transition={{ duration: 2 + Math.random(), repeat: Infinity, delay: Math.random() * 2 }}
+              />
+            ))
+          )}
           
-          <Button 
-            variant="outline" 
-            onClick={() => setShowLearningFrameworkEval(!showLearningFrameworkEval)}
+          {/* Neural nodes */}
+          {nodes.map((node) => (
+            <motion.circle
+              key={node.id}
+              cx={node.x}
+              cy={node.y}
+              r={node.pulsing ? 6 : 3}
+              fill="#00FF41"
+              animate={{
+                r: node.pulsing ? [3, 10, 3] : [3, 5, 3],
+                fill: ['#00FF41', '#00FFFF', '#FF0080', '#FFFF00', '#00FF41']
+              }}
+              transition={{ duration: 1.5 + Math.random(), repeat: Infinity }}
+            />
+          ))}
+          </svg>
+        </div>
+
+        {/* Right: ARC grid + chess boards */}
+        <div className="flex flex-col gap-4">
+          <ArcGrid color="#00FFFF" title="ARC GRID" gridSize={10} className="w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChessBoard color="#FF0080" title="Neural Chess" sizePx={260} />
+            <ChessBoard color="#00FF41" title="Emoji Chess" sizePx={260} emojiMode />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Advanced Metrics Display
+const AdvancedMetrics = () => {
+  const [metrics, setMetrics] = useState({
+    quantumFlux: 99.7834,
+    tensorFields: 847329.234,
+    eigenValues: 42.000001,
+    hyperDimensions: 11,
+    consciousnessLevel: 97.4,
+    realityIntegrity: 99.99,
+    neuralPathways: 2847392,
+    quantumEntanglement: 99.7,
+    waveCollapse: 0.00001,
+    darkMatter: 23.8,
+    stringTheory: 10.994,
+    multiverse: 'STABLE'
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMetrics(prev => ({
+        ...prev,
+        quantumFlux: 99.7834 + (Math.random() - 0.5) * 0.01,
+        tensorFields: prev.tensorFields + Math.random() * 10000,
+        eigenValues: 42.000001 + (Math.random() - 0.5) * 0.000001,
+        consciousnessLevel: 97.4 + (Math.random() - 0.5) * 0.1,
+        realityIntegrity: 99.99 + (Math.random() - 0.5) * 0.001,
+        neuralPathways: prev.neuralPathways + Math.floor(Math.random() * 1000),
+        quantumEntanglement: 99.7 + (Math.random() - 0.5) * 0.05,
+        waveCollapse: 0.00001 + Math.random() * 0.00001,
+        darkMatter: 23.8 + (Math.random() - 0.5) * 0.1,
+        stringTheory: 10.994 + (Math.random() - 0.5) * 0.001
+      }));
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
+ 
+  return (
+    <div className="bg-black border border-purple-500 rounded-lg p-6 font-mono">
+      <h3 className="text-purple-400 text-lg mb-4 animate-pulse">⚛️ QUANTUM HYPERCORE STATUS</h3>
+      <div className="grid grid-cols-2 gap-6 text-sm">
+        <div className="space-y-1">
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Quantum Flux:</span>
+            <motion.span 
+              className="text-green-400 text-right"
+              animate={{ textShadow: ['0 0 5px #00FF41', '0 0 15px #00FF41', '0 0 5px #00FF41'] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >{metrics.quantumFlux.toFixed(4)}%</motion.span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Tensor Fields:</span>
+            <span className="text-yellow-400 text-right">{metrics.tensorFields.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Eigenvalues:</span>
+            <span className="text-purple-400 text-right">{metrics.eigenValues.toFixed(6)}</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Hyperdimensions:</span>
+            <span className="text-orange-400 text-right">{metrics.hyperDimensions}.D</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Consciousness:</span>
+            <motion.span 
+              className="text-green-400 text-right"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >{metrics.consciousnessLevel.toFixed(1)}%</motion.span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Reality Integrity:</span>
+            <span className="text-red-400 text-right">{metrics.realityIntegrity.toFixed(2)}%</span>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Neural Pathways:</span>
+            <span className="text-pink-400 text-right">{metrics.neuralPathways.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Entanglement:</span>
+            <span className="text-green-400 text-right">{metrics.quantumEntanglement.toFixed(1)}%</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Wave Collapse:</span>
+            <span className="text-blue-400 text-right">{metrics.waveCollapse.toFixed(5)}μs</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Dark Matter:</span>
+            <span className="text-purple-400 text-right">{metrics.darkMatter.toFixed(1)}%</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">String Theory:</span>
+            <span className="text-yellow-400 text-right">{metrics.stringTheory.toFixed(3)}</span>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="text-cyan-400 whitespace-nowrap">Multiverse:</span>
+            <motion.span 
+              className="text-green-400 text-right"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              ◉ {metrics.multiverse}
+            </motion.span>
+          </div>
+        </div>
+      </div>
+      {/* Extra verbose quantum telemetry with multilingual characters and math-like strings */}
+      <div className="mt-4 p-3 rounded border border-purple-700 bg-zinc-950">
+        <h4 className="text-purple-300 text-sm mb-2">Σ Quantum Telemetry Stream · 多言語 · Многоязычный · متعدد اللغات</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs leading-relaxed">
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2, repeat: Infinity }}>
+            λ≈{metrics.quantumFlux.toFixed(6)} · ϕ(t)={'e^{iπ}'} + ∑ᵢ ψᵢ · ℏ={Math.PI.toFixed(3)} · Δx·Δp ≥ ℏ/2
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.2, repeat: Infinity }}>
+            連結度: {metrics.quantumEntanglement.toFixed(2)}% · 行列値 λᵢ≈{metrics.eigenValues.toFixed(3)} · π≈3.14159 · τ≈6.28318
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.4, repeat: Infinity }}>
+            матрица Ξ[{metrics.hyperDimensions}D]: det(A)≈{(metrics.eigenValues*1.0001).toFixed(4)} · Σχ²≈{(metrics.tensorFields%997).toFixed(2)}
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.6, repeat: Infinity }}>
+            موجة انهيار: {metrics.waveCollapse.toFixed(5)} μs · 𝔻={metrics.darkMatter.toFixed(2)}% · reality(t)≈{metrics.realityIntegrity.toFixed(2)}%
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2.8, repeat: Infinity }}>
+            ᚠᚢᚦ ᛗᚨᛏᚺ σ⊗τ · 字形: Σ形態 · Συνείδηση={metrics.consciousnessLevel.toFixed(1)}% · 🧬 paths={metrics.neuralPathways.toLocaleString()}
+          </motion.div>
+          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 3.0, repeat: Infinity }}>
+            String(Μ): {metrics.stringTheory.toFixed(3)} · Multiverse: {metrics.multiverse} · ∮ E·dl = − dΦᴮ/dt
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Floating Particles Effect
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+}
+
+const FloatingParticles: React.FC = () => {
+  const [particles, setParticles] = useState<Particle[]>([]);
+
+  useEffect(() => {
+    const newParticles: Particle[] = Array(50).fill(null).map((_, i) => ({
+      id: i,
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 2,
+      color: Object.values(neonColors)[Math.floor(Math.random() * Object.values(neonColors).length)],
+      size: Math.random() * 4 + 2
+    }));
+    setParticles(newParticles);
+
+    const interval = setInterval(() => {
+      setParticles((prevParticles: Particle[]) => 
+        prevParticles.map(p => ({
+          ...p,
+          x: (p.x + p.vx + window.innerWidth) % window.innerWidth,
+          y: (p.y + p.vy + window.innerHeight) % window.innerHeight
+        }))
+      );
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0">
+      {particles.map(particle => (
+        <motion.div
+          key={particle.id}
+          className="absolute rounded-full opacity-30"
+          style={{
+            x: particle.x,
+            y: particle.y,
+            width: particle.size,
+            height: particle.size,
+            backgroundColor: particle.color,
+            boxShadow: `0 0 10px ${particle.color}`
+          }}
+          animate={{
+            scale: [1, 1.5, 1],
+            opacity: [0.3, 0.7, 0.3]
+          }}
+          transition={{ duration: 2 + Math.random() * 2, repeat: Infinity }}
+        />
+      ))}
+    </div>
+  );
+};
+
+
+// Main ARC-AGI Component
+export default function ArcAgiPage() {
+  const [systemStatus] = useState({
+    coreTemp: -273.15,
+    quantumCores: '∞/∞',
+    realityEngine: 'ACTIVE',
+    timeFlow: 'SYNCHRONIZED',
+    spaceTime: 'STABLE',
+    probability: 99.99999
+  });
+
+  // Generate fake impressive data
+  const generateData = () => Array(8).fill(null).map(() => Math.random() * 100);
+
+  return (
+    <div className="min-h-screen bg-black text-white font-mono relative overflow-hidden">
+      {/* Background Effects */}
+      <MatrixRain />
+      <FloatingParticles />
+      
+      {/* Scanline Effect */}
+      <div className="fixed inset-0 pointer-events-none z-10">
+        <motion.div 
+          className="absolute w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-30"
+          animate={{ y: [0, window.innerHeight, 0] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-20 bg-black bg-opacity-90 border-b border-cyan-400 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <motion.div 
+              className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-pink-500 rounded-lg flex items-center justify-center"
+              animate={{ 
+                boxShadow: [
+                  '0 0 20px #00FFFF',
+                  '0 0 30px #FF0080',
+                  '0 0 20px #00FFFF'
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <span className="text-2xl">⚛️</span>
+            </motion.div>
+            <div>
+              <motion.h1 
+                className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-pink-500 to-yellow-400 bg-clip-text text-transparent"
+                animate={{ 
+                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                HYPERDIMENSIONAL COMPUTING AGI NEURAL INTERFACE
+              </motion.h1>
+              <p className="text-sm text-gray-400">
+                Advanced Reality Manipulation System v∞.∞.∞ | Hyperdimensional Interface
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-6">
+            <div className="text-right">
+              <div className="text-sm text-gray-400">SYSTEM STATUS</div>
+              <motion.div 
+                className="text-green-400 font-bold"
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                ◉ TRANSCENDENT
+              </motion.div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-400">REALITY LEVEL</div>
+              <div className="text-red-400 font-bold animate-pulse">MAXIMUM</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Dashboard Content */}
+      <div className="relative z-20 p-6 space-y-6">
+        {/* Top Row - Quantum Metrics */}
+        <QuantumMetrics />
+        {/* Three-column: left small components, center PromptInterface, right BioCard */}
+        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left sidebar: smaller components */}
+          <div className="lg:col-span-3 flex flex-col gap-4">
+            <ArcGrid color="#00FFFF" title="ARC GRID (mini)" gridSize={10} className="w-full" />
+            <ChessBoard color="#FF0080" title="Neural Chess (mini)" sizePx={220} />
+          </div>
+          {/* Center: main prompt interface */}
+          <div className="lg:col-span-6">
+            <PromptInterface />
+          </div>
+          {/* Right: Bio */}
+          <div className="lg:col-span-3">
+            <BioCard />
+          </div>
+        </div>
+
+        {/* ARC-AGI Pattern Grid Wall (compact 1x4) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <ArcGrid color="#00FFFF" title="ARC-AGI" gridSize={10} patternId="#001" className="w-full" />
+          <ArcGrid color="#FF0080" title="ARC-AGI" gridSize={10} patternId="#002" className="w-full" />
+          <ArcGrid color="#00FF41" title="ARC-AGI" gridSize={10} patternId="#003" className="w-full" />
+          <ArcGrid color="#8000FF" title="ARC-AGI" gridSize={10} patternId="#004" className="w-full" />
+        </div>
+
+        {/* Neural Network */}
+        <NeuralNetwork />
+
+        {/* Live Counters */}
+        <div className="bg-black border border-yellow-500 rounded-lg p-6">
+          <h3 className="text-yellow-400 text-lg mb-4 animate-pulse">🚀 LIVE COMPUTATION METRICS</h3>
+          <div className="grid grid-cols-4 gap-6">
+            <LiveCounter
+              label="Neural Ops/sec"
+              value={847329847}
+              increment={() => Math.floor(Math.random() * 10000) + 1000}
+              color="text-cyan-400"
+            />
+            <LiveCounter
+              label="Quantum States"
+              value={999999999}
+              suffix=" qbits"
+              increment={() => Math.floor(Math.random() * 100000) + 10000}
+              color="text-green-400"
+            />
+            <LiveCounter
+              label="Reality Patches"
+              value={2847329}
+              increment={() => Math.floor(Math.random() * 1000) + 100}
+              color="text-pink-400"
+            />
+            <LiveCounter
+              label="Consciousness Units"
+              value={99999999}
+              increment={() => Math.floor(Math.random() * 50000) + 5000}
+              color="text-purple-400"
+            />
+          </div>
+        </div>
+
+        {/* Prompt Interface moved above, removing inline block to prevent duplication */}
+
+        {/* System Status Footer */}
+        <div className="bg-black border border-red-500 rounded-lg p-4">
+          <div className="grid grid-cols-4 gap-4 text-sm font-mono">
+            <div>
+              <span className="text-red-400">⚠️ CORE TEMP:</span> 
+              <span className="text-cyan-400 ml-2">-273.15°K</span>
+            </div>
+            <div>
+              <span className="text-red-400">⚛️ Q-CORES:</span> 
+              <span className="text-green-400 ml-2">∞/∞</span>
+            </div>
+            <div>
+              <span className="text-red-400">🌌 REALITY:</span> 
+              <motion.span 
+                className="text-yellow-400 ml-2"
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              >STABLE</motion.span>
+            </div>
+            <div>
+              <span className="text-red-400">⏰ SPACETIME:</span> 
+              <span className="text-purple-400 ml-2">LOCKED</span>
+            </div>
+          </div>
+          <motion.div 
+            className="mt-2 text-xs text-orange-400 animate-pulse"
+            animate={{ color: ['#FF4000', '#FFFF00', '#FF4000'] }}
+            transition={{ duration: 2, repeat: Infinity }}
           >
-            <Brain className="w-4 h-4 mr-2" />
-            {showLearningFrameworkEval ? 'Hide' : 'Evaluate my learning framework'}
-          </Button>
+            ⚠️ WARNING: Reality buffer overflow detected. Consciousness leak in sector 7G.
+          </motion.div>
         </div>
       </div>
 
-      {showEducationalContent && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5" />
-              Understanding What Makes Real Machine Learning
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-yellow-500" />
-                Training Data Reality Check
-              </h3>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="mb-3 font-medium">Data only becomes training data if you:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li><strong>Clean and label it</strong> - Raw data needs preprocessing, missing value handling, and proper labels</li>
-                  <li><strong>Convert it into a supervised dataset</strong> - For supervised learning or RLHF (Reinforcement Learning from Human Feedback)</li>
-                  <li><strong>Actually run an optimization procedure</strong> - Gradient descent, backpropagation, or other algorithms that update model weights</li>
-                </ul>
-                <p className="mt-3 text-sm italic">Without these steps, nothing in the model changes. Just having data files doesn't train anything.</p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-500" />
-                How Models Actually Learn
-              </h3>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <p className="mb-3">Models learn through mathematical optimization:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li><strong>Gradient Descent:</strong> Iteratively adjusting weights to minimize loss</li>
-                  <li><strong>Backpropagation:</strong> Computing gradients through the computational graph</li>
-                  <li><strong>Loss Functions:</strong> Mathematical measures of prediction error (MSE, cross-entropy, etc.)</li>
-                  <li><strong>Epochs:</strong> Complete passes through the training dataset</li>
-                </ul>
-                <p className="mt-3 text-sm italic">Key Point: Models don't "understand" or "think" - they optimize mathematical functions through calculus and linear algebra.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {showLearningFrameworkEval && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5" />
-              Learning Framework Evaluation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-yellow-500" />
-                Understanding AI Conversations vs. Machine Learning Research
-              </h3>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <p className="mb-3 font-medium">Chatting with AI assistants is not machine learning research because:</p>
-                <ul className="list-disc list-inside space-y-2 text-sm">
-                  <li><strong>No training occurs</strong> - The model weights don't change during our conversation</li>
-                  <li><strong>No data collection process</strong> - Conversations aren't systematically processed into training datasets</li>
-                  <li><strong>No optimization algorithms run</strong> - There's no gradient descent, backpropagation, or parameter updates</li>
-                  <li><strong>No validation methodology</strong> - There's no way to measure if ideas actually improve model performance</li>
-                </ul>
-                <p className="mt-3 text-sm italic text-amber-700">
-                  Think of it like this: discussing basketball strategy doesn't make you play basketball - you'd need to actually practice with a ball, court, and opponents.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Target className="w-5 h-5 text-blue-500" />
-                How ARC-AGI Research Actually Works
-              </h3>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="mb-3">Real ARC-AGI research involves:</p>
-                <ul className="list-disc list-inside space-y-2 text-sm">
-                  <li><strong>Implementing algorithms</strong> - Writing code that can process the ARC task grids programmatically</li>
-                  <li><strong>Pattern recognition systems</strong> - Building computer vision or symbolic reasoning systems</li>
-                  <li><strong>Evaluation on test tasks</strong> - Running your system against the official ARC evaluation dataset</li>
-                  <li><strong>Measurable performance metrics</strong> - Getting quantifiable scores on how many tasks your system solves</li>
-                  <li><strong>Reproducible results</strong> - Others can run your code and get the same results</li>
-                </ul>
-                <p className="mt-3 text-sm italic text-blue-700">
-                  ARC-AGI researchers submit working code and performance benchmarks, not conversation transcripts or theoretical discussions.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-green-500" />
-                Transitioning from Conversations to Real Research
-              </h3>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <p className="mb-3">If you've been exploring ideas through AI conversations, here's how to move toward actual research:</p>
-                <ul className="list-disc list-inside space-y-2 text-sm">
-                  <li><strong>Download the ARC dataset</strong> - Get the actual JSON files with the puzzle tasks</li>
-                  <li><strong>Write code to parse tasks</strong> - Build functions that can read the grid patterns programmatically</li>
-                  <li><strong>Implement pattern detection</strong> - Create algorithms that identify transformations between input/output grids</li>
-                  <li><strong>Test on validation tasks</strong> - Run your system and measure how many tasks it solves correctly</li>
-                  <li><strong>Document your methodology</strong> - Write up your approach so others can understand and reproduce it</li>
-                </ul>
-                <p className="mt-3 text-sm italic text-green-700">
-                  Remember: The goal is to build systems that can solve ARC tasks automatically, not to have more sophisticated conversations about them.
-                </p>
-              </div>
-            </div>
-
-            <Alert className="mt-6">
-              <Brain className="w-4 h-4" />
-              <AlertDescription>
-                <strong>Gentle Reality Check:</strong> If you've spent months discussing ML concepts with AI assistants, 
-                that time could have been spent learning Python, implementing actual algorithms, and building working systems. 
-                The research community values code that works, not conversations about code that might work. 💪
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
-
-      {!assessment ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Rocket className="w-5 h-5" />
-              Technical Readiness Assessment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="framework" className="text-base font-medium">
-                  1. Framework & Tools
-                </Label>
-                <p className="text-sm text-gray-600 mb-3">
-                  What machine learning framework and tools are you using?
-                </p>
-                <Input
-                  id="framework"
-                  value={formData.framework}
-                  onChange={(e) => handleInputChange('framework', e.target.value)}
-                  placeholder="e.g., scikit-learn, PyTorch, TensorFlow, XGBoost..."
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Real ML work requires actual software libraries with documented APIs and mathematical implementations.
-                </p>
-              </div>
-
-              <Separator />
-
-              <div>
-                <Label htmlFor="validation" className="text-base font-medium">
-                  2. Data Validation Strategy
-                </Label>
-                <p className="text-sm text-gray-600 mb-3">
-                  How are you validating your model's performance?
-                </p>
-                <Textarea
-                  id="validation"
-                  value={formData.validation}
-                  onChange={(e) => handleInputChange('validation', e.target.value)}
-                  placeholder="e.g., train_test_split with 80/20 ratio, 5-fold cross-validation, holdout test set..."
-                  className="w-full min-h-[80px]"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Without proper validation, you can't trust your results. This is fundamental to the scientific method in ML.
-                </p>
-              </div>
-
-              <Separator />
-
-              <div>
-                <Label htmlFor="metric" className="text-base font-medium">
-                  3. Evaluation Metrics
-                </Label>
-                <p className="text-sm text-gray-600 mb-3">
-                  What evaluation metric are you optimizing for?
-                </p>
-                <Input
-                  id="metric"
-                  value={formData.metric}
-                  onChange={(e) => handleInputChange('metric', e.target.value)}
-                  placeholder="e.g., RMSE, accuracy, F1-score, AUC-ROC..."
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Different problems require different mathematical measures of success.
-                </p>
-              </div>
-
-              <Separator />
-
-              <div>
-                <Label htmlFor="approach" className="text-base font-medium">
-                  4. Model Architecture or Approach
-                </Label>
-                <p className="text-sm text-gray-600 mb-3">
-                  Describe your modeling approach or architecture.
-                </p>
-                <Textarea
-                  id="approach"
-                  value={formData.approach}
-                  onChange={(e) => handleInputChange('approach', e.target.value)}
-                  placeholder="e.g., Random Forest with feature engineering, CNN for image classification, ensemble of gradient boosting models..."
-                  className="w-full min-h-[100px]"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Real ML involves deliberate choices about algorithms, features, and model complexity.
-                </p>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" className="flex-1">
-                  Assess My Readiness
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Clear Form
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {getScoreIcon(assessment.level)}
-                Assessment Results: {assessment.score}/4
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className={`text-2xl font-bold ${getScoreColor(assessment.score)}`}>
-                    Score: {assessment.score}/4
-                  </span>
-                  <Badge variant={assessment.ready ? "default" : "secondary"}>
-                    {assessment.level === 'ready' ? 'Ready to Submit ✅' : 
-                     assessment.level === 'nearly' ? 'Nearly Ready 📚' : 
-                     'Build Foundations First 🌱'}
-                  </Badge>
-                </div>
-
-                <div className="space-y-3">
-                  {assessment.feedback.map((item, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      {item.startsWith('✅') ? 
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" /> :
-                        <BookOpen className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      }
-                      <span className="text-sm">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-3">Next Steps:</h3>
-                <ul className="space-y-2">
-                  {assessment.nextSteps.map((step, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0" />
-                      <span className="text-sm">{step}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {assessment.level === 'foundations' && (
-                <Alert className="mt-6">
-                  <Lightbulb className="w-4 h-4" />
-                  <AlertDescription>
-                    <strong>Remember:</strong> Real ML expertise comes from understanding the mathematics
-                    and implementing algorithms step by step. There are no shortcuts,
-                    but that's what makes it rewarding! 💪
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="flex gap-4">
-            <Button onClick={resetForm} className="flex-1">
-              Take Assessment Again
-            </Button>
-          </div>
+      {/* Warning Messages */}
+      <motion.div 
+        className="fixed bottom-4 right-4 bg-red-900 border border-red-500 rounded p-3 max-w-sm"
+        animate={{ opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <div className="text-red-400 text-xs font-mono">
+          ⚠️ WARNING: Reality buffer overflow detected<br/>
+          🔄 Auto-patching spacetime continuum...<br/>
+          📡 Quantum entanglement at 847.2% capacity
         </div>
-      )}
-
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5" />
-            Educational Resources
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <h4 className="font-semibold mb-2">Absolute Beginners</h4>
-              <ul className="text-sm space-y-1">
-                <li>• Kaggle Learn: Free, hands-on courses</li>
-                <li>• 3Blue1Brown Neural Networks</li>
-                <li>• Andrew Ng's Course: Stanford CS229</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Intermediate</h4>
-              <ul className="text-sm space-y-1">
-                <li>• Hands-On Machine Learning (Géron)</li>
-                <li>• Fast.ai: Top-down learning</li>
-                <li>• Papers with Code implementations</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Advanced</h4>
-              <ul className="text-sm space-y-1">
-                <li>• Elements of Statistical Learning</li>
-                <li>• Deep Learning Book (Goodfellow)</li>
-                <li>• Research papers: arXiv.org</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </motion.div>
     </div>
   );
 }
