@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Deployment Template Validation Error:** Fixed template validation failure during deployment by ensuring the `client/public/docs` directory containing template markdown files is copied to the Docker production container. This resolves the "Templates directory not found" error that was blocking successful deployments.
+
 ### Added
 - **OpenAI Prompt ID/Version Support Plan:** Created comprehensive implementation plan in `docs/openai-prompt-id-version-plan.md` for integrating OpenAI's Prompt Templates feature using the Responses API. The plan covers:
   - Prompt ID/version execution with variable substitution
