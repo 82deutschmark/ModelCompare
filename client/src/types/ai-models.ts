@@ -1,39 +1,48 @@
 /**
- * AI Models Type Definitions - Frontend Model Interfaces and Provider Mappings
- * 
- * This module contains TypeScript type definitions specific to the frontend
- * application for AI model management and response handling. It provides:
- * 
- * - Model interface definitions for UI components
- * - Provider grouping mappings for organized model selection
- * - Response status types and result interfaces
- * - Frontend-specific type extensions for UI state management
- * 
- * These types complement the shared schema definitions and provide additional
- * frontend-specific typing for component props, state management, and UI logic.
- * 
- * Author: Replit Agent
- * Date: August 9, 2025
+ * Author: Claude Code using Sonnet 4
+ * Date: 2025-01-14
+ * PURPOSE: Frontend AI model type definitions compatible with new centralized model configuration.
+ * Updated to match shared/models.ts structure for consistency and proper UI rendering.
+ * SRP/DRY check: Pass - Single responsibility for frontend type definitions
+ * shadcn/ui: Pass - Types support shadcn/ui component integration
  */
+
+// Re-export the shared ModelConfig for compatibility
+export type { ModelConfig } from '@shared/api-types';
 
 export interface AIModel {
   id: string;
   name: string;
   provider: string;
-  model: string;
-  knowledgeCutoff: string;
-  capabilities: {
+  color: string;
+  premium: boolean;
+  cost: { input: string; output: string };
+  supportsTemperature: boolean;
+  responseTime: { speed: 'fast' | 'moderate' | 'slow'; estimate: string };
+  isReasoning?: boolean;
+  apiModelName: string;
+  modelType: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  releaseDate?: string;
+  requiresPromptFormat?: boolean;
+  supportsStructuredOutput?: boolean;
+
+  // Legacy compatibility fields for existing components
+  model?: string;
+  knowledgeCutoff?: string;
+  capabilities?: {
     reasoning: boolean;
     multimodal: boolean;
     functionCalling: boolean;
     streaming: boolean;
   };
-  pricing: {
+  pricing?: {
     inputPerMillion: number;
     outputPerMillion: number;
     reasoningPerMillion?: number;
   };
-  limits: {
+  limits?: {
     maxTokens: number;
     contextWindow: number;
   };
