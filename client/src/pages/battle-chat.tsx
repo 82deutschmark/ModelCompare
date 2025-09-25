@@ -32,6 +32,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Sword, MessageSquare, Play, Brain, Settings, Plus, Users,
   Loader2, Send, DollarSign, Timer, Zap, Clock, Palette, Eye, BookOpen
@@ -463,10 +465,12 @@ export default function BattleChat() {
 
               {/* Setup Panel */}
               {showSetup && (
-                <div className="px-6 pb-4 border-b">
+                <>
+                <Separator />
+                <div className="px-6 pb-4">
                   {/* Template Selection */}
                   {!promptsLoading && battlePromptCategories.length > 0 && (
-                    <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                    <Alert className="mb-4">
                       <div className="flex items-center gap-2 mb-3">
                         <Settings className="w-4 h-4" />
                         <h3 className="text-sm font-medium">Battle Prompt Templates</h3>
