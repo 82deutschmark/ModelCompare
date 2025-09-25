@@ -27,6 +27,19 @@ export interface ModelConfig {
   id: string;
   name: string;
   provider: string;
+  color: string;
+  premium: boolean;
+  cost: { input: string; output: string };
+  supportsTemperature: boolean;
+  responseTime: { speed: 'fast' | 'moderate' | 'slow'; estimate: string };
+  isReasoning?: boolean;
+  apiModelName: string;
+  modelType: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  releaseDate?: string;
+  requiresPromptFormat?: boolean;
+  supportsStructuredOutput?: boolean;
   maxTokens?: number;
   temperature?: number;
 }

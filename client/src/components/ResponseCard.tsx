@@ -1,20 +1,11 @@
 /**
- * Response Card Component - Individual AI Model Response Display
- * 
- * This component renders a single AI model's response in a card format with:
- * - Model name and provider information in the header
- * - Status indicators (loading, success, error) with appropriate styling
- * - Response timing information when available
- * - Loading skeleton animations during API calls
- * - Error states with retry functionality
- * - Response content with proper typography and formatting
- * - Copy-to-clipboard functionality for successful responses
- * 
- * The component handles all possible response states and provides a consistent
- * interface for displaying AI model outputs in the comparison grid.
- * 
- * Author: Replit Agent
- * Date: August 9, 2025
+ * Author: Claude Code using Sonnet 4
+ * Date: 2025-01-14
+ * PURPOSE: Enhanced ResponseCard component using improved shadcn/ui patterns.
+ * Better status badges, alerts for errors, proper skeleton states, and consistent typography.
+ * Uses new centralized model configuration for provider colors and information.
+ * SRP/DRY check: Pass - Single responsibility (response display), reuses shadcn/ui components
+ * shadcn/ui: Pass - Uses Card, Badge, Alert, Skeleton, Collapsible, and other shadcn/ui components
  */
 
 import { useState } from "react";
@@ -22,9 +13,25 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Copy, Clock, AlertTriangle, CheckCircle, RotateCcw, Brain, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import {
+  Copy,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  RotateCcw,
+  Brain,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  DollarSign,
+  Activity
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
 interface ResponseCardProps {
@@ -43,7 +50,7 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
 
   const copyToClipboard = async () => {
     if (!response?.content) return;
-    
+
     setIsCopying(true);
     try {
       await navigator.clipboard.writeText(response.content);
@@ -65,9 +72,9 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
   const getStatusBadge = () => {
     if (!response) {
       return (
-        <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-700 px-1 py-0 text-xs">
-          <Clock className="w-2 h-2 mr-1" />
-          <span>Waiting</span>
+        <Badge variant="secondary">
+          <Clock className="w-3 h-3 mr-1" />
+          Waiting
         </Badge>
       );
     }
@@ -75,23 +82,23 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
     switch (response.status) {
       case 'loading':
         return (
-          <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1 py-0 text-xs">
-            <div className="w-2 h-2 mr-1 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-            <span>Loading</span>
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            Generating
           </Badge>
         );
       case 'success':
         return (
-          <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1 py-0 text-xs">
-            <CheckCircle className="w-2 h-2 mr-1" />
-            <span>Complete</span>
+          <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Complete
           </Badge>
         );
       case 'error':
         return (
-          <Badge variant="destructive" className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-1 py-0 text-xs">
-            <AlertTriangle className="w-2 h-2 mr-1" />
-            <span>Error</span>
+          <Badge variant="destructive">
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            Failed
           </Badge>
         );
       default:
@@ -99,33 +106,46 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
     }
   };
 
+  const getProviderIcon = (provider: string) => {
+    const icons: Record<string, string> = {
+      'OpenAI': 'OAI',
+      'Anthropic': 'ANT',
+      'Gemini': 'GEM',
+      'DeepSeek': 'DS',
+      'xAI': 'XAI',
+    };
+    return icons[provider] || provider.substring(0, 2).toUpperCase();
+  };
+
   const formatTime = (ms: number) => {
     return ms > 0 ? `${(ms / 1000).toFixed(1)}s` : '-';
   };
 
   return (
-    <Card className={`h-full transition-all duration-200 hover:shadow-md ${response?.status === 'error' ? 'border-red-200 dark:border-red-800 shadow-red-100/50' : 'border-gray-200 dark:border-gray-700 shadow-sm'}`}>
-      <CardHeader className={`pb-3 px-4 py-3 ${response?.status === 'error' ? 'bg-gradient-to-r from-red-50 to-red-50/80 dark:from-red-900/20 dark:to-red-900/10' : 'bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80'}`}>
+    <Card className={cn(
+      "h-full transition-all duration-200 hover:shadow-lg",
+      response?.status === 'error' && "border-destructive/50"
+    )}>
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-              model.provider === 'OpenAI' ? 'bg-green-500' :
-              model.provider === 'Anthropic' ? 'bg-orange-500' :
-              model.provider === 'Google' ? 'bg-blue-500' :
-              model.provider === 'DeepSeek' ? 'bg-purple-500' :
-              model.provider === 'xAI' ? 'bg-gray-500' : 'bg-gray-400'
-            }`}>
-              {model.provider.slice(0, 2).toUpperCase()}
-            </div>
+            {/* Provider Avatar using model color */}
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className={cn("text-xs font-bold text-white", model.color)}>
+                {getProviderIcon(model.provider)}
+              </AvatarFallback>
+            </Avatar>
+
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{model.name}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{model.provider}</p>
+              <h3 className="font-semibold text-sm">{model.name}</h3>
+              <p className="text-xs text-muted-foreground">{model.provider}</p>
             </div>
           </div>
+
           <div className="flex items-center space-x-2">
             {getStatusBadge()}
             {response && showTiming && (
-              <Badge variant="outline" className="text-xs px-2 py-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+              <Badge variant="outline" className="text-xs">
                 <Clock className="w-3 h-3 mr-1" />
                 {formatTime(response.responseTime || 0)}
               </Badge>
@@ -133,141 +153,154 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
           </div>
         </div>
       </CardHeader>
-      
-      <CardContent className="pt-0 px-4 pb-4">
+
+      <CardContent className="pt-0">
         {response?.status === 'loading' ? (
           <div className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-            <div className="mt-4">
-              <Skeleton className="h-16 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
             </div>
-            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-20 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
           </div>
         ) : response?.status === 'error' ? (
-          <div className="text-center py-4">
-            <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-xs text-red-600 dark:text-red-400 mb-3">
-              {response.error || 'An error occurred while processing this request.'}
-            </p>
-            {onRetry && (
-              <Button
-                onClick={onRetry}
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20 px-2 py-1"
-              >
-                <RotateCcw className="w-3 h-3 mr-1" />
-                <span className="text-xs">Retry</span>
-              </Button>
-            )}
-          </div>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="mt-2">
+              <p className="mb-3">
+                {response.error || 'An error occurred while processing this request.'}
+              </p>
+              {onRetry && (
+                <Button
+                  onClick={onRetry}
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Retry
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
         ) : response?.status === 'success' ? (
           <div className="space-y-4">
+            {/* Response Content */}
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap text-sm p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border-l-4 border-blue-500">
-                {response.content}
+              <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                  {response.content}
+                </pre>
               </div>
             </div>
 
-            {/* System Prompt (if available) */}
+            {/* System Prompt */}
             {systemPrompt && (
               <Collapsible open={showSystemPrompt} onOpenChange={setShowSystemPrompt}>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-start px-1 py-1 h-6">
-                    <FileText className="w-3 h-3 mr-1" />
-                    <span className="text-xs">System Prompt</span>
-                    {showSystemPrompt ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-8">
+                    <FileText className="w-4 h-4 mr-2" />
+                    System Prompt
+                    {showSystemPrompt ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                  <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {systemPrompt}
+                <CollapsibleContent className="mt-2">
+                  <div className="p-3 bg-secondary/50 rounded-lg border">
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                      {systemPrompt}
+                    </pre>
                   </div>
                 </CollapsibleContent>
               </Collapsible>
             )}
 
-            {/* Reasoning Logs (if available) */}
+            {/* Reasoning */}
             {response.reasoning && (
               <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-start px-1 py-1 h-6">
-                    <Brain className="w-3 h-3 mr-1" />
-                    <span className="text-xs">View Reasoning</span>
-                    {showReasoning ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-8">
+                    <Brain className="w-4 h-4 mr-2" />
+                    Reasoning Process
+                    {showReasoning ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-1 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
-                  <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {response.reasoning}
+                <CollapsibleContent className="mt-2">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
+                      {response.reasoning}
+                    </pre>
                   </div>
                 </CollapsibleContent>
               </Collapsible>
             )}
-            
-            {/* Token Usage and Cost Information */}
+
+            {/* Metrics */}
             {(response.tokenUsage || response.cost) && (
-              <div className="mt-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-750 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300">
+              <>
+                <Separator />
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   {response.tokenUsage && (
                     <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-1">
-                        <span className="text-xs">Tokens:</span>
-                        <span className="font-mono text-xs">{response.tokenUsage.input}→{response.tokenUsage.output}</span>
-                        {response.tokenUsage.reasoning && (
-                          <span className="text-amber-600 dark:text-amber-400 font-mono text-xs">
-                            +{response.tokenUsage.reasoning} reasoning
-                          </span>
-                        )}
-                      </div>
-                      {response.cost && (
-                        <div className="flex items-center space-x-1">
-                          <span className="text-xs">Cost:</span>
-                          <span className="font-mono text-green-600 dark:text-green-400 text-xs">
-                            ${response.cost.total.toFixed(4)}
-                          </span>
-                          {response.cost.reasoning && (
-                            <span className="text-amber-600 dark:text-amber-400 text-xs">
-                              (+${response.cost.reasoning.toFixed(4)} reasoning)
+                      <Activity className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium">Tokens</div>
+                        <div className="text-xs text-muted-foreground">
+                          {response.tokenUsage.input}→{response.tokenUsage.output}
+                          {response.tokenUsage.reasoning && (
+                            <span className="text-amber-600 dark:text-amber-400">
+                              {` +${response.tokenUsage.reasoning}`}
                             </span>
                           )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
-                  {!response.tokenUsage && response.cost && (
-                    <div className="flex items-center space-x-1">
-                      <span className="text-xs">Cost:</span>
-                      <span className="font-mono text-green-600 dark:text-green-400 text-xs">
-                        ${response.cost.total.toFixed(4)}
-                      </span>
+
+                  {response.cost && (
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium">Cost</div>
+                        <div className="text-xs text-muted-foreground">
+                          ${response.cost.total.toFixed(4)}
+                          {response.cost.reasoning && (
+                            <span className="text-amber-600 dark:text-amber-400">
+                              {` (+$${response.cost.reasoning.toFixed(4)})`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             )}
 
-            <div className="flex items-center justify-end pt-3 border-t border-gray-200 dark:border-gray-700">
+            {/* Copy Button */}
+            <div className="flex justify-end pt-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={copyToClipboard}
                 disabled={isCopying}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 h-8 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                className="hover:bg-muted"
               >
                 <Copy className="w-4 h-4 mr-2" />
-                <span className="text-sm font-medium">{isCopying ? 'Copied!' : 'Copy'}</span>
+                {isCopying ? 'Copied!' : 'Copy Response'}
               </Button>
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
+              <Clock className="w-6 h-6 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium">Waiting for response...</p>
+            <p className="text-sm font-medium text-muted-foreground">Waiting for response...</p>
           </div>
         )}
       </CardContent>
