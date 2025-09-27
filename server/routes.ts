@@ -206,8 +206,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Compare models endpoint
-  app.post("/api/compare", async (req, res) => {
+  // Compare models endpoint - protected with authentication and credit check
+  app.post("/api/compare", isAuthenticated, hasCredits, async (req, res) => {
     try {
       const { prompt, modelIds } = compareModelsSchema.parse(req.body);
       
@@ -240,8 +240,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Wait for all model calls to complete
       await Promise.all(modelPromises);
 
-      // Store the comparison
+      // Deduct credits for successful API calls (5 credits per model called)
+      const user = req.user as User;
       const storage = await getStorage();
+      const successfulCalls = modelIds.filter(modelId => responses[modelId]?.status === 'success').length;
+      const creditsToDeduct = successfulCalls * 5;
+      
+      if (creditsToDeduct > 0) {
+        await storage.deductCredits(user.id, creditsToDeduct);
+        contextLog(`Deducted ${creditsToDeduct} credits from user ${user.email} for ${successfulCalls} successful API calls`);
+      }
+
+      // Store the comparison
       const comparison = await storage.createComparison({
         prompt,
         selectedModels: modelIds,
