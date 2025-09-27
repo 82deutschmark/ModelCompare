@@ -26,7 +26,7 @@ import { contextLog, contextError } from './request-context.js';
 
 // Initialize Stripe with secret key from environment
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20', // Latest stable API version
+  apiVersion: '2025-08-27.basil', // Use the API version supported by this Stripe package
 });
 
 // Credit package definitions - these define what users can purchase
