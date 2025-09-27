@@ -30,13 +30,12 @@ import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
 import type { GenerateRequest, GenerateResponse, UnifiedMessage, ModelMessage } from "../shared/api-types.js";
 import { PromptBuilder } from "./prompt-builder.js";
-import { getDisplayForModelId } from "../shared/model-catalog.js";
+import { getDisplayForModelId, MODEL_CATALOG, type ModelDisplay } from "../shared/model-catalog.js";
 import { getDatabaseManager } from "./db.js";
 import { contextLog } from "./request-context.js";
 import { isAuthenticated, hasCredits } from "./auth.js";
 import type { User } from "../shared/schema.js";
 import { createPaymentIntent, handleStripeWebhook, getCreditPackages, validateStripeConfig } from "./stripe.js";
-import { MODELS, ModelLookup, type ModelConfig } from "../shared/models.js";
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -159,8 +158,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get available models - using centralized configuration
   app.get("/api/models", async (req, res) => {
     try {
-      // Use centralized model configuration for consistency
-      const models = MODELS.map(model => ({
+      // Use MODEL_CATALOG for display metadata
+      const models = Object.values(MODEL_CATALOG).map(model => ({
         // Map to expected frontend format (AIModel interface)
         id: model.key,
         name: model.name,
@@ -168,22 +167,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         color: model.color,
         premium: model.premium,
         cost: model.cost,
-        supportsTemperature: model.supportsTemperature,
+        supportsTemperature: model.supportsTemperature || true,
         responseTime: model.responseTime,
-        isReasoning: model.isReasoning,
-        apiModelName: model.apiModelName,
-        modelType: model.modelType,
-        contextWindow: model.contextWindow,
-        maxOutputTokens: model.maxOutputTokens,
-        releaseDate: model.releaseDate,
-        requiresPromptFormat: model.requiresPromptFormat,
-        supportsStructuredOutput: model.supportsStructuredOutput,
+        isReasoning: model.supportsReasoning || false,
+        apiModelName: model.key, // Use key as apiModelName
+        modelType: 'chat', // Default model type
+        contextWindow: 128000, // Default context window
+        maxOutputTokens: 4000, // Default max output tokens
+        releaseDate: '2024', // Default release date
+        requiresPromptFormat: false, // Default prompt format
+        supportsStructuredOutput: false, // Default structured output
 
-        // Legacy compatibility fields for existing components
-        model: model.apiModelName,
-        knowledgeCutoff: model.releaseDate || 'Unknown',
+        // Legacy compatibility fields for existing components  
+        model: model.key,
+        knowledgeCutoff: '2024',
         capabilities: {
-          reasoning: model.isReasoning || false,
+          reasoning: model.supportsReasoning || false,
           multimodal: false, // TODO: add multimodal support to model definitions
           functionCalling: false, // TODO: add function calling support to model definitions
           streaming: true, // Most models support streaming
@@ -191,11 +190,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pricing: {
           inputPerMillion: parseFloat(model.cost.input.replace(/\$/, '')),
           outputPerMillion: parseFloat(model.cost.output.replace(/\$/, '')),
-          reasoningPerMillion: model.isReasoning ? parseFloat(model.cost.output.replace(/\$/, '')) * 1.5 : undefined,
+          reasoningPerMillion: model.supportsReasoning ? parseFloat(model.cost.output.replace(/\$/, '')) * 1.5 : undefined,
         },
         limits: {
-          maxTokens: model.maxOutputTokens || 4000,
-          contextWindow: model.contextWindow || 128000,
+          maxTokens: 4000,
+          contextWindow: 128000,
         },
       }));
 
@@ -647,7 +646,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
             finishReason: 'stop',
             tokenUsage: result.tokenUsage ?? { input: 0, output: 0 },
             cost: result.cost ?? { total: 0, input: 0, output: 0 },
-            modelConfig: result.modelConfig
+            modelConfig: result.modelConfig as any
           };
 
           const response: GenerateResponse = {
