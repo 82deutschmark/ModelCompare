@@ -24,19 +24,22 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { callModel, callModelWithMessages, getAllModels, getReasoningModels } from "./providers/index.js";
-import { getStorage } from "./storage";
+import { getStorage } from "./storage.js";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
-import type { GenerateRequest, GenerateResponse, UnifiedMessage } from "../shared/api-types.js";
+import type { GenerateRequest, GenerateResponse, UnifiedMessage, ModelMessage } from "../shared/api-types.js";
 import { PromptBuilder } from "./prompt-builder.js";
 import { getDisplayForModelId } from "../shared/model-catalog.js";
 import { getDatabaseManager } from "./db.js";
 import { contextLog } from "./request-context.js";
-import type { ModelMessage } from "../shared/api-types.js";
+import { isAuthenticated, hasCredits } from "./auth.js";
+import type { User } from "../shared/schema.js";
+import { createPaymentIntent, handleStripeWebhook, getCreditPackages, validateStripeConfig } from "./stripe.js";
 import { MODELS, ModelLookup, type ModelConfig } from "../shared/models.js";
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
+  mode: z.enum(['compare', 'generate', 'reasoning']).default('compare'),
   modelIds: z.array(z.string()).min(1),
 });
 
