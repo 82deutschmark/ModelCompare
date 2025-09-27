@@ -99,6 +99,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch credits' });
     }
   });
+
+  // Stripe payment routes
+  // Get available credit packages
+  app.get("/api/stripe/packages", (req, res) => {
+    try {
+      const packages = getCreditPackages();
+      res.json({ packages });
+    } catch (error) {
+      console.error('Error fetching credit packages:', error);
+      res.status(500).json({ error: 'Failed to fetch credit packages' });
+    }
+  });
+
+  // Create payment intent for credit purchase
+  app.post("/api/stripe/create-payment-intent", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const { packageId } = req.body;
+
+      if (!packageId) {
+        return res.status(400).json({ error: 'Package ID is required' });
+      }
+
+      const result = await createPaymentIntent(user.id, packageId, user.email);
+      
+      res.json({
+        clientSecret: result.clientSecret,
+        packageInfo: result.packageInfo,
+      });
+    } catch (error) {
+      console.error('Error creating payment intent:', error);
+      res.status(500).json({ error: 'Failed to create payment intent' });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post("/api/stripe/webhook", async (req, res) => {
+    try {
+      const signature = req.headers['stripe-signature'] as string;
+      
+      if (!signature) {
+        return res.status(400).json({ error: 'Missing stripe-signature header' });
+      }
+
+      const result = await handleStripeWebhook(req.body, signature);
+      
+      if (result.success) {
+        res.json({ received: true, message: result.message });
+      } else {
+        res.status(400).json({ error: result.message });
+      }
+    } catch (error) {
+      console.error('Error handling webhook:', error);
+      res.status(400).json({ error: 'Webhook processing failed' });
+    }
+  });
   
   // Get available models - using centralized configuration
   app.get("/api/models", async (req, res) => {
