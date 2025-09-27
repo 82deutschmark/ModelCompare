@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import Compare from "@/pages/compare";
 import Home from "@/pages/home";
 import Battle from "@/pages/battle-chat";
 import CreativeCombat from "./pages/creative-combat";
@@ -17,7 +18,8 @@ import ArcAgiPage from "./pages/dashboard";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={Compare} />
+      <Route path="/legacy" component={Home} />
       <Route path="/battle" component={Battle} />
       <Route path="/creative-combat" component={CreativeCombat} />
       <Route path="/debate" component={Debate} />
