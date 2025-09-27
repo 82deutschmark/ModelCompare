@@ -1,6 +1,6 @@
 /**
  * Author: Claude Code using Sonnet 4
- * Date: 2025-01-14
+ * Date: 2025-09-14
  * PURPOSE: Centralized model configuration - single source of truth for all AI models.
  * This file contains the comprehensive model data array from arc-explainer, adapted for ModelCompare.
  * It provides unified model definitions, capabilities, pricing, and provider information.
