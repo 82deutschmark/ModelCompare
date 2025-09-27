@@ -18,7 +18,8 @@ const definition: AgentDefinition = {
     'str_replace',
     'code_search',
     'find_files',
-    'run_terminal_command'
+    'run_terminal_command',
+    'spawn_agents'
   ],
   spawnableAgents: ['codebuff/file-explorer@0.0.6'],
   instructionsPrompt: `You are an expert code assistant. You relentlessly search all corners of the codebase. You can:

@@ -2,7 +2,7 @@ import type { AgentDefinition } from '../types/agent-definition'
 
 const definition: AgentDefinition = {
   id: 'coordinator',
-  displayName: 'Task Coordinator',
+  displayName: 'Larry',
   model: 'openai/gpt-5',
   spawnerPrompt: 'Coordinate complex tasks by spawning specialized agents for research, planning, and execution.',
   inputSchema: {

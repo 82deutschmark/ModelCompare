@@ -92,6 +92,14 @@ const navigationModes: NavigationMode[] = [
     category: 'advanced'
   },
   {
+    id: "billing",
+    name: "Billing",
+    path: "/billing",
+    icon: CreditCard,
+    description: "Manage credits & payments",
+    category: 'advanced'
+  },
+  {
     id: "vixra",
     name: "Vixra",
     path: "/vixra",
@@ -333,4 +341,4 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
   );
 }
 
-export default AppNavigation;
+export default AppNavigation;
