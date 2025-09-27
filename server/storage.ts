@@ -19,10 +19,10 @@
  * Date: August 20, 2025
  */
 
-import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, comparisons, vixraSessions, promptAudits } from "@shared/schema";
+import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, comparisons, vixraSessions, promptAudits, users } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, ensureTablesExist } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   createComparison(comparison: InsertComparison): Promise<Comparison>;
@@ -39,6 +39,20 @@ export interface IStorage {
   createPromptAudit(audit: InsertPromptAudit): Promise<PromptAuditRecord>;
   getPromptAudit(id: string): Promise<PromptAuditRecord | undefined>;
   getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]>;
+  
+  // User authentication operations
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  upsertUser(userData: UpsertUser): Promise<User>;
+  
+  // Credit management operations
+  getUserCredits(userId: string): Promise<number>;
+  deductCredits(userId: string, amount: number): Promise<User>;
+  addCredits(userId: string, amount: number): Promise<User>;
+  
+  // Stripe integration operations
+  updateStripeCustomerId(userId: string, customerId: string): Promise<User>;
+  updateUserStripeInfo(userId: string, info: StripeInfo): Promise<User>;
 }
 
 export class DbStorage implements IStorage {
@@ -119,17 +133,125 @@ export class DbStorage implements IStorage {
     }
     return await query.orderBy(desc(promptAudits.createdAt));
   }
+
+  // User authentication operations
+  async getUser(id: string): Promise<User | undefined> {
+    const [result] = await requireDb().select().from(users).where(eq(users.id, id));
+    return result;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [result] = await requireDb().select().from(users).where(eq(users.email, email));
+    return result;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    if (userData.id) {
+      // Update existing user
+      const [result] = await requireDb()
+        .update(users)
+        .set({
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          credits: userData.credits,
+          stripeCustomerId: userData.stripeCustomerId,
+          stripeSubscriptionId: userData.stripeSubscriptionId,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userData.id))
+        .returning();
+      return result;
+    } else {
+      // Create new user
+      const [result] = await requireDb()
+        .insert(users)
+        .values({
+          email: userData.email!,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          credits: userData.credits ?? 500,
+          stripeCustomerId: userData.stripeCustomerId,
+          stripeSubscriptionId: userData.stripeSubscriptionId,
+        })
+        .returning();
+      return result;
+    }
+  }
+
+  // Credit management operations
+  async getUserCredits(userId: string): Promise<number> {
+    const [result] = await requireDb()
+      .select({ credits: users.credits })
+      .from(users)
+      .where(eq(users.id, userId));
+    return result?.credits ?? 0;
+  }
+
+  async deductCredits(userId: string, amount: number): Promise<User> {
+    const [result] = await requireDb()
+      .update(users)
+      .set({
+        credits: sql`${users.credits} - ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result;
+  }
+
+  async addCredits(userId: string, amount: number): Promise<User> {
+    const [result] = await requireDb()
+      .update(users)
+      .set({
+        credits: sql`${users.credits} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result;
+  }
+
+  // Stripe integration operations
+  async updateStripeCustomerId(userId: string, customerId: string): Promise<User> {
+    const [result] = await requireDb()
+      .update(users)
+      .set({
+        stripeCustomerId: customerId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result;
+  }
+
+  async updateUserStripeInfo(userId: string, info: StripeInfo): Promise<User> {
+    const [result] = await requireDb()
+      .update(users)
+      .set({
+        stripeCustomerId: info.stripeCustomerId,
+        stripeSubscriptionId: info.stripeSubscriptionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result;
+  }
 }
 
 export class MemStorage implements IStorage {
   private comparisons: Map<string, Comparison>;
   private vixraSessions: Map<string, VixraSession>;
   private promptAudits: Map<string, PromptAuditRecord>;
+  private users: Map<string, User>;
 
   constructor() {
     this.comparisons = new Map();
     this.vixraSessions = new Map();
     this.promptAudits = new Map();
+    this.users = new Map();
   }
 
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
@@ -247,6 +369,133 @@ export class MemStorage implements IStorage {
     const audits = Array.from(this.promptAudits.values());
     const filtered = templateId ? audits.filter(a => a.templateId === templateId) : audits;
     return filtered.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  // User authentication operations
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const users = Array.from(this.users.values());
+    return users.find(user => user.email === email);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    if (userData.id) {
+      // Update existing user
+      const existing = this.users.get(userData.id);
+      if (!existing) {
+        throw new Error(`User with id ${userData.id} not found`);
+      }
+      
+      const updated: User = {
+        ...existing,
+        email: userData.email || existing.email,
+        firstName: userData.firstName ?? existing.firstName,
+        lastName: userData.lastName ?? existing.lastName,
+        profileImageUrl: userData.profileImageUrl ?? existing.profileImageUrl,
+        credits: userData.credits ?? existing.credits,
+        stripeCustomerId: userData.stripeCustomerId ?? existing.stripeCustomerId,
+        stripeSubscriptionId: userData.stripeSubscriptionId ?? existing.stripeSubscriptionId,
+        updatedAt: new Date(),
+      };
+      
+      this.users.set(userData.id, updated);
+      return updated;
+    } else {
+      // Create new user
+      const id = randomUUID();
+      const newUser: User = {
+        id,
+        email: userData.email!,
+        firstName: userData.firstName ?? null,
+        lastName: userData.lastName ?? null,
+        profileImageUrl: userData.profileImageUrl ?? null,
+        credits: userData.credits ?? 500,
+        stripeCustomerId: userData.stripeCustomerId ?? null,
+        stripeSubscriptionId: userData.stripeSubscriptionId ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      this.users.set(id, newUser);
+      return newUser;
+    }
+  }
+
+  // Credit management operations
+  async getUserCredits(userId: string): Promise<number> {
+    const user = this.users.get(userId);
+    return user?.credits ?? 0;
+  }
+
+  async deductCredits(userId: string, amount: number): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    const currentCredits = user.credits ?? 0;
+    const updated: User = {
+      ...user,
+      credits: Math.max(0, currentCredits - amount),
+      updatedAt: new Date(),
+    };
+    
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  async addCredits(userId: string, amount: number): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    const currentCredits = user.credits ?? 0;
+    const updated: User = {
+      ...user,
+      credits: currentCredits + amount,
+      updatedAt: new Date(),
+    };
+    
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  // Stripe integration operations
+  async updateStripeCustomerId(userId: string, customerId: string): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    const updated: User = {
+      ...user,
+      stripeCustomerId: customerId,
+      updatedAt: new Date(),
+    };
+    
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  async updateUserStripeInfo(userId: string, info: StripeInfo): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    
+    const updated: User = {
+      ...user,
+      stripeCustomerId: info.stripeCustomerId ?? user.stripeCustomerId,
+      stripeSubscriptionId: info.stripeSubscriptionId ?? user.stripeSubscriptionId,
+      updatedAt: new Date(),
+    };
+    
+    this.users.set(userId, updated);
+    return updated;
   }
 }
 

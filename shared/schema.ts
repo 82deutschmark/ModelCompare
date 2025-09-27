@@ -78,6 +78,27 @@ export const promptAudits = pgTable("prompt_audits", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// User authentication and billing tables
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique().notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  credits: integer("credits").default(500), // Starting credits
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Session storage for authentication
+export const sessions = pgTable("sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
+
 export const insertComparisonSchema = createInsertSchema(comparisons).omit({
   id: true,
   createdAt: true,
@@ -94,12 +115,31 @@ export const insertPromptAuditSchema = createInsertSchema(promptAudits).omit({
   createdAt: true,
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSessionSchema = createInsertSchema(sessions);
+
 export type InsertComparison = z.infer<typeof insertComparisonSchema>;
 export type Comparison = typeof comparisons.$inferSelect;
 export type InsertVixraSession = z.infer<typeof insertVixraSessionSchema>;
 export type VixraSession = typeof vixraSessions.$inferSelect;
 export type InsertPromptAudit = z.infer<typeof insertPromptAuditSchema>;
 export type PromptAuditRecord = typeof promptAudits.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type Session = typeof sessions.$inferSelect;
+
+// Additional types for authentication and billing
+export type UpsertUser = Omit<InsertUser, 'id'> & { id?: string };
+export type StripeInfo = {
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+};
 
 // AI Model types
 export const aiModelSchema = z.object({
