@@ -1,3 +1,9 @@
+// UNKNOWN HOW THIS WORKS
+// UNKNOWN IF IT'S USED
+// UNKNOWN IF IT'S USEFUL
+
+
+
 import { VariableEngine } from './variable-engine';
 import { VARIABLE_REGISTRIES, type ModeType } from './variable-registry';
 
