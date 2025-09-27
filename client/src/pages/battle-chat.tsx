@@ -32,6 +32,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Sword, MessageSquare, Play, Brain, Settings, Plus, Users,
   Loader2, Send, DollarSign, Timer, Zap, Clock, Palette, Eye, BookOpen
@@ -463,56 +465,60 @@ export default function BattleChat() {
 
               {/* Setup Panel */}
               {showSetup && (
-                <div className="px-6 pb-4 border-b">
+                <>
+                <Separator />
+                <div className="px-6 pb-4">
                   {/* Template Selection */}
                   {!promptsLoading && battlePromptCategories.length > 0 && (
-                    <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Settings className="w-4 h-4" />
-                        <h3 className="text-sm font-medium">Battle Prompt Templates</h3>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Category</label>
-                          <Select value={selectedPromptCategory} onValueChange={setSelectedPromptCategory}>
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {battlePromptCategories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                    <Alert className="mb-4">
+                      <AlertDescription>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Settings className="w-4 h-4" />
+                          <h3 className="text-sm font-medium">Battle Prompt Templates</h3>
                         </div>
-                        <div>
-                          <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Template</label>
-                          <Select value={selectedPromptId} onValueChange={setSelectedPromptId}>
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Select template" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {selectedPromptCategory && 
-                                battlePromptCategories
-                                  .find(cat => cat.id === selectedPromptCategory)
-                                  ?.prompts.map((promptPair) => (
-                                    <SelectItem key={promptPair.id} value={promptPair.id}>
-                                      {promptPair.name}
-                                    </SelectItem>
-                                  ))
-                              }
-                            </SelectContent>
-                          </Select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Category</label>
+                            <Select value={selectedPromptCategory} onValueChange={setSelectedPromptCategory}>
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {battlePromptCategories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Template</label>
+                            <Select value={selectedPromptId} onValueChange={setSelectedPromptId}>
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="Select template" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {selectedPromptCategory &&
+                                  battlePromptCategories
+                                    .find(cat => cat.id === selectedPromptCategory)
+                                    ?.prompts.map((promptPair) => (
+                                      <SelectItem key={promptPair.id} value={promptPair.id}>
+                                        {promptPair.name}
+                                      </SelectItem>
+                                    ))
+                                }
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                      </div>
-                      {currentBattlePrompt && (
-                        <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                          Using template: <span className="font-medium">{currentBattlePrompt.name}</span>
-                        </div>
-                      )}
-                    </div>
+                        {currentBattlePrompt && (
+                          <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                            Using template: <span className="font-medium">{currentBattlePrompt.name}</span>
+                          </div>
+                        )}
+                      </AlertDescription>
+                    </Alert>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -555,6 +561,7 @@ export default function BattleChat() {
                     </div>
                   </div>
                 </div>
+                </>
               )}
 
               {/* Raw Prompt Preview */}

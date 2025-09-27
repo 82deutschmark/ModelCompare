@@ -33,6 +33,7 @@ import { getDisplayForModelId } from "../shared/model-catalog.js";
 import { getDatabaseManager } from "./db.js";
 import { contextLog } from "./request-context.js";
 import type { ModelMessage } from "../shared/api-types.js";
+import { MODELS, ModelLookup, type ModelConfig } from "../shared/models.js";
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
@@ -48,17 +49,52 @@ const ENABLE_LEGACY_ROUTES = process.env.ENABLE_LEGACY_ROUTES !== 'false';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // Get available models
+  // Get available models - using centralized configuration
   app.get("/api/models", async (req, res) => {
     try {
-      const models = getAllModels();
-      const enriched = models.map(m => ({
-        ...m,
-        // Attach display-only UI metadata from the centralized catalog
-        ui: getDisplayForModelId(m.id) || undefined,
+      // Use centralized model configuration for consistency
+      const models = MODELS.map(model => ({
+        // Map to expected frontend format (AIModel interface)
+        id: model.key,
+        name: model.name,
+        provider: model.provider,
+        color: model.color,
+        premium: model.premium,
+        cost: model.cost,
+        supportsTemperature: model.supportsTemperature,
+        responseTime: model.responseTime,
+        isReasoning: model.isReasoning,
+        apiModelName: model.apiModelName,
+        modelType: model.modelType,
+        contextWindow: model.contextWindow,
+        maxOutputTokens: model.maxOutputTokens,
+        releaseDate: model.releaseDate,
+        requiresPromptFormat: model.requiresPromptFormat,
+        supportsStructuredOutput: model.supportsStructuredOutput,
+
+        // Legacy compatibility fields for existing components
+        model: model.apiModelName,
+        knowledgeCutoff: model.releaseDate || 'Unknown',
+        capabilities: {
+          reasoning: model.isReasoning || false,
+          multimodal: false, // TODO: add multimodal support to model definitions
+          functionCalling: false, // TODO: add function calling support to model definitions
+          streaming: true, // Most models support streaming
+        },
+        pricing: {
+          inputPerMillion: parseFloat(model.cost.input.replace(/\$/, '')),
+          outputPerMillion: parseFloat(model.cost.output.replace(/\$/, '')),
+          reasoningPerMillion: model.isReasoning ? parseFloat(model.cost.output.replace(/\$/, '')) * 1.5 : undefined,
+        },
+        limits: {
+          maxTokens: model.maxOutputTokens || 4000,
+          contextWindow: model.contextWindow || 128000,
+        },
       }));
-      res.json(enriched);
+
+      res.json(models);
     } catch (error) {
+      console.error('Error fetching models:', error);
       res.status(500).json({ error: "Failed to fetch models" });
     }
   });
