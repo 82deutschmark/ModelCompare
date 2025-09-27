@@ -23,6 +23,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
+import passport from 'passport';
 import { callModel, callModelWithMessages, getAllModels, getReasoningModels } from "./providers/index.js";
 import { getStorage } from "./storage.js";
 import { VariableEngine } from "../shared/variable-engine.js";
@@ -51,6 +52,53 @@ const compareModelsSchema = z.object({
 const ENABLE_LEGACY_ROUTES = process.env.ENABLE_LEGACY_ROUTES !== 'false';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Authentication routes
+  // Get current user
+  app.get("/api/auth/user", async (req, res) => {
+    if (req.isAuthenticated() && req.user) {
+      res.json(req.user);
+    } else {
+      res.status(401).json({ error: 'Not authenticated' });
+    }
+  });
+
+  // Initiate Google OAuth login
+  app.get("/api/auth/google", 
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  // Google OAuth callback
+  app.get("/api/auth/google/callback",
+    passport.authenticate('google', { failureRedirect: '/' }),
+    (req, res) => {
+      // Successful authentication, redirect to frontend
+      res.redirect('/');
+    }
+  );
+
+  // Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to logout' });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  // Get user's current credit balance
+  app.get("/api/user/credits", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const storage = await getStorage();
+      const credits = await storage.getUserCredits(user.id);
+      res.json({ credits });
+    } catch (error) {
+      console.error('Error fetching user credits:', error);
+      res.status(500).json({ error: 'Failed to fetch credits' });
+    }
+  });
   
   // Get available models - using centralized configuration
   app.get("/api/models", async (req, res) => {
