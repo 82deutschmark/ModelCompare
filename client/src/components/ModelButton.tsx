@@ -61,73 +61,85 @@ export function ModelButton({
         <TooltipTrigger asChild>
           <Card
             className={cn(
-              "relative cursor-pointer transition-all duration-200 hover:shadow-md overflow-hidden", // Added overflow-hidden for best practices
+              "relative cursor-pointer transition-all duration-200 hover:shadow-md overflow-hidden",
               isSelected && "ring-2 ring-primary ring-offset-2",
               isAnalyzing && "animate-pulse",
               disabled && "opacity-50 cursor-not-allowed",
-              "border-2",
+              "border-2 min-h-[120px]", // Increased minimum height for better visibility
               isSelected ? "border-primary bg-primary/5" : "border-muted hover:border-muted-foreground/20"
             )}
             onClick={handleClick}
           >
-            <CardContent className="p-3 space-y-2"> {/* Added space-y-2 for consistent vertical spacing */}
-              {/* Compact Header Row - Using CardHeader for standard shadcn structure */}
-              <CardHeader className="p-0 pb-1"> {/* Zero padding, minimal bottom for separation */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 flex-1 min-w-0"> {/* flex-1 min-w-0 to allow shrinking without overflow */}
-                    <Avatar className="h-6 w-6 flex-shrink-0"> {/* flex-shrink-0 to prevent avatar from compressing */}
-                      <AvatarFallback className={cn("text-xs font-bold text-white", model.color)}>
+            <CardContent className="p-4 space-y-3"> {/* Increased padding and spacing */}
+              {/* Header Row with full model name visibility */}
+              <CardHeader className="p-0 pb-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-3 flex-1 min-w-0">
+                    <Avatar className="h-8 w-8 flex-shrink-0"> {/* Slightly larger avatar */}
+                      <AvatarFallback className={cn("text-sm font-bold text-white", model.color)}>
                         {getProviderIcon(model.provider)}
                       </AvatarFallback>
                     </Avatar>
-                    <h3 className="font-semibold text-sm truncate min-w-0 flex-1"> {/* Added flex-1 min-w-0 for proper truncation */}
-                      {model.name}
-                    </h3>
-                    {model.premium && <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm leading-tight mb-1"> {/* Removed truncate, allow wrapping */}
+                        {model.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {model.provider}
+                      </p>
+                    </div>
+                    {model.premium && <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />}
                   </div>
-                  
+
                   {/* Status Indicator */}
-                  <div className="flex items-center flex-shrink-0 ml-2"> {/* flex-shrink-0 to isolate status */}
+                  <div className="flex items-center flex-shrink-0 ml-2">
                     {isAnalyzing ? (
-                      <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
                     ) : responseCount > 0 ? (
-                      <Badge variant="default" className="px-1 py-0 text-xs h-4">
+                      <Badge variant="default" className="px-2 py-0.5 text-xs">
                         {responseCount}
                       </Badge>
                     ) : isSelected ? (
-                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <div className="w-3 h-3 rounded-full bg-primary" />
                     ) : null}
                   </div>
                 </div>
               </CardHeader>
 
-              {/* Compact Info Row */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center space-x-2 flex-1 min-w-0"> {/* flex-1 min-w-0 for left side */}
-                  {model.isReasoning && <Brain className="w-3 h-3 text-blue-500 flex-shrink-0" />}
-                  <Zap className="w-3 h-3 flex-shrink-0" />
-                  <span className="capitalize truncate min-w-0 flex-1"> {/* truncate min-w-0 flex-1 for speed text */}
-                    {model.responseTime?.speed}
-                  </span>
+              {/* Enhanced Info Rows with better spacing */}
+              <div className="space-y-2">
+                {/* Speed and Reasoning Row */}
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    {model.isReasoning && <Brain className="w-3 h-3 text-blue-500" />}
+                    <Zap className="w-3 h-3 text-amber-500" />
+                    <span className="capitalize text-muted-foreground">
+                      {model.responseTime?.speed || 'Standard'}
+                    </span>
+                  </div>
                 </div>
-                
-                <div className="flex items-center space-x-1 flex-shrink-0"> {/* flex-shrink-0 for right side */}
-                  <DollarSign className="w-3 h-3" />
-                  <span className="truncate min-w-0"> {/* Added truncate as fallback, though costs are short */}
-                    {model.cost?.input}/{model.cost?.output}M
-                  </span>
-                </div>
-              </div>
 
-              {/* Optional Timing Row */}
-              {showTiming && (
-                <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                  <Clock className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate min-w-0 flex-1"> {/* Added truncate for long estimates */}
-                    {model.responseTime?.estimate}
+                {/* Cost Row - Full visibility */}
+                <div className="flex items-center space-x-2 text-xs">
+                  <DollarSign className="w-3 h-3 text-green-600" />
+                  <span className="text-muted-foreground">
+                    <span className="font-medium">${model.cost?.input || '0'}</span>
+                    <span className="mx-1">/</span>
+                    <span className="font-medium">${model.cost?.output || '0'}</span>
+                    <span className="ml-1">per M</span>
                   </span>
                 </div>
-              )}
+
+                {/* Optional Timing Row */}
+                {showTiming && model.responseTime?.estimate && (
+                  <div className="flex items-center space-x-2 text-xs">
+                    <Clock className="w-3 h-3 text-blue-600" />
+                    <span className="text-muted-foreground">
+                      ~{model.responseTime.estimate}
+                    </span>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TooltipTrigger>
