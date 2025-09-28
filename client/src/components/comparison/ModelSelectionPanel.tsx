@@ -81,32 +81,36 @@ export function ModelSelectionPanel({
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
         {modelsLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+          <div className="grid gap-3 grid-cols-1 min-[480px]:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1 2xl:grid-cols-2">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div key={i} className="h-32 bg-muted rounded-lg animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Provider Groups */}
             {Object.entries(groupedModels).map(([provider, providerModels]) => (
-              <div key={provider} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                    {provider}
+              <div key={provider} className="space-y-3">
+                <div className="flex items-center justify-between border-b border-border pb-2">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-primary"></span>
+                    <span>{provider}</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      ({providerModels.length})
+                    </span>
                   </h3>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleProviderToggle(provider, providerModels)}
-                      className="text-xs h-6 px-2"
+                      className="text-xs h-7 px-3 hover:bg-accent"
                     >
-                      {providerModels.every(model => selectedModels.includes(model.id)) ? 'None' : 'All'}
+                      {providerModels.every(model => selectedModels.includes(model.id)) ? 'Deselect All' : 'Select All'}
                     </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+                <div className="grid gap-3 grid-cols-1 min-[480px]:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1 2xl:grid-cols-2">
                   {providerModels.map((model) => (
                     <ModelButton
                       key={model.id}
@@ -125,38 +129,43 @@ export function ModelSelectionPanel({
           </div>
         )}
         
-        {/* Quick Actions */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-          <div className="flex items-center justify-between">
+        {/* Enhanced Quick Actions */}
+        <div className="pt-4 border-t border-border space-y-4">
+          <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onSelectAllModels(models.map(m => m.id))}
               disabled={selectedModels.length === models.length}
-              className="text-xs"
+              className="text-xs h-8"
             >
-              Select All
+              Select All Models
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onClearAllModels}
               disabled={selectedModels.length === 0}
-              className="text-xs"
+              className="text-xs h-8"
             >
-              Clear All
+              Clear Selection
             </Button>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="timing"
-              checked={showTiming}
-              onCheckedChange={(checked) => setShowTiming(checked === true)}
-            />
-            <Label htmlFor="timing" className="text-sm">
-              Show response timing
-            </Label>
+
+          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="timing"
+                checked={showTiming}
+                onCheckedChange={(checked) => setShowTiming(checked === true)}
+              />
+              <Label htmlFor="timing" className="text-sm font-medium">
+                Show response timing
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Display estimated response times for each model
+            </p>
           </div>
         </div>
       </CardContent>
