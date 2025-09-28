@@ -81,9 +81,9 @@ export function ModelSelectionPanel({
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
         {modelsLoading ? (
-          <div className="grid grid-cols-1 gap-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
             ))}
           </div>
         ) : (
@@ -106,7 +106,7 @@ export function ModelSelectionPanel({
                     </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
                   {providerModels.map((model) => (
                     <ModelButton
                       key={model.id}
