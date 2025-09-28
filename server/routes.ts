@@ -56,7 +56,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   // Get current user
   app.get("/api/auth/user", async (req, res) => {
-    if (req.isAuthenticated() && req.user) {
+    // Handle case where Passport isn't initialized (development mode)
+    if (typeof req.isAuthenticated === 'function' && req.isAuthenticated() && req.user) {
       res.json(req.user);
     } else {
       res.status(401).json({ error: 'Not authenticated' });
