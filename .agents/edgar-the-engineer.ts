@@ -27,7 +27,13 @@ import type { AgentDefinition } from './types/agent-definition'
 const definition: AgentDefinition = {
   id: 'edgar-the-engineer',
   displayName: 'Edgar the Engineer',
+  publisher: 'mark-barney',
   model: 'xai/grok-4-fast',
+
+  /**
+   * Spawner prompt for code analysis requests
+   * Determines if code is over-engineered or under-engineered, and checks for violations of SRP (Single Responsibility Principle) and DRY (Don\'t Repeat Yourself) principles.
+   */
   spawnerPrompt: 'Determines if code is over-engineered or under-engineered, and checks for violations of SRP (Single Responsibility Principle) and DRY (Don\'t Repeat Yourself) principles.',
 
   /**
