@@ -123,26 +123,20 @@ const definition: AgentDefinition = {
     'run_terminal_command',
     'spawn_agents',
     'think_deeply',
+    'set_output',
     'end_turn'
   ],
 
-  /**
-   * Spawnable agents for additional analysis capabilities
-   * File explorer for codebase context, thinker for deep analysis
-   */
   spawnableAgents: [
     'codebuff/file-explorer@0.0.6',
     'codebuff/researcher-grok-4-fast@0.0.3',
     'codebuff/file-explorer@0.0.6',
     'codebuff/thinker@0.0.4',
     'codebuff/editor@0.0.4',
-    'simple-researcher',
     'codebuff/deep-thinker@0.0.3',
     'codebuff/deep-code-reviewer@0.0.2',
     'codebuff/docs-researcher@0.0.7',
-    'code-assistant',
-    'commit-reviewer',
-    'basic-diff-reviewer',
+    
     'codebuff/gemini-thinker@0.0.3',
     
   ],
