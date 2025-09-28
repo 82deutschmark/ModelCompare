@@ -220,8 +220,11 @@ headers['x-device-id'] = deviceId;
 
 **Before deployment, verify:**
 - [ ] Anonymous users can use `/api/compare` without signing in
+- [ ] Anonymous users can use and access ALL features and all pages
 - [ ] Device ID is generated and persisted in localStorage
+- [ ] Session ID is generated and persisted in localStorage for that device
 - [ ] Credit tracking works (new users get 500 credits)
+- [ ] Using a feature consumes credits on the backend for that device!!!
 - [ ] Credit deduction works (5 credits per comparison)
 - [ ] Error handling when credits reach 0
 - [ ] Existing authenticated users still work normally
