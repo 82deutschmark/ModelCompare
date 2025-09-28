@@ -258,7 +258,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid request data", details: error.errors });
       } else {
-        res.status(500).json({ error: "Failed to compare models" });
+        console.error("Compare models error:", error);
+        res.status(500).json({
+          error: "Failed to compare models",
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
   });
