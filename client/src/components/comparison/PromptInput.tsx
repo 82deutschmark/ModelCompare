@@ -124,66 +124,77 @@ export function PromptInput({
   return (
     <>
       {/* Main Prompt Input Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2 text-sm">
-            <MessageSquare className="w-4 h-4" />
-            <span>Enter Your Prompt</span>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              <span className="text-lg font-semibold">Enter Your Prompt</span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {prompt.length}/32,000 chars
+            </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 pt-0">
-          {/* Prompt Templates Section */}
+        <CardContent className="space-y-4 pt-0">
+          {/* Enhanced Prompt Templates Section */}
           {!promptsLoading && promptCategories.length > 0 && (
-            <div className="space-y-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border">
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
               <div className="flex items-center space-x-2">
-                <BookOpen className="w-3 h-3 text-blue-600" />
-                <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Prompt Templates</Label>
+                <BookOpen className="w-4 h-4 text-primary" />
+                <Label className="text-sm font-semibold">Prompt Templates</Label>
               </div>
-              
-              <div className="grid grid-cols-2 gap-2">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Category Selection */}
-                <Select 
-                  key={`category-${selectedCategory}`}
-                  value={selectedCategory} 
-                  onValueChange={handleCategoryChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose category..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {promptCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Category</Label>
+                  <Select
+                    key={`category-${selectedCategory}`}
+                    value={selectedCategory}
+                    onValueChange={handleCategoryChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose category..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {promptCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Prompt Selection */}
-                <Select 
-                  key={`prompt-${selectedCategory}-${selectedPromptTemplate}`}
-                  value={selectedPromptTemplate} 
-                  onValueChange={handlePromptTemplateChange}
-                  disabled={!selectedCategory}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select prompt..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePrompts.map((prompt) => (
-                      <SelectItem key={prompt.id} value={prompt.id}>
-                        {prompt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Template</Label>
+                  <Select
+                    key={`prompt-${selectedCategory}-${selectedPromptTemplate}`}
+                    value={selectedPromptTemplate}
+                    onValueChange={handlePromptTemplateChange}
+                    disabled={!selectedCategory}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select prompt..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePrompts.map((prompt) => (
+                        <SelectItem key={prompt.id} value={prompt.id}>
+                          {prompt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              
+
               {/* Clear Selection Button */}
               {(selectedCategory || selectedPromptTemplate) && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={clearPromptSelection}
                   className="w-full"
                 >
@@ -193,83 +204,93 @@ export function PromptInput({
             </div>
           )}
           
-          {/* Prompt Textarea */}
-          <div className="relative">
-            <Textarea
-              value={prompt}
-              onChange={handlePromptChange}
-              onFocus={handlePromptFocus}
-              rows={12}
-              className={`min-h-48 pr-16 resize-none ${isDefaultPrompt ? 'text-gray-300 dark:text-gray-600' : ''}`}
-              placeholder="Ask a question or provide a prompt to compare across selected AI models..."
-              maxLength={32000}
-            />
-            <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-              {prompt.length}/32000
-            </div>
-          </div>
-          
-          {/* Action Bar */}
-          <div className="flex justify-between items-center">
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              {selectedModels.length === 0 ? (
-                "Select models to start comparing"
-              ) : (
-                `Ready to compare with ${selectedModels.length} model${selectedModels.length !== 1 ? 's' : ''}`
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={() => setShowPromptPreview(!showPromptPreview)}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                <Eye className="w-3 h-3 mr-1" />
-                {showPromptPreview ? 'Hide' : 'Show'} Raw Prompt
-              </Button>
-              <Button
-                onClick={onSubmit}
-                disabled={disabled || !prompt.trim() || selectedModels.length === 0}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
-                size="sm"
-              >
-                {disabled ? (
-                  <>
-                    <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span className="text-sm">Comparing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-3 h-3 mr-1" />
-                    <span className="text-sm">Compare Models</span>
-                  </>
+          {/* Enhanced Prompt Textarea */}
+          <div className="space-y-3">
+            <div className="relative">
+              <Textarea
+                value={prompt}
+                onChange={handlePromptChange}
+                onFocus={handlePromptFocus}
+                rows={10}
+                className={cn(
+                  "min-h-64 resize-none text-sm leading-relaxed",
+                  isDefaultPrompt && "text-muted-foreground"
                 )}
-              </Button>
+                placeholder="Ask a question or provide a prompt to compare across selected AI models..."
+                maxLength={32000}
+              />
+            </div>
+
+            {/* Status and Action Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-muted/30 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-muted-foreground">
+                  {selectedModels.length === 0 ? (
+                    <span className="text-destructive">Select models to start comparing</span>
+                  ) : (
+                    <span className="text-foreground font-medium">
+                      Ready to compare with {selectedModels.length} model{selectedModels.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Button
+                  onClick={() => setShowPromptPreview(!showPromptPreview)}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  <Eye className="w-3 h-3 mr-2" />
+                  {showPromptPreview ? 'Hide' : 'Show'} Raw Prompt
+                </Button>
+                <Button
+                  onClick={onSubmit}
+                  disabled={disabled || !prompt.trim() || selectedModels.length === 0}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 font-medium"
+                  size="sm"
+                >
+                  {disabled ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Comparing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-2" />
+                      <span>Compare Models</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Raw Prompt Preview */}
+      {/* Enhanced Raw Prompt Preview */}
       {showPromptPreview && (
-        <Card className="mb-6">
+        <Card className="shadow-sm border-muted">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-sm">
-              <BookOpen className="w-4 h-4" />
-              <span>Raw Prompt Preview</span>
+            <CardTitle className="flex items-center space-x-2">
+              <BookOpen className="w-4 h-4 text-primary" />
+              <span className="text-base">Raw Prompt Preview</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 border">
-              <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+          <CardContent className="pt-0 space-y-3">
+            <div className="bg-muted/50 rounded-lg p-4 border">
+              <pre className="text-sm text-foreground whitespace-pre-wrap font-mono leading-relaxed">
                 {prompt || 'No prompt entered'}
               </pre>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              This is the exact prompt that will be sent to all selected AI models.
-            </p>
+            <div className="flex items-start space-x-2 text-xs text-muted-foreground">
+              <div className="w-1 h-1 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+              <p>
+                This is the exact prompt that will be sent to all selected AI models.
+                Character count: <span className="font-medium">{prompt.length}</span>
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
