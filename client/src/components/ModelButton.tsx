@@ -69,65 +69,48 @@ export function ModelButton({
             )}
             onClick={handleClick}
           >
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                {/* Provider Avatar */}
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className={cn("text-xs font-bold text-white", model.color)}>
-                    {getProviderIcon(model.provider)}
-                  </AvatarFallback>
-                </Avatar>
-
+            <CardContent className="p-3">
+              {/* Compact Header Row */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className={cn("text-xs font-bold text-white", model.color)}>
+                      {getProviderIcon(model.provider)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <h3 className="font-semibold text-sm truncate">{model.name}</h3>
+                  {model.premium && <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
+                </div>
+                
                 {/* Status Indicator */}
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center">
                   {isAnalyzing ? (
-                    <Badge variant="secondary" className="px-1.5 py-0.5">
-                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                      <span className="text-xs">Loading</span>
-                    </Badge>
+                    <Loader2 className="w-3 h-3 animate-spin text-primary" />
                   ) : responseCount > 0 ? (
-                    <Badge variant="default" className="px-1.5 py-0.5">
-                      <span className="text-xs">{responseCount}</span>
+                    <Badge variant="default" className="px-1 py-0 text-xs h-4">
+                      {responseCount}
                     </Badge>
                   ) : isSelected ? (
                     <div className="w-2 h-2 rounded-full bg-primary" />
                   ) : null}
                 </div>
               </div>
-            </CardHeader>
 
-            <CardContent className="pt-0">
-              {/* Model Name */}
-              <div className="flex items-center space-x-2 mb-2">
-                <h3 className="font-semibold text-sm truncate">{model.name}</h3>
-                {model.premium && (
-                  <Badge variant="outline" className="px-1 py-0">
-                    <Crown className="w-3 h-3 text-yellow-500" />
-                  </Badge>
-                )}
+              {/* Compact Info Row */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center space-x-2">
+                  {model.isReasoning && <Brain className="w-3 h-3 text-blue-500" />}
+                  <Zap className="w-3 h-3" />
+                  <span className="capitalize">{model.responseTime?.speed}</span>
+                </div>
+                
+                <div className="flex items-center space-x-1">
+                  <DollarSign className="w-3 h-3" />
+                  <span>{model.cost?.input}/{model.cost?.output}M</span>
+                </div>
               </div>
 
-              {/* Capabilities */}
-              <div className="flex items-center space-x-2 mb-2">
-                {model.isReasoning && (
-                  <Badge variant="secondary" className="px-1.5 py-0.5">
-                    <Brain className="w-3 h-3 mr-1" />
-                    <span className="text-xs">Reasoning</span>
-                  </Badge>
-                )}
-                <Badge variant="outline" className="px-1.5 py-0.5">
-                  <Zap className="w-3 h-3 mr-1" />
-                  <span className="text-xs capitalize">{model.responseTime?.speed}</span>
-                </Badge>
-              </div>
-
-              {/* Pricing */}
-              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                <DollarSign className="w-3 h-3" />
-                <span>{model.cost?.input}/{model.cost?.output}M</span>
-              </div>
-
-              {/* Response Time */}
+              {/* Optional Timing Row */}
               {showTiming && (
                 <div className="flex items-center space-x-1 text-xs text-muted-foreground mt-1">
                   <Clock className="w-3 h-3" />
@@ -156,4 +139,4 @@ export function ModelButton({
       </Tooltip>
     </TooltipProvider>
   );
-}
+}
