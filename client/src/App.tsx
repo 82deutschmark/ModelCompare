@@ -20,8 +20,8 @@ import ArcAgiPage from "./pages/dashboard";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/compare" component={Compare} />
+      <Route path="/" component={Compare} />
+      <Route path="/home" component={Home} />
       <Route path="/battle" component={Battle} />
       <Route path="/creative-combat" component={CreativeCombat} />
       <Route path="/debate" component={Debate} />
