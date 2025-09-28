@@ -194,24 +194,4 @@ export interface PaymentAnalytics {
   retryCount: number;
 }
 
-export default {
-  CreditPackage,
-  PaymentIntentResponse,
-  PaymentSuccessResult,
-  PaymentStatus,
-  StripePaymentIntent,
-  StripeError,
-  PaymentFormState,
-  StripeElementsOptions,
-  CardElementOptions,
-  StripeConfig,
-  ApiErrorResponse,
-  CreditPackagesResponse,
-  UserCreditsResponse,
-  PaymentConfirmationData,
-  StripeCheckoutProps,
-  PaymentFormProps,
-  PaymentMethodType,
-  PaymentSecurityInfo,
-  PaymentAnalytics
-};
+// Types only - no default export needed for type-only exports

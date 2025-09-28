@@ -42,17 +42,13 @@ export function UserMenu({ className }: UserMenuProps) {
   }
 
   const getUserInitials = () => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    return user.email[0].toUpperCase();
+    // Generate initials from device ID for consistency
+    const deviceId = user.id.slice(-2).toUpperCase();
+    return deviceId;
   };
 
   const getUserDisplayName = () => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    }
-    return user.email;
+    return `User ${user.id.slice(-4)}`;
   };
 
   const getStatusColor = (credits: number) => {
@@ -66,7 +62,7 @@ export function UserMenu({ className }: UserMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className={`relative h-8 w-8 rounded-full ${className}`}>
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.profileImageUrl || undefined} alt={getUserDisplayName()} />
+            <AvatarImage src={undefined} alt={getUserDisplayName()} />
             <AvatarFallback className="text-sm">
               {getUserInitials()}
             </AvatarFallback>
@@ -80,11 +76,11 @@ export function UserMenu({ className }: UserMenuProps) {
               <div>
                 <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
                 <p className="text-xs leading-none text-muted-foreground mt-1">
-                  {user.email}
+                  Device User
                 </p>
               </div>
               <Avatar className="h-10 w-10">
-                <AvatarImage src={user.profileImageUrl || undefined} alt={getUserDisplayName()} />
+                <AvatarImage src={undefined} alt={getUserDisplayName()} />
                 <AvatarFallback>{getUserInitials()}</AvatarFallback>
               </Avatar>
             </div>
@@ -93,10 +89,10 @@ export function UserMenu({ className }: UserMenuProps) {
             <div className="flex items-center justify-between p-2 bg-muted rounded-md">
               <div className="flex items-center space-x-2">
                 <Coins className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{user.credits.toLocaleString()} credits</span>
+                <span className="text-sm font-medium">{(user.credits ?? 0).toLocaleString()} credits</span>
               </div>
-              <Badge variant="secondary" className={getStatusColor(user.credits)}>
-                {user.credits >= 100 ? 'Healthy' : user.credits >= 25 ? 'Low' : 'Critical'}
+              <Badge variant="secondary" className={getStatusColor(user.credits ?? 0)}>
+                {(user.credits ?? 0) >= 100 ? 'Healthy' : (user.credits ?? 0) >= 25 ? 'Low' : 'Critical'}
               </Badge>
             </div>
           </div>

@@ -211,6 +211,7 @@ export class DbStorage implements IStorage {
         .insert(users)
         .values({
           email: userData.email!,
+          deviceId: userData.deviceId || null,
           firstName: userData.firstName,
           lastName: userData.lastName,
           profileImageUrl: userData.profileImageUrl,
@@ -488,6 +489,7 @@ export class MemStorage implements IStorage {
       const newUser: User = {
         id,
         email: userData.email!,
+        deviceId: userData.deviceId || null,
         firstName: userData.firstName ?? null,
         lastName: userData.lastName ?? null,
         profileImageUrl: userData.profileImageUrl ?? null,

@@ -78,8 +78,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
  */
 export async function createPaymentIntent(
   userId: string,
-  packageId: string,
-  userEmail: string
+  packageId: string
 ): Promise<{ clientSecret: string; packageInfo: CreditPackage }> {
   try {
     // Find the requested credit package
@@ -99,12 +98,11 @@ export async function createPaymentIntent(
         userId,
         packageId,
         credits: packageInfo.credits.toString(),
-        userEmail,
       },
       description: `${packageInfo.name} - ${packageInfo.credits} credits`,
     });
 
-    contextLog(`Created payment intent for user ${userEmail}: ${packageInfo.name} (${packageInfo.credits} credits)`);
+    contextLog(`Created payment intent for user ${userId}: ${packageInfo.name} (${packageInfo.credits} credits)`);
 
     return {
       clientSecret: paymentIntent.client_secret!,
