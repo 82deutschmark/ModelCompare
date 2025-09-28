@@ -35,15 +35,22 @@ export const selectors = {
   getCurrentResponse: (state: AppState, seatId?: string) => 
     selectors.getLastAssistantMessage(state, seatId)?.content || '',
     
-  getTotals: (state: AppState) => 
-    state.messages.reduce((acc, msg) => ({
+  getTotals: (state: AppState) => {
+    // Only count final assistant messages per seat to avoid double-counting retries
+    const latestMessages = selectors.getLatestMessagePerSeat(state);
+    const finalMessages = Object.values(latestMessages).filter(msg => 
+      msg.role === 'assistant' && msg.status === 'complete'
+    );
+    
+    return finalMessages.reduce((acc, msg) => ({
       cost: acc.cost + (msg.cost?.total || 0),
       tokens: {
         input: acc.tokens.input + (msg.tokenUsage?.input || 0),
         output: acc.tokens.output + (msg.tokenUsage?.output || 0),
         reasoning: acc.tokens.reasoning + (msg.tokenUsage?.reasoning || 0)
       }
-    }), { cost: 0, tokens: { input: 0, output: 0, reasoning: 0 } }),
+    }), { cost: 0, tokens: { input: 0, output: 0, reasoning: 0 } });
+  },
 
   getMessagesBySeat: (state: AppState, seatId: string) =>
     state.messages.filter(m => m.seatId === seatId),
@@ -119,4 +126,4 @@ export const useAppStore = create<AppState>((set, get) => ({
   }),
   
   setIsProcessing: (processing) => set({ isProcessing: processing })
-}));
+}));

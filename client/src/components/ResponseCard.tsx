@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { formatCost, formatTokens, formatResponseTime } from "@/lib/formatUtils";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
 interface ResponseCardProps {
@@ -117,9 +118,7 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
     return icons[provider] || provider.substring(0, 2).toUpperCase();
   };
 
-  const formatTime = (ms: number) => {
-    return ms > 0 ? `${(ms / 1000).toFixed(1)}s` : '-';
-  };
+
 
   return (
     <Card className={cn(
@@ -144,11 +143,10 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
 
           <div className="flex items-center space-x-2">
             {getStatusBadge()}
-            {response && showTiming && (
-              <Badge variant="outline" className="text-xs">
-                <Clock className="w-3 h-3 mr-1" />
-                {formatTime(response.responseTime || 0)}
-              </Badge>
+            {response && showTiming && (                <Badge variant="outline" className="text-xs">
+                  <Clock className="w-3 h-3 mr-1" />
+                  {formatResponseTime(response.responseTime)}
+                </Badge>
             )}
           </div>
         </div>
@@ -250,12 +248,7 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
                       <div>
                         <div className="font-medium">Tokens</div>
                         <div className="text-xs text-muted-foreground">
-                          {response.tokenUsage.input}→{response.tokenUsage.output}
-                          {response.tokenUsage.reasoning && (
-                            <span className="text-amber-600 dark:text-amber-400">
-                              {` +${response.tokenUsage.reasoning}`}
-                            </span>
-                          )}
+                          {formatTokens(response.tokenUsage)}
                         </div>
                       </div>
                     </div>
@@ -267,10 +260,10 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
                       <div>
                         <div className="font-medium">Cost</div>
                         <div className="text-xs text-muted-foreground">
-                          ${response.cost.total.toFixed(4)}
-                          {response.cost.reasoning && (
+                          {formatCost(response.cost.total)}
+                          {response.cost.reasoning && response.cost.reasoning > 0 && (
                             <span className="text-amber-600 dark:text-amber-400">
-                              {` (+$${response.cost.reasoning.toFixed(4)})`}
+                              {` (+${formatCost(response.cost.reasoning)})`}
                             </span>
                           )}
                         </div>
@@ -306,4 +299,4 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
       </CardContent>
     </Card>
   );
-}
+}

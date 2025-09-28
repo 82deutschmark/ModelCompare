@@ -341,10 +341,7 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     setShowSetup(true);
   };
 
-  const formatCost = (cost: any) => {
-    if (!cost || !cost.total) return 'N/A';
-    return `$${cost.total.toFixed(4)}`;
-  };
+
 
   // Convert DebateMessage to MessageCardData format
   const convertToMessageCardData = (message: DebateMessage): MessageCardData => {
@@ -707,7 +704,7 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
                   </div>
                   {totalCost > 0 && (
                     <div className="text-sm font-medium text-green-600">
-                      Total Cost: ${totalCost.toFixed(4)}
+                      Total Cost: {formatCost(totalCost)}
                     </div>
                   )}
                 </div>
@@ -834,4 +831,4 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
       </div>
     </div>
   );
-}
+}

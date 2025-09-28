@@ -144,7 +144,7 @@ export function FloatingModelPicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-80 p-0"
+        className="w-88 p-0"
         side="bottom"
         align="start"
         sideOffset={4}
@@ -224,8 +224,8 @@ export function FloatingModelPicker({
           <Separator />
 
           <CardContent className="p-0">
-            <ScrollArea className="h-72">
-              <div className="p-2 space-y-3">
+            <ScrollArea className="h-80">
+              <div className="p-3 space-y-3">
                 {Object.entries(groupedModels).map(([provider, providerModels]) => (
                   <div key={provider} className="space-y-1.5">
                     {/* Provider Header */}
@@ -379,4 +379,4 @@ export function FloatingModelPicker({
       </PopoverContent>
     </Popover>
   );
-}
+}

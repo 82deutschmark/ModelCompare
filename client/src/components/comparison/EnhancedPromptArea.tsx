@@ -179,10 +179,10 @@ export function EnhancedPromptArea({
   const currentCategory = promptCategories.find(cat => cat.id === selectedCategory);
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-3">
+    <div className="w-full max-w-5xl mx-auto space-y-6">
       {/* Main Prompt Card */}
       <Card className="relative">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-4">
           <CardTitle className="flex items-center justify-between text-base">
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-primary" />
@@ -196,7 +196,7 @@ export function EnhancedPromptArea({
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {/* Prompt Textarea */}
           <div className="relative">
             <Textarea
@@ -205,7 +205,7 @@ export function EnhancedPromptArea({
               onFocus={handlePromptFocus}
               rows={6}
               className={cn(
-                "min-h-32 resize-none text-sm leading-relaxed",
+                "min-h-40 resize-none text-sm leading-relaxed",
                 "focus:ring-1 focus:ring-primary/20 border",
                 isDefaultPrompt && "text-muted-foreground"
               )}
@@ -262,7 +262,7 @@ export function EnhancedPromptArea({
           <Separator />
 
           {/* Model Selection Area */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-medium flex items-center gap-1.5">
                 <Zap className="w-3 h-3 text-primary" />
@@ -325,12 +325,10 @@ export function EnhancedPromptArea({
                   <span>Ready to compare {selectedModels.length} models</span>
                 </>
               )}
-            </div>
-
-            <Button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              size="sm"
+            </div>              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                size="default"
               className={cn(
                 "gap-1.5 min-w-24 h-8",
                 isComparing && "animate-pulse"
@@ -377,4 +375,4 @@ export function EnhancedPromptArea({
       )}
     </div>
   );
-}
+}
