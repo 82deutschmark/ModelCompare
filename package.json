@@ -9,7 +9,16 @@
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "test": "npm run build && npm run dev",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "health-check": "node scripts/health-check.js",
+    "health-check:quick": "node scripts/health-check.js --fast-only",
+    "health-check:openai": "node scripts/health-check.js --provider openai",
+    "health-check:anthropic": "node scripts/health-check.js --provider anthropic",
+    "health-check:google": "node scripts/health-check.js --provider google",
+    "health-check:deepseek": "node scripts/health-check.js --provider deepseek",
+    "health-check:openrouter": "node scripts/health-check.js --provider openrouter",
+    "health-check:reasoning": "node scripts/health-check.js --reasoning-only",
+    "health-check:report": "node scripts/health-check.js --output html --output-file reports/health-check.html"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
