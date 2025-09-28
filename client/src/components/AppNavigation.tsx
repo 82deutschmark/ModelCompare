@@ -162,27 +162,27 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo and Breadcrumb */}
-          <div className="flex items-center space-x-4">
+        <div className="flex h-14 items-center justify-between">
+          {/* Compact Logo and Breadcrumb */}
+          <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
-              {TitleIcon && <TitleIcon className="w-6 h-6 text-primary" />}
-              <span className="font-bold text-lg">ModelCompare</span>
+              {TitleIcon && <TitleIcon className="w-5 h-5 text-primary" />}
+              <span className="font-bold text-base">ModelCompare</span>
             </div>
 
-            <div className="hidden sm:flex">
+            <div className="hidden md:flex">
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <BreadcrumbLink href="/home">
-                      <Home className="w-4 h-4" />
+                    <BreadcrumbLink href="/home" className="text-sm">
+                      <Home className="w-3 h-3" />
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   {currentMode && (
                     <>
                       <BreadcrumbSeparator />
                       <BreadcrumbItem>
-                        <span className="font-medium">{currentMode.name}</span>
+                        <span className="font-medium text-sm">{currentMode.name}</span>
                       </BreadcrumbItem>
                     </>
                   )}
@@ -279,28 +279,29 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
             </NavigationMenu>
           </div>
 
-          {/* Authentication & Theme */}
-          <div className="flex items-center space-x-4">
+          {/* Compact Authentication & Theme */}
+          <div className="flex items-center space-x-3">
             {/* Credit Balance - only show if authenticated */}
             {isAuthenticated && user && (
-              <div className="hidden md:block">
+              <div className="hidden lg:block">
               </div>
             )}
 
-            {/* Theme Toggle */}
-            <div className="flex items-center space-x-2">
-              <Sun className="h-4 w-4" />
+            {/* Compact Theme Toggle */}
+            <div className="flex items-center space-x-1.5">
+              <Sun className="h-3 w-3 text-muted-foreground" />
               <Switch
                 checked={theme === 'dark'}
                 onCheckedChange={toggleTheme}
                 aria-label="Toggle theme"
+                className="scale-90"
               />
-              <Moon className="h-4 w-4" />
+              <Moon className="h-3 w-3 text-muted-foreground" />
             </div>
 
             {/* Authentication */}
             {authLoading ? (
-              <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+              <div className="w-7 h-7 rounded-full bg-muted animate-pulse" />
             ) : isAuthenticated ? (
               <UserMenu />
             ) : (
@@ -311,8 +312,8 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
             <div className="lg:hidden">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Menu className="w-5 h-5" />
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Menu className="w-4 h-4" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-80">
@@ -351,10 +352,10 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           </div>
         </div>
 
-        {/* Current Page Info */}
+        {/* Compact Current Page Info */}
         {currentMode && subtitle && (
-          <div className="pb-3 pt-1">
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+          <div className="pb-2 pt-1">
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
         )}
       </div>
