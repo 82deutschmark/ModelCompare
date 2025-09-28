@@ -1,21 +1,21 @@
-/*
- * Author: Cascade (GPT-5 medium reasoning)
- * Date: 2025-09-27T17:06:47-04:00
- * PURPOSE: New modular compare page that replaces the monolithic home.tsx.
- *          Assembles reusable components: ModelSelectionPanel, PromptInput, ComparisonResults.
- *          Uses useComparison hook for state management and follows proper SRP/DRY principles.
- * SRP/DRY check: Pass - Single responsibility (page orchestration), reuses all existing components
- * shadcn/ui: Pass - Uses existing shadcn/ui components via composed components
+/**
+ * Author: Claude Sonnet 4
+ * Date: 2025-09-28
+ * PURPOSE: Modern hero-centered compare page with prompt-first design philosophy.
+ *          Features EnhancedPromptArea as centerpiece with inline model selection.
+ *          Removes sidebar layout in favor of floating model picker and model pills.
+ *          Responsive design that scales from mobile to desktop with focus on UX.
+ * SRP/DRY check: Pass - Single responsibility (page orchestration), reuses enhanced components
+ * shadcn/ui: Pass - Uses enhanced shadcn/ui components with modern patterns
  */
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Brain } from "lucide-react";
+import { Brain, Sparkles } from "lucide-react";
 
-// Reusable components
+// Enhanced components for modern design
 import { AppNavigation } from "@/components/AppNavigation";
-import { ModelSelectionPanel } from "@/components/comparison/ModelSelectionPanel";
-import { PromptInput } from "@/components/comparison/PromptInput";
+import { EnhancedPromptArea } from "@/components/comparison/EnhancedPromptArea";
 import { ComparisonResults } from "@/components/comparison/ComparisonResults";
 
 // Custom hook for state management
@@ -60,46 +60,36 @@ export default function Compare() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col">
       <AppNavigation
         title="AI Model Comparison"
-        subtitle="Side-by-side model comparison"
-        icon={Brain}
+        subtitle="Compare responses across multiple AI models"
+        icon={Sparkles}
       />
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="h-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-            {/* Model Selection Panel - Responsive width */}
-            <div className="md:col-span-1 lg:col-span-1 xl:col-span-1 overflow-y-auto">
-              <ModelSelectionPanel
-                models={models}
-                selectedModels={state.selectedModels}
-                loadingModels={state.loadingModels}
-                responses={state.responses}
-                modelsLoading={modelsLoading}
-                onToggleModel={actions.toggleModel}
-                onSelectAllModels={actions.selectAllModels}
-                onClearAllModels={actions.clearAllModels}
-                showTiming={showTiming}
-                setShowTiming={setShowTiming}
-              />
-            </div>
+      <div className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-8">
+            {/* Hero Prompt Area - Centerpiece of the page */}
+            <EnhancedPromptArea
+              prompt={prompt}
+              setPrompt={setPrompt}
+              models={models}
+              selectedModels={state.selectedModels}
+              onToggleModel={actions.toggleModel}
+              onSelectAllModels={actions.selectAllModels}
+              onClearAllModels={actions.clearAllModels}
+              onSubmit={handleSubmit}
+              disabled={status.isComparing}
+              isComparing={status.isComparing}
+              showPromptPreview={showPromptPreview}
+              setShowPromptPreview={setShowPromptPreview}
+              loadingModels={state.loadingModels}
+              responses={state.responses}
+            />
 
-            {/* Main Content Area - Responsive width */}
-            <div className="md:col-span-1 lg:col-span-2 xl:col-span-3 overflow-y-auto space-y-4">
-              {/* Prompt Input */}
-              <PromptInput
-                prompt={prompt}
-                setPrompt={setPrompt}
-                onSubmit={handleSubmit}
-                disabled={status.isComparing}
-                selectedModels={state.selectedModels}
-                showPromptPreview={showPromptPreview}
-                setShowPromptPreview={setShowPromptPreview}
-              />
-
-              {/* Comparison Results */}
+            {/* Comparison Results - Appears below when models are running/completed */}
+            {(status.isComparing || Object.keys(state.responses).length > 0) && (
               <ComparisonResults
                 models={models}
                 responses={state.responses}
@@ -109,7 +99,7 @@ export default function Compare() {
                 prompt={prompt}
                 isComparing={status.isComparing}
               />
-            </div>
+            )}
           </div>
         </div>
       </div>

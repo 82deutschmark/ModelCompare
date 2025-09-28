@@ -313,13 +313,12 @@ export function generateDynamicFavicon(): string {
 
   canvas.width = 48; // Slightly larger for crisper shapes
   canvas.height = 48;
-
   const GRID_SIZE = 2;
   const squareSize = canvas.width / GRID_SIZE;
   const shape = getRandomShape();
 
-  // Neon-bright background for contrast
-  ctx.fillStyle = '#0a0a0a';
+  // Pure black background for maximum contrast
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw the 2x2 grid with electric colors
