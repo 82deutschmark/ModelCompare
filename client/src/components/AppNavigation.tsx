@@ -16,6 +16,10 @@ import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMe
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/ThemeProvider";
+import { useAuth } from "@/hooks/useAuth";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { UserMenu } from "@/components/UserMenu";
+import { CreditBalance } from "@/components/CreditBalance";
 import { cn } from "@/lib/utils";
 import {
   Brain,
@@ -126,6 +130,7 @@ interface AppNavigationProps {
 
 export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigationProps) {
   const { theme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [location] = useLocation();
 
   const currentMode = navigationModes.find(mode => mode.path === location);
@@ -170,7 +175,7 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <BreadcrumbLink href="/">
+                    <BreadcrumbLink href="/home">
                       <Home className="w-4 h-4" />
                     </BreadcrumbLink>
                   </BreadcrumbItem>
@@ -275,8 +280,16 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
             </NavigationMenu>
           </div>
 
-          {/* Theme Toggle */}
+          {/* Authentication & Theme */}
           <div className="flex items-center space-x-4">
+            {/* Credit Balance - only show if authenticated */}
+            {isAuthenticated && user && (
+              <div className="hidden md:block">
+                <CreditBalance compact={true} showBuyButton={false} />
+              </div>
+            )}
+
+            {/* Theme Toggle */}
             <div className="flex items-center space-x-2">
               <Sun className="h-4 w-4" />
               <Switch
@@ -286,6 +299,15 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
               />
               <Moon className="h-4 w-4" />
             </div>
+
+            {/* Authentication */}
+            {authLoading ? (
+              <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+            ) : isAuthenticated ? (
+              <UserMenu />
+            ) : (
+              <GoogleSignInButton size="sm" variant="outline" />
+            )}
 
             {/* Mobile Menu */}
             <div className="lg:hidden">
