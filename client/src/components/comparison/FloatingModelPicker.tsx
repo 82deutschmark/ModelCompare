@@ -123,13 +123,14 @@ export function FloatingModelPicker({
   const DefaultTrigger = (
     <Button
       variant="outline"
-      className="gap-2 border-dashed border-2 hover:border-primary/50"
+      size="sm"
+      className="gap-1.5 border-dashed border-2 hover:border-primary/50 h-7"
       disabled={disabled}
     >
-      <Plus className="w-4 h-4" />
+      <Plus className="w-3 h-3" />
       Add Models
       {selectedModels.length > 0 && (
-        <Badge variant="secondary" className="ml-1">
+        <Badge variant="secondary" className="ml-0.5 h-4 px-1.5 text-xs">
           {selectedModels.length}
         </Badge>
       )}
@@ -143,63 +144,65 @@ export function FloatingModelPicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-96 p-0"
+        className="w-80 p-0"
         side="bottom"
         align="start"
-        sideOffset={8}
+        sideOffset={4}
       >
         <Card className="border-0 shadow-none">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center justify-between text-base">
-              <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-primary" />
-                Select AI Models
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-1.5">
+                <Brain className="w-3 h-3 text-primary" />
+                Select Models
               </div>
-              <Badge variant="outline" className="text-xs">
-                {selectedModels.length} selected
+              <Badge variant="outline" className="text-xs h-4 px-1.5">
+                {selectedModels.length}
               </Badge>
             </CardTitle>
 
             {/* Search Bar */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-muted-foreground" />
               <Input
                 placeholder="Search models..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
+                className="pl-7 h-7 text-xs"
               />
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {/* Provider Filter */}
               <select
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
-                className="text-xs border rounded px-2 py-1 bg-background"
+                className="text-xs border rounded px-1.5 py-0.5 bg-background h-6"
               >
-                <option value="">All Providers</option>
+                <option value="">All</option>
                 {providers.map(provider => (
                   <option key={provider} value={provider}>{provider}</option>
                 ))}
               </select>
 
               {/* Feature Filters */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <Checkbox
                   id="premium"
                   checked={showOnlyPremium}
                   onCheckedChange={(checked) => setShowOnlyPremium(checked === true)}
+                  className="h-3 w-3"
                 />
                 <label htmlFor="premium" className="text-xs cursor-pointer">Premium</label>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <Checkbox
                   id="reasoning"
                   checked={showOnlyReasoning}
                   onCheckedChange={(checked) => setShowOnlyReasoning(checked === true)}
+                  className="h-3 w-3"
                 />
                 <label htmlFor="reasoning" className="text-xs cursor-pointer">Reasoning</label>
               </div>
@@ -209,9 +212,9 @@ export function FloatingModelPicker({
                   variant="ghost"
                   size="sm"
                   onClick={clearFilters}
-                  className="h-6 px-2 text-xs"
+                  className="h-5 px-1.5 text-xs"
                 >
-                  <X className="w-3 h-3 mr-1" />
+                  <X className="w-2.5 h-2.5 mr-0.5" />
                   Clear
                 </Button>
               )}
@@ -221,14 +224,14 @@ export function FloatingModelPicker({
           <Separator />
 
           <CardContent className="p-0">
-            <ScrollArea className="h-96">
-              <div className="p-3 space-y-4">
+            <ScrollArea className="h-72">
+              <div className="p-2 space-y-3">
                 {Object.entries(groupedModels).map(([provider, providerModels]) => (
-                  <div key={provider} className="space-y-2">
+                  <div key={provider} className="space-y-1.5">
                     {/* Provider Header */}
-                    <div className="flex items-center justify-between py-1">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
+                    <div className="flex items-center justify-between py-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Avatar className="h-4 w-4">
                           <AvatarFallback className={cn(
                             "text-xs font-bold text-white",
                             providerModels[0]?.color
@@ -236,8 +239,8 @@ export function FloatingModelPicker({
                             {getProviderIcon(provider)}
                           </AvatarFallback>
                         </Avatar>
-                        <h4 className="text-sm font-medium">{provider}</h4>
-                        <Badge variant="outline" className="text-xs h-5">
+                        <h4 className="text-xs font-medium">{provider}</h4>
+                        <Badge variant="outline" className="text-xs h-4 px-1">
                           {providerModels.length}
                         </Badge>
                       </div>
@@ -245,20 +248,20 @@ export function FloatingModelPicker({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleProviderToggle(provider, providerModels)}
-                        className="h-6 px-2 text-xs"
+                        className="h-5 px-1.5 text-xs"
                       >
                         {providerModels.every(model => selectedModels.includes(model.id))
-                          ? 'Deselect' : 'Select All'}
+                          ? 'Deselect' : 'All'}
                       </Button>
                     </div>
 
                     {/* Models List */}
-                    <div className="space-y-1 pl-7">
+                    <div className="space-y-0.5 pl-5">
                       {providerModels.map((model) => (
                         <div
                           key={model.id}
                           className={cn(
-                            "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors",
+                            "flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors",
                             "hover:bg-accent/50",
                             selectedModels.includes(model.id) && "bg-primary/5 border border-primary/20"
                           )}
@@ -267,16 +270,16 @@ export function FloatingModelPicker({
                           <Checkbox
                             checked={selectedModels.includes(model.id)}
                             onCheckedChange={() => onToggleModel(model.id)}
-                            className="pointer-events-none"
+                            className="pointer-events-none h-3 w-3"
                           />
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1">
-                              <span className="text-sm font-medium truncate">
+                              <span className="text-xs font-medium truncate">
                                 {model.name}
                               </span>
-                              {model.premium && <Crown className="w-3 h-3 text-yellow-500" />}
-                              {model.isReasoning && <Brain className="w-3 h-3 text-blue-500" />}
+                              {model.premium && <Crown className="w-2.5 h-2.5 text-yellow-500" />}
+                              {model.isReasoning && <Brain className="w-2.5 h-2.5 text-blue-500" />}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               ${model.cost?.input}/M • ${model.cost?.output}/M
@@ -284,7 +287,7 @@ export function FloatingModelPicker({
                           </div>
 
                           {selectedModels.includes(model.id) && (
-                            <Check className="w-4 h-4 text-primary" />
+                            <Check className="w-3 h-3 text-primary" />
                           )}
                         </div>
                       ))}
@@ -293,14 +296,14 @@ export function FloatingModelPicker({
                 ))}
 
                 {filteredModels.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Filter className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No models match your filters</p>
+                  <div className="text-center py-6 text-muted-foreground">
+                    <Filter className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                    <p className="text-xs">No models match filters</p>
                     <Button
                       variant="link"
                       size="sm"
                       onClick={clearFilters}
-                      className="text-xs mt-1"
+                      className="text-xs mt-0.5 h-5"
                     >
                       Clear filters
                     </Button>
@@ -312,14 +315,14 @@ export function FloatingModelPicker({
             <Separator />
 
             {/* Quick Actions */}
-            <div className="p-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 space-y-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onSelectAllModels(models.map(m => m.id))}
                   disabled={selectedModels.length === models.length}
-                  className="text-xs h-8"
+                  className="text-xs h-6"
                 >
                   Select All
                 </Button>
@@ -328,7 +331,7 @@ export function FloatingModelPicker({
                   size="sm"
                   onClick={onClearAllModels}
                   disabled={selectedModels.length === 0}
-                  className="text-xs h-8"
+                  className="text-xs h-6"
                 >
                   Clear All
                 </Button>
@@ -343,9 +346,9 @@ export function FloatingModelPicker({
                     const gptModels = models.filter(m => m.provider === 'OpenAI').map(m => m.id);
                     onSelectAllModels([...new Set([...selectedModels, ...gptModels])]);
                   }}
-                  className="text-xs h-6 px-2"
+                  className="text-xs h-5 px-1.5"
                 >
-                  + All OpenAI
+                  + OpenAI
                 </Button>
                 <Button
                   variant="ghost"
@@ -354,9 +357,9 @@ export function FloatingModelPicker({
                     const claudeModels = models.filter(m => m.provider === 'Anthropic').map(m => m.id);
                     onSelectAllModels([...new Set([...selectedModels, ...claudeModels])]);
                   }}
-                  className="text-xs h-6 px-2"
+                  className="text-xs h-5 px-1.5"
                 >
-                  + All Claude
+                  + Claude
                 </Button>
                 <Button
                   variant="ghost"
@@ -365,7 +368,7 @@ export function FloatingModelPicker({
                     const reasoningModels = models.filter(m => m.isReasoning).map(m => m.id);
                     onSelectAllModels([...new Set([...selectedModels, ...reasoningModels])]);
                   }}
-                  className="text-xs h-6 px-2"
+                  className="text-xs h-5 px-1.5"
                 >
                   + Reasoning
                 </Button>

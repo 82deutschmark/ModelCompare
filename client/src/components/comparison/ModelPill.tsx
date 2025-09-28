@@ -63,15 +63,15 @@ export function ModelPill({
 
   // Variant styles
   const pillStyles = {
-    default: "px-3 py-2 gap-2",
-    compact: "px-2 py-1.5 gap-1.5",
-    minimal: "px-2 py-1 gap-1"
+    default: "px-2 py-1.5 gap-1.5",
+    compact: "px-1.5 py-1 gap-1",
+    minimal: "px-1 py-0.5 gap-0.5"
   };
 
   const avatarSizes = {
-    default: "h-6 w-6",
-    compact: "h-5 w-5",
-    minimal: "h-4 w-4"
+    default: "h-5 w-5",
+    compact: "h-4 w-4",
+    minimal: "h-3 w-3"
   };
 
   return (
@@ -103,28 +103,53 @@ export function ModelPill({
 
             {/* Model Name */}
             <span className={cn(
-              "font-medium truncate max-w-32",
-              variant === 'default' && "text-sm",
-              variant === 'compact' && "text-xs",
-              variant === 'minimal' && "text-xs max-w-20"
+              "font-medium truncate",
+              variant === 'default' && "text-xs max-w-24",
+              variant === 'compact' && "text-xs max-w-20",
+              variant === 'minimal' && "text-xs max-w-16"
             )}>
               {model.name}
             </span>
 
             {/* Status Indicators */}
             <div className="flex items-center gap-1">
-              {model.premium && variant !== 'minimal' && (
-                <Crown className="w-3 h-3 text-yellow-500" />
+              {model.premium && (
+                <Crown className={cn(
+                  "text-yellow-500",
+                  variant === 'default' && "w-3 h-3",
+                  variant === 'compact' && "w-2.5 h-2.5",
+                  variant === 'minimal' && "w-2 h-2"
+                )} />
               )}
-              {model.isReasoning && variant !== 'minimal' && (
-                <Brain className="w-3 h-3 text-blue-500" />
+              {model.isReasoning && (
+                <Brain className={cn(
+                  "text-blue-500",
+                  variant === 'default' && "w-3 h-3",
+                  variant === 'compact' && "w-2.5 h-2.5",
+                  variant === 'minimal' && "w-2 h-2"
+                )} />
               )}
               {isLoading ? (
-                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                <Loader2 className={cn(
+                  "animate-spin text-primary",
+                  variant === 'default' && "w-2.5 h-2.5",
+                  variant === 'compact' && "w-2 h-2",
+                  variant === 'minimal' && "w-1.5 h-1.5"
+                )} />
               ) : hasResponse ? (
-                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <div className={cn(
+                  "rounded-full bg-green-500",
+                  variant === 'default' && "w-2 h-2",
+                  variant === 'compact' && "w-1.5 h-1.5",
+                  variant === 'minimal' && "w-1 h-1"
+                )} />
               ) : (
-                <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                <div className={cn(
+                  "rounded-full bg-muted-foreground/30",
+                  variant === 'default' && "w-2 h-2",
+                  variant === 'compact' && "w-1.5 h-1.5",
+                  variant === 'minimal' && "w-1 h-1"
+                )} />
               )}
             </div>
 
@@ -134,13 +159,17 @@ export function ModelPill({
               size="sm"
               className={cn(
                 "p-0 hover:bg-destructive hover:text-destructive-foreground rounded-full",
-                variant === 'default' && "h-4 w-4",
+                variant === 'default' && "h-3.5 w-3.5",
                 variant === 'compact' && "h-3 w-3",
-                variant === 'minimal' && "h-3 w-3"
+                variant === 'minimal' && "h-2.5 w-2.5"
               )}
               onClick={handleRemove}
             >
-              <X className="w-3 h-3" />
+              <X className={cn(
+                variant === 'default' && "w-2.5 h-2.5",
+                variant === 'compact' && "w-2 h-2",
+                variant === 'minimal' && "w-1.5 h-1.5"
+              )} />
             </Button>
           </Badge>
         </TooltipTrigger>

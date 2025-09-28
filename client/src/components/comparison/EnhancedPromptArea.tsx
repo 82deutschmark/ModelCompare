@@ -178,59 +178,58 @@ export function EnhancedPromptArea({
   const currentCategory = promptCategories.find(cat => cat.id === selectedCategory);
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-5xl mx-auto space-y-3">
       {/* Main Prompt Card */}
       <Card className="relative">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center justify-between">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-base">
             <div className="flex items-center space-x-2">
-              <MessageSquare className="w-5 h-5 text-primary" />
-              <span>AI Model Comparison</span>
+              <MessageSquare className="w-4 h-4 text-primary" />
+              <span>Compare Models</span>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <span>{wordCount} words</span>
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+              <span>{wordCount}w</span>
               <span>•</span>
-              <span>{characterCount} characters</span>
+              <span>{characterCount}c</span>
             </div>
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {/* Prompt Textarea */}
           <div className="relative">
             <Textarea
               value={prompt}
               onChange={handlePromptChange}
               onFocus={handlePromptFocus}
-              rows={8}
+              rows={6}
               className={cn(
-                "min-h-48 resize-none text-base leading-relaxed",
-                "focus:ring-2 focus:ring-primary/20 border-2",
-                isDefaultPrompt && "text-muted-foreground",
-                "text-lg" // Larger text for hero element
+                "min-h-32 resize-none text-sm leading-relaxed",
+                "focus:ring-1 focus:ring-primary/20 border",
+                isDefaultPrompt && "text-muted-foreground"
               )}
               placeholder="Enter your prompt here to compare across AI models..."
             />
 
             {/* Character/Word Count Overlay */}
-            <div className="absolute bottom-3 right-3 flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
+            <div className="absolute bottom-2 right-2 flex items-center gap-1">
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5">
                 {characterCount > 4000 && (
-                  <AlertCircle className="w-3 h-3 mr-1 text-amber-500" />
+                  <AlertCircle className="w-2.5 h-2.5 mr-0.5 text-amber-500" />
                 )}
-                {characterCount}/8000
+                {characterCount}/8k
               </Badge>
             </div>
           </div>
 
           {/* Template Selection */}
           {!promptsLoading && promptCategories.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg border">
-              <div className="flex items-center space-x-2">
-                <BookOpen className="w-4 h-4 text-muted-foreground" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-muted/20 rounded border">
+              <div className="flex items-center space-x-1.5">
+                <BookOpen className="w-3 h-3 text-muted-foreground" />
                 <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Choose template category" />
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Template category" />
                   </SelectTrigger>
                   <SelectContent>
                     {promptCategories.map((category) => (
@@ -244,8 +243,8 @@ export function EnhancedPromptArea({
 
               {selectedCategory && currentCategory && (
                 <Select value={selectedPromptTemplate} onValueChange={handleTemplateChange}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Select prompt template" />
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent>
                     {currentCategory.prompts.map((template) => (
@@ -262,17 +261,17 @@ export function EnhancedPromptArea({
           <Separator />
 
           {/* Model Selection Area */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium flex items-center gap-2">
-                <Zap className="w-4 h-4 text-primary" />
-                Selected Models
+              <h3 className="text-xs font-medium flex items-center gap-1.5">
+                <Zap className="w-3 h-3 text-primary" />
+                Models
                 {selectedModels.length > 0 && (
-                  <Badge variant="secondary">{selectedModels.length}</Badge>
+                  <Badge variant="secondary" className="h-4 px-1.5 text-xs">{selectedModels.length}</Badge>
                 )}
               </h3>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <FloatingModelPicker
                   models={models}
                   selectedModels={selectedModels}
@@ -281,24 +280,12 @@ export function EnhancedPromptArea({
                   onClearAllModels={onClearAllModels}
                   disabled={disabled}
                 />
-
-                {showPromptPreview && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPromptPreview(false)}
-                    className="gap-1"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Hide Preview
-                  </Button>
-                )}
               </div>
             </div>
 
             {/* Selected Model Pills */}
             {selectedModels.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {selectedModelObjects.map((model) => (
                   <ModelPill
                     key={model.id}
@@ -307,15 +294,15 @@ export function EnhancedPromptArea({
                     hasResponse={!!responses[model.id]}
                     onRemove={onToggleModel}
                     onClick={handleModelPillClick}
-                    variant="default"
+                    variant="compact"
                   />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                <Zap className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No models selected</p>
-                <p className="text-xs">Click "Add Models" to get started</p>
+              <div className="text-center py-4 text-muted-foreground border border-dashed rounded">
+                <Zap className="w-5 h-5 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">No models selected</p>
+                <p className="text-xs opacity-75">Click "Add Models" to get started</p>
               </div>
             )}
           </div>
@@ -323,12 +310,12 @@ export function EnhancedPromptArea({
           <Separator />
 
           {/* Action Area */}
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {selectedModels.length > 0 && (
                 <>
-                  <Check className="w-4 h-4 text-green-500" />
-                  <span>Ready to compare across {selectedModels.length} models</span>
+                  <Check className="w-3 h-3 text-green-500" />
+                  <span>Ready to compare {selectedModels.length} models</span>
                 </>
               )}
             </div>
@@ -336,21 +323,21 @@ export function EnhancedPromptArea({
             <Button
               onClick={handleSubmit}
               disabled={!canSubmit}
-              size="lg"
+              size="sm"
               className={cn(
-                "gap-2 min-w-32",
+                "gap-1.5 min-w-24 h-8",
                 isComparing && "animate-pulse"
               )}
             >
               {isComparing ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   Comparing...
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4" />
-                  Compare Models
+                  <Play className="w-3 h-3" />
+                  Compare
                 </>
               )}
             </Button>
@@ -359,25 +346,25 @@ export function EnhancedPromptArea({
       </Card>
 
       {/* Quick Stats */}
-      {selectedModels.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-muted/30 rounded-lg">
-            <div className="text-lg font-semibold">{selectedModels.length}</div>
-            <div className="text-xs text-muted-foreground">Models Selected</div>
+      {selectedModels.length > 0 && (Object.keys(responses).length > 0 || loadingModels.size > 0) && (
+        <div className="grid grid-cols-4 gap-2">
+          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+            <div className="font-semibold">{selectedModels.length}</div>
+            <div className="text-muted-foreground">Models</div>
           </div>
-          <div className="text-center p-3 bg-muted/30 rounded-lg">
-            <div className="text-lg font-semibold">{wordCount}</div>
-            <div className="text-xs text-muted-foreground">Words in Prompt</div>
+          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+            <div className="font-semibold">{wordCount}</div>
+            <div className="text-muted-foreground">Words</div>
           </div>
-          <div className="text-center p-3 bg-muted/30 rounded-lg">
-            <div className="text-lg font-semibold">
+          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+            <div className="font-semibold">
               {Object.keys(responses).length}
             </div>
-            <div className="text-xs text-muted-foreground">Responses Ready</div>
+            <div className="text-muted-foreground">Ready</div>
           </div>
-          <div className="text-center p-3 bg-muted/30 rounded-lg">
-            <div className="text-lg font-semibold">{loadingModels.size}</div>
-            <div className="text-xs text-muted-foreground">Currently Processing</div>
+          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+            <div className="font-semibold">{loadingModels.size}</div>
+            <div className="text-muted-foreground">Running</div>
           </div>
         </div>
       )}
