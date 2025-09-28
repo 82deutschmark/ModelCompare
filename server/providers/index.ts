@@ -11,18 +11,20 @@ import { OpenAIProvider } from './openai.js';
 import { AnthropicProvider } from './anthropic.js';
 import { GoogleProvider } from './google.js';
 import { DeepSeekProvider } from './deepseek.js';
-import { XAIProvider } from './xai.js';
+
+import { OpenRouterProvider } from './openrouter.js';
 import { CircuitBreaker } from './circuit-breaker.js';
 import { ModelNotFoundError, ProviderError, CircuitBreakerError } from '../errors.js';
 import { getCircuitBreakerConfig } from '../config.js';
 
 // Initialize all providers with circuit breakers
+// Note: xAI provider deprecated - Grok models now available via OpenRouter
 const providers: BaseProvider[] = [
   new OpenAIProvider(),
   new AnthropicProvider(),
   new GoogleProvider(),
   new DeepSeekProvider(),
-  new XAIProvider(),
+  new OpenRouterProvider(),
 ];
 
 // Circuit breaker per provider for resilience
@@ -129,4 +131,4 @@ export async function callModelWithMessages(messages: ModelMessage[], modelId: s
 }
 
 export { BaseProvider, ModelConfig, ModelResponse };
-export { OpenAIProvider, AnthropicProvider, GoogleProvider, DeepSeekProvider, XAIProvider };
+export { OpenAIProvider, AnthropicProvider, GoogleProvider, DeepSeekProvider, OpenRouterProvider };

@@ -21,7 +21,7 @@ export type ModelDisplay = {
     input: string;
     output: string;
   };
-  provider: 'OpenAI' | 'Anthropic' | 'Gemini' | 'DeepSeek' | 'xAI';
+  provider: 'OpenAI' | 'Anthropic' | 'Gemini' | 'DeepSeek' | 'OpenRouter';
   responseTime: { speed: 'fast' | 'moderate' | 'slow'; estimate: string };
   supportsTemperature?: boolean;
   supportsReasoning?: boolean;
@@ -217,52 +217,104 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     responseTime: { speed: 'moderate', estimate: '30-90 sec' },
   },
 
-  // xAI
-  'grok-4-0709': {
-    key: 'grok-4-0709',
-    name: 'Grok 4 (July 2025)',
-    color: 'bg-gray-900',
+
+
+  // OpenRouter
+  // OpenRouter - Grok models (migrated from deprecated xAI provider)
+  'openrouter/grok-4': {
+    key: 'openrouter/grok-4',
+    name: 'Grok 4 (via OpenRouter)',
+    color: 'bg-slate-800',
     premium: true,
-    cost: { input: '$3.00', output: '$15.00' },
-    provider: 'xAI',
+    cost: { input: '$5.00', output: '$15.00' },
+    provider: 'OpenRouter',
     responseTime: { speed: 'slow', estimate: '3-5+ min' },
     supportsReasoning: true,
   },
-  'grok-3': {
-    key: 'grok-3',
-    name: 'Grok 3',
-    color: 'bg-gray-600',
+  'openrouter/grok-3': {
+    key: 'openrouter/grok-3',
+    name: 'Grok 3 (via OpenRouter)',
+    color: 'bg-slate-700',
     premium: true,
-    cost: { input: '$2.00', output: '$10.00' },
-    provider: 'xAI',
+    cost: { input: '$3.00', output: '$15.00' },
+    provider: 'OpenRouter',
     responseTime: { speed: 'slow', estimate: '3-5+ min' },
+    supportsReasoning: true,
   },
-  'grok-3-mini': {
-    key: 'grok-3-mini',
-    name: 'Grok 3 Mini',
-    color: 'bg-gray-500',
+  'openrouter/grok-3-mini': {
+    key: 'openrouter/grok-3-mini',
+    name: 'Grok 3 Mini (via OpenRouter)',
+    color: 'bg-slate-600',
     premium: false,
     cost: { input: '$0.50', output: '$2.00' },
-    provider: 'xAI',
+    provider: 'OpenRouter',
     responseTime: { speed: 'moderate', estimate: '1-2 min' },
   },
-  'grok-3-fast': {
-    key: 'grok-3-fast',
-    name: 'Grok 3 Fast',
-    color: 'bg-gray-600',
+  'openrouter/grok-3-fast': {
+    key: 'openrouter/grok-3-fast',
+    name: 'Grok 3 Fast (via OpenRouter)',
+    color: 'bg-slate-500',
     premium: false,
     cost: { input: '$1.00', output: '$4.00' },
-    provider: 'xAI',
-    responseTime: { speed: 'moderate', estimate: '1-2 min' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'fast', estimate: '30-60 sec' },
   },
-  'grok-3-mini-fast': {
-    key: 'grok-3-mini-fast',
-    name: 'Grok 3 Mini Fast',
-    color: 'bg-gray-600',
+  'openrouter/grok-3-mini-fast': {
+    key: 'openrouter/grok-3-mini-fast',
+    name: 'Grok 3 Mini Fast (via OpenRouter)',
+    color: 'bg-slate-400',
     premium: false,
     cost: { input: '$0.25', output: '$1.00' },
-    provider: 'xAI',
-    responseTime: { speed: 'fast', estimate: '30-60 sec' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'fast', estimate: '15-30 sec' },
+  },
+  // OpenRouter - Premium frontier models
+  'openrouter/qwen-3-235b': {
+    key: 'openrouter/qwen-3-235b',
+    name: 'Qwen 3 235B (via OpenRouter)',
+    color: 'bg-orange-600',
+    premium: true,
+    cost: { input: '$0.15', output: '$0.85' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'moderate', estimate: '1-2 min' },
+    supportsReasoning: true,
+  },
+  'openrouter/llama-4-maverick': {
+    key: 'openrouter/llama-4-maverick',
+    name: 'Llama 4 Maverick (via OpenRouter)',
+    color: 'bg-blue-700',
+    premium: true,
+    cost: { input: '$0.80', output: '$2.40' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'moderate', estimate: '1-2 min' },
+    supportsReasoning: true,
+  },
+  'openrouter/llama-3.3-70b': {
+    key: 'openrouter/llama-3.3-70b',
+    name: 'Llama 3.3 70B (via OpenRouter)',
+    color: 'bg-blue-600',
+    premium: false,
+    cost: { input: '$0.60', output: '$0.60' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'moderate', estimate: '1-2 min' },
+  },
+  'openrouter/mistral-large': {
+    key: 'openrouter/mistral-large',
+    name: 'Mistral Large (via OpenRouter)',
+    color: 'bg-rose-600',
+    premium: false,
+    cost: { input: '$2.00', output: '$6.00' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'moderate', estimate: '1-2 min' },
+  },
+  'openrouter/command-r-plus': {
+    key: 'openrouter/command-r-plus',
+    name: 'Command R+ (via OpenRouter)',
+    color: 'bg-emerald-600',
+    premium: false,
+    cost: { input: '$2.50', output: '$10.00' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'moderate', estimate: '1-2 min' },
   },
 };
 

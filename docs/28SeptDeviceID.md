@@ -222,6 +222,40 @@ headers['x-device-id'] = deviceId;
    - Handle 402 status code from credit checks
    - Show user-friendly message: "Usage limit reached. Visit account page to continue."
    - Link to account/billing page
+
+### 🚨 CRITICAL TESTING POINTS
+
+**Before deployment, verify:**
+- [ ] Anonymous users can use `/api/compare` without signing in
+- [ ] Anonymous users can use and access ALL features and all pages
+- [ ] Has no PII stored in the database
+- [ ] Hash the device ID before storing it in the database
+- [ ] ZDR all auth is via Google OAuth
+- [ ] Device ID is generated and persisted in localStorage
+- [ ] Session ID is generated and persisted in localStorage for that device
+- [ ] Credit tracking works (new users get 500 credits)
+- [ ] Using a feature consumes credits on the backend for that device!!!
+- [ ] Credit deduction works (5 credits per comparison)
+- [ ] Error handling when credits reach 0
+- [ ] Existing authenticated users still work normally
+- [ ] Database schema supports both anonymous and authenticated users
+
+### 📁 FILES MODIFIED
+```
+✅ client/src/lib/deviceId.ts                 (NEW - Device ID utilities)
+✅ shared/schema.ts                           (MODIFIED - Added deviceId field)
+✅ server/storage.ts                          (MODIFIED - Added device user functions)
+✅ server/device-auth.ts                      (NEW - Device middleware)
+✅ server/routes.ts                           (MODIFIED - Updated /api/compare, /api/user/credits)
+🔄 client/src/lib/api.ts                      (TODO - Add x-device-id header)
+🔄 client/src/hooks/useAuth.ts                (TODO - Fix User type import)
+🔄 client/src/components/AppNavigation.tsx    (TODO - Hide credits for anonymous)
+```
+
+### 🎯 SUCCESS CRITERIA
+When complete, new users should:
+1. Access ModelCompare without creating accounts
+2. Get 500 credits automatically (invisible to them)
 3. Use all features normally until credits depleted
 4. See account page link only when credits run out
 5. Optional sign-in for credit purchases and account management

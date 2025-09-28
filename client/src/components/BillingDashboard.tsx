@@ -339,7 +339,7 @@ export function BillingDashboard({
                   <p className="text-sm font-medium">Current Balance</p>
                   <div className="flex items-center space-x-1">
                     <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {user.credits.toLocaleString()}
+                      {(user.credits ?? 0).toLocaleString()}
                     </span>
                     <span className="text-sm text-muted-foreground">credits</span>
                   </div>
@@ -356,7 +356,7 @@ export function BillingDashboard({
                   <p className="text-sm font-medium">Member Since</p>
                   <div className="flex items-center space-x-1">
                     <span className="text-2xl font-bold">
-                      {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
                     </span>
                   </div>
                 </div>
