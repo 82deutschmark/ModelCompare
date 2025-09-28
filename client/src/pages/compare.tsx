@@ -60,54 +60,56 @@ export default function Compare() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <AppNavigation 
-        title="AI Model Comparison" 
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      <AppNavigation
+        title="AI Model Comparison"
         subtitle="Side-by-side model comparison"
         icon={Brain}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Model Selection Panel - Left column */}
-          <div className="xl:col-span-1">
-            <ModelSelectionPanel
-              models={models}
-              selectedModels={state.selectedModels}
-              loadingModels={state.loadingModels}
-              responses={state.responses}
-              modelsLoading={modelsLoading}
-              onToggleModel={actions.toggleModel}
-              onSelectAllModels={actions.selectAllModels}
-              onClearAllModels={actions.clearAllModels}
-              showTiming={showTiming}
-              setShowTiming={setShowTiming}
-            />
-          </div>
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="h-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+            {/* Model Selection Panel - Responsive width */}
+            <div className="md:col-span-1 lg:col-span-1 xl:col-span-1 overflow-y-auto">
+              <ModelSelectionPanel
+                models={models}
+                selectedModels={state.selectedModels}
+                loadingModels={state.loadingModels}
+                responses={state.responses}
+                modelsLoading={modelsLoading}
+                onToggleModel={actions.toggleModel}
+                onSelectAllModels={actions.selectAllModels}
+                onClearAllModels={actions.clearAllModels}
+                showTiming={showTiming}
+                setShowTiming={setShowTiming}
+              />
+            </div>
 
-          {/* Main Content Area - Right columns */}
-          <div className="xl:col-span-2 space-y-4">
-            {/* Prompt Input */}
-            <PromptInput
-              prompt={prompt}
-              setPrompt={setPrompt}
-              onSubmit={handleSubmit}
-              disabled={status.isComparing}
-              selectedModels={state.selectedModels}
-              showPromptPreview={showPromptPreview}
-              setShowPromptPreview={setShowPromptPreview}
-            />
+            {/* Main Content Area - Responsive width */}
+            <div className="md:col-span-1 lg:col-span-2 xl:col-span-3 overflow-y-auto space-y-4">
+              {/* Prompt Input */}
+              <PromptInput
+                prompt={prompt}
+                setPrompt={setPrompt}
+                onSubmit={handleSubmit}
+                disabled={status.isComparing}
+                selectedModels={state.selectedModels}
+                showPromptPreview={showPromptPreview}
+                setShowPromptPreview={setShowPromptPreview}
+              />
 
-            {/* Comparison Results */}
-            <ComparisonResults
-              models={models}
-              responses={state.responses}
-              selectedModels={state.selectedModels}
-              onRetry={handleRetry}
-              showTiming={showTiming}
-              prompt={prompt}
-              isComparing={status.isComparing}
-            />
+              {/* Comparison Results */}
+              <ComparisonResults
+                models={models}
+                responses={state.responses}
+                selectedModels={state.selectedModels}
+                onRetry={handleRetry}
+                showTiming={showTiming}
+                prompt={prompt}
+                isComparing={status.isComparing}
+              />
+            </div>
           </div>
         </div>
       </div>
