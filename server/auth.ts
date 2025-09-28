@@ -49,9 +49,10 @@ export function configurePassport() {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: process.env.NODE_ENV === 'production' 
-      ? 'https://your-domain.com/api/auth/google/callback'  // Update with your production domain
-      : 'http://localhost:5000/api/auth/google/callback'
+    callbackURL: process.env.GOOGLE_OAUTH_CALLBACK_URL || 
+      (process.env.NODE_ENV === 'production' 
+        ? `https://${process.env.DOMAIN || 'localhost'}/api/auth/google/callback`
+        : 'http://localhost:5000/api/auth/google/callback')
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -196,7 +197,8 @@ declare global {
   namespace Express {
     interface User {
       id: string;
-      email: string;
+      email: string | null;
+      deviceId: string | null;
       firstName: string | null;
       lastName: string | null;
       profileImageUrl: string | null;
