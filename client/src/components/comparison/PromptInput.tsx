@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { MessageSquare, BookOpen, Eye, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { parsePromptsFromMarkdown, type PromptCategory } from "@/lib/promptParser";
+import { cn } from "@/lib/utils";
 
 interface PromptInputProps {
   prompt: string;
