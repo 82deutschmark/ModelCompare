@@ -35,6 +35,7 @@ import { initializeDatabaseManager } from "./db.js";
 import { formatErrorResponse } from "./errors.js";
 import { requestContextMiddleware, requestCompletionLogger, contextLog, contextError } from "./request-context.js";
 import { config, isDevelopment, isProduction, getSecurityConfig, getServerConfig } from "./config.js";
+import { configurePassport, configureSession } from "./auth.js";
 
 const app = express();
 
@@ -83,6 +84,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Configure authentication (Passport + Sessions) before routes
+  configurePassport();
+  await configureSession(app);
+
   const server = await registerRoutes(app);
 
   // Validate all templates at startup
