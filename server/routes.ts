@@ -34,6 +34,7 @@ import { getDisplayForModelId, MODEL_CATALOG, type ModelDisplay } from "../share
 import { getDatabaseManager } from "./db.js";
 import { contextLog } from "./request-context.js";
 import { isAuthenticated, hasCredits } from "./auth.js";
+import { ensureDeviceUser, checkDeviceCredits, deductCreditsForSuccessfulCalls, getUserCredits } from "./device-auth.js";
 import type { User } from "../shared/schema.js";
 import { createPaymentIntent, handleStripeWebhook, getCreditPackages, validateStripeConfig } from "./stripe.js";
 
@@ -87,11 +88,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's current credit balance
-  app.get("/api/user/credits", isAuthenticated, async (req, res) => {
+  app.get("/api/user/credits", ensureDeviceUser, async (req, res) => {
     try {
-      const user = req.user as User;
-      const storage = await getStorage();
-      const credits = await storage.getUserCredits(user.id);
+      const credits = await getUserCredits(req);
       res.json({ credits });
     } catch (error) {
       console.error('Error fetching user credits:', error);
@@ -206,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Compare models endpoint - protected with authentication and credit check
-  app.post("/api/compare", isAuthenticated, hasCredits, async (req, res) => {
+  app.post("/api/compare", ensureDeviceUser, checkDeviceCredits, async (req, res) => {
     try {
       const { prompt, modelIds } = compareModelsSchema.parse(req.body);
       
@@ -240,15 +239,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await Promise.all(modelPromises);
 
       // Deduct credits for successful API calls (5 credits per model called)
-      const user = req.user as User;
-      const storage = await getStorage();
       const successfulCalls = modelIds.filter(modelId => responses[modelId]?.status === 'success').length;
-      const creditsToDeduct = successfulCalls * 5;
-      
-      if (creditsToDeduct > 0) {
-        await storage.deductCredits(user.id, creditsToDeduct);
-        contextLog(`Deducted ${creditsToDeduct} credits from user ${user.email} for ${successfulCalls} successful API calls`);
-      }
+      await deductCreditsForSuccessfulCalls(req, successfulCalls, 5);
 
       // Store the comparison
       const comparison = await storage.createComparison({

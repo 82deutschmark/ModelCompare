@@ -43,7 +43,10 @@ export interface IStorage {
   // User authentication operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByDeviceId(deviceId: string): Promise<User | undefined>;
   upsertUser(userData: UpsertUser): Promise<User>;
+  createAnonymousUser(deviceId: string): Promise<User>;
+  ensureDeviceUser(deviceId: string): Promise<User>;
   
   // Credit management operations
   getUserCredits(userId: string): Promise<number>;
@@ -143,6 +146,33 @@ export class DbStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [result] = await requireDb().select().from(users).where(eq(users.email, email));
     return result;
+  }
+
+  async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
+    const [result] = await requireDb().select().from(users).where(eq(users.deviceId, deviceId));
+    return result;
+  }
+
+  async createAnonymousUser(deviceId: string): Promise<User> {
+    const [result] = await requireDb()
+      .insert(users)
+      .values({
+        deviceId: deviceId,
+        credits: 500, // Anonymous users start with 500 credits
+      })
+      .returning();
+    return result;
+  }
+
+  async ensureDeviceUser(deviceId: string): Promise<User> {
+    // Try to find existing user by device ID
+    const existingUser = await this.getUserByDeviceId(deviceId);
+    if (existingUser) {
+      return existingUser;
+    }
+
+    // Create new anonymous user
+    return await this.createAnonymousUser(deviceId);
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -379,6 +409,41 @@ export class MemStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const users = Array.from(this.users.values());
     return users.find(user => user.email === email);
+  }
+
+  async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
+    const users = Array.from(this.users.values());
+    return users.find(user => user.deviceId === deviceId);
+  }
+
+  async createAnonymousUser(deviceId: string): Promise<User> {
+    const id = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2)}`;
+    const user: User = {
+      id,
+      email: null,
+      deviceId: deviceId,
+      firstName: null,
+      lastName: null,
+      profileImageUrl: null,
+      credits: 500, // Anonymous users start with 500 credits
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  async ensureDeviceUser(deviceId: string): Promise<User> {
+    // Try to find existing user by device ID
+    const existingUser = await this.getUserByDeviceId(deviceId);
+    if (existingUser) {
+      return existingUser;
+    }
+
+    // Create new anonymous user
+    return await this.createAnonymousUser(deviceId);
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

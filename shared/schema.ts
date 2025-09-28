@@ -81,7 +81,8 @@ export const promptAudits = pgTable("prompt_audits", {
 // User authentication and billing tables
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique().notNull(),
+  email: varchar("email").unique(), // Made nullable for anonymous users
+  deviceId: varchar("device_id").unique(), // Device-based identification for anonymous users
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
