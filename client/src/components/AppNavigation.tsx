@@ -29,7 +29,8 @@ import {
   FileText,
   Monitor,
   Menu,
-  Home
+  Home,
+  CreditCard
 } from "lucide-react";
 
 interface NavigationMode {

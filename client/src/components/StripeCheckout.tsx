@@ -34,13 +34,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-// TODO: Install these packages:
-// npm install @stripe/stripe-js @stripe/react-stripe-js
-// import { loadStripe } from '@stripe/stripe-js';
-// import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 // Stripe configuration
-// const stripePromise = loadStripe(process.env.VITE_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.VITE_STRIPE_PUBLISHABLE_KEY!);
 
 // Credit package interface matching server-side definition
 interface CreditPackage {
@@ -72,41 +70,33 @@ function PaymentForm({
   onPaymentSuccess: (paymentIntent: any) => void;
   onPaymentError: (error: string) => void;
 }) {
-  // const stripe = useStripe();
-  // const elements = useElements();
+  const stripe = useStripe();
+  const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    
-    // TODO: Implement actual Stripe payment processing
-    // if (!stripe || !elements) {
-    //   return;
-    // }
+
+    if (!stripe || !elements) {
+      return;
+    }
 
     setIsProcessing(true);
     setPaymentError(null);
 
     try {
-      // Simulate payment processing for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // TODO: Replace with actual Stripe payment confirmation
-      // const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      //   payment_method: {
-      //     card: elements.getElement(CardElement)!,
-      //   }
-      // });
-      
-      // if (error) {
-      //   onPaymentError(error.message || 'Payment failed');
-      // } else {
-      //   onPaymentSuccess(paymentIntent);
-      // }
-      
-      // Simulate success for now
-      onPaymentSuccess({ id: 'pi_simulated_success' });
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: elements.getElement(CardElement)!,
+        }
+      });
+
+      if (error) {
+        onPaymentError(error.message || 'Payment failed');
+      } else {
+        onPaymentSuccess(paymentIntent);
+      }
     } catch (error) {
       onPaymentError(error instanceof Error ? error.message : 'Payment processing failed');
     } finally {
@@ -137,35 +127,27 @@ function PaymentForm({
           <span className="font-medium">Payment Method</span>
         </div>
         
-        {/* TODO: Replace with actual Stripe CardElement */}
         <div className="p-4 border rounded-lg bg-background">
           <div className="space-y-3">
-            <div className="h-10 bg-muted/30 rounded animate-pulse flex items-center px-3">
-              <span className="text-sm text-muted-foreground">Stripe Elements will load here</span>
-            </div>
+            <CardElement
+              options={{
+                style: {
+                  base: {
+                    fontSize: '16px',
+                    color: '#424770',
+                    '::placeholder': {
+                      color: '#aab7c4',
+                    },
+                  },
+                },
+              }}
+            />
             <div className="text-xs text-muted-foreground flex items-center space-x-1">
               <Lock className="w-3 h-3" />
               <span>Secured by Stripe. Your payment information is encrypted and secure.</span>
             </div>
           </div>
         </div>
-        {/* When Stripe Elements is installed, use:
-        <div className="stripe-card-element-container">
-          <CardElement 
-            options={{
-              style: {
-                base: {
-                  fontSize: '16px',
-                  color: '#424770',
-                  '::placeholder': {
-                    color: '#aab7c4',
-                  },
-                },
-              },
-            }}
-          />
-        </div>
-        */}
       </div>
 
       {/* Error Display */}
@@ -378,15 +360,14 @@ export function StripeCheckout({ packageId, onSuccess, onCancel, className }: St
       </CardHeader>
       <CardContent>
         {clientSecret && packageInfo ? (
-          // TODO: Wrap with Stripe Elements provider when installed
-          // <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
             <PaymentForm
               clientSecret={clientSecret}
               packageInfo={packageInfo}
               onPaymentSuccess={handlePaymentSuccess}
               onPaymentError={handlePaymentError}
             />
-          // </Elements>
+          </Elements>
         ) : (
           <div className="text-center py-8">
             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />

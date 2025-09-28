@@ -11,6 +11,7 @@ import CreativeCombat from "./pages/creative-combat";
 import Debate from "@/pages/debate";
 import ResearchSynthesis from "@/pages/research-synthesis";
 import PlanAssessmentPage from "@/pages/plan-assessment";
+import BillingPage from "@/pages/billing";
 import NotFound from "@/pages/not-found";
 import VixraPage from "./pages/vixra";
 import ArcAgiPage from "./pages/dashboard";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/battle" component={Battle} />
       <Route path="/creative-combat" component={CreativeCombat} />
       <Route path="/debate" component={Debate} />
+      <Route path="/billing" component={BillingPage} />
       <Route path="/vixra" component={VixraPage} />
       <Route path="/arc-agi" component={ArcAgiPage} />
       <Route path="/research-synthesis" component={ResearchSynthesis} />
