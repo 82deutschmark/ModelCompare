@@ -51,9 +51,25 @@ const definition: AgentDefinition = {
 - DO NOT use embedded \\n or backtick-n characters
 - DO NOT try to create multiline strings with quotes
 
-**Correct PowerShell Syntax:**
+**Correct PowerShell Syntax (Method 1 - Multiple -m flags):**
 \`\`\`powershell
 git commit -m "feat: Add user authentication" -m "Implement JWT-based login system" -m "Requires USER_SECRET environment variable"
+\`\`\`
+
+**Alternative Method (Method 2 - File-based if quotes fail):**
+\`\`\`powershell
+# Create temporary commit message file
+Set-Content -Path "commit-msg.txt" -Value "feat: Add user authentication
+
+Implement JWT-based login system.
+
+Requires USER_SECRET environment variable."
+
+# Commit using file
+git commit -F commit-msg.txt
+
+# Clean up
+del commit-msg.txt
 \`\`\`
 
 **WRONG (Do not use):**
@@ -142,4 +158,4 @@ Implement JWT system"\`
   },
 }
 
-export default definition
+export default definition

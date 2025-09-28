@@ -21,6 +21,6 @@ shadcn/ui: Pass - No UI components involved; reference only.
 - [ ] Review downstream imports and run lightweight validations if available.
 
 ## Notes
-- Keep variable generation asynchronous and reuse /api/models/respond via piRequest for consistency with other flows.
+- Keep variable generation asynchronous and reuse /api/models/respond via apiRequest for consistency with other flows.
 - Maintain satirical flavor while prioritizing deterministic, testable logic for exports and formatting helpers.
-- Watch for duplicate logic already present in ixraWorkflow.ts; prefer reuse or alignment where sensible.
+- Watch for duplicate logic already present in vixraWorkflow.ts; prefer reuse or alignment where sensible.
