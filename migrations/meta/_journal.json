@@ -8,6 +8,13 @@
       "when": 1755486198874,
       "tag": "0000_public_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1759076015711,
+      "tag": "0001_cynical_moon_knight",
+      "breakpoints": true
     }
   ]
 }

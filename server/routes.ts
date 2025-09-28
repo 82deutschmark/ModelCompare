@@ -25,7 +25,7 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import passport from 'passport';
 import { callModel, callModelWithMessages, getAllModels, getReasoningModels } from "./providers/index.js";
-import { getStorage, storage } from "./storage.js";
+import { getStorage } from "./storage.js";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
 import type { GenerateRequest, GenerateResponse, UnifiedMessage, ModelMessage } from "../shared/api-types.js";
@@ -244,6 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await deductCreditsForSuccessfulCalls(req, successfulCalls, 5);
 
       // Store the comparison
+      const storage = await getStorage();
       const comparison = await storage.createComparison({
         prompt,
         selectedModels: modelIds,

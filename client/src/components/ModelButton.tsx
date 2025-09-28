@@ -1,11 +1,12 @@
 /**
- * Author: Claude Code using Sonnet 4
- * Date: 2025-01-14
+ * Author: Grok 4 Fast
+ * Date: 2025-09-28 12:15:52
  * PURPOSE: Redesigned ModelButton component using shadcn/ui components for consistent design.
  * Implements Card, Badge, Tooltip, and other shadcn/ui primitives for better UX.
  * Uses new centralized model configuration with color and premium status.
  * SRP/DRY check: Pass - Single responsibility (model selection UI), reuses shadcn/ui components
  * shadcn/ui: Pass - Uses Card, Badge, Tooltip, and other shadcn/ui components
+ * Improvements: Added overflow-hidden to prevent text overrun, flex-1 and truncate with min-w-0 for better text handling in compact layouts.
  */
 
 import React from 'react';
@@ -60,7 +61,7 @@ export function ModelButton({
         <TooltipTrigger asChild>
           <Card
             className={cn(
-              "relative cursor-pointer transition-all duration-200 hover:shadow-md",
+              "relative cursor-pointer transition-all duration-200 hover:shadow-md overflow-hidden", // Added overflow-hidden for best practices
               isSelected && "ring-2 ring-primary ring-offset-2",
               isAnalyzing && "animate-pulse",
               disabled && "opacity-50 cursor-not-allowed",
@@ -69,52 +70,62 @@ export function ModelButton({
             )}
             onClick={handleClick}
           >
-            <CardContent className="p-3">
-              {/* Compact Header Row */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className={cn("text-xs font-bold text-white", model.color)}>
-                      {getProviderIcon(model.provider)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <h3 className="font-semibold text-sm truncate">{model.name}</h3>
-                  {model.premium && <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
+            <CardContent className="p-3 space-y-2"> {/* Added space-y-2 for consistent vertical spacing */}
+              {/* Compact Header Row - Using CardHeader for standard shadcn structure */}
+              <CardHeader className="p-0 pb-1"> {/* Zero padding, minimal bottom for separation */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 flex-1 min-w-0"> {/* flex-1 min-w-0 to allow shrinking without overflow */}
+                    <Avatar className="h-6 w-6 flex-shrink-0"> {/* flex-shrink-0 to prevent avatar from compressing */}
+                      <AvatarFallback className={cn("text-xs font-bold text-white", model.color)}>
+                        {getProviderIcon(model.provider)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-semibold text-sm truncate min-w-0 flex-1"> {/* Added flex-1 min-w-0 for proper truncation */}
+                      {model.name}
+                    </h3>
+                    {model.premium && <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
+                  </div>
+                  
+                  {/* Status Indicator */}
+                  <div className="flex items-center flex-shrink-0 ml-2"> {/* flex-shrink-0 to isolate status */}
+                    {isAnalyzing ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                    ) : responseCount > 0 ? (
+                      <Badge variant="default" className="px-1 py-0 text-xs h-4">
+                        {responseCount}
+                      </Badge>
+                    ) : isSelected ? (
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    ) : null}
+                  </div>
                 </div>
-                
-                {/* Status Indicator */}
-                <div className="flex items-center">
-                  {isAnalyzing ? (
-                    <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                  ) : responseCount > 0 ? (
-                    <Badge variant="default" className="px-1 py-0 text-xs h-4">
-                      {responseCount}
-                    </Badge>
-                  ) : isSelected ? (
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                  ) : null}
-                </div>
-              </div>
+              </CardHeader>
 
               {/* Compact Info Row */}
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center space-x-2">
-                  {model.isReasoning && <Brain className="w-3 h-3 text-blue-500" />}
-                  <Zap className="w-3 h-3" />
-                  <span className="capitalize">{model.responseTime?.speed}</span>
+                <div className="flex items-center space-x-2 flex-1 min-w-0"> {/* flex-1 min-w-0 for left side */}
+                  {model.isReasoning && <Brain className="w-3 h-3 text-blue-500 flex-shrink-0" />}
+                  <Zap className="w-3 h-3 flex-shrink-0" />
+                  <span className="capitalize truncate min-w-0 flex-1"> {/* truncate min-w-0 flex-1 for speed text */}
+                    {model.responseTime?.speed}
+                  </span>
                 </div>
                 
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-1 flex-shrink-0"> {/* flex-shrink-0 for right side */}
                   <DollarSign className="w-3 h-3" />
-                  <span>{model.cost?.input}/{model.cost?.output}M</span>
+                  <span className="truncate min-w-0"> {/* Added truncate as fallback, though costs are short */}
+                    {model.cost?.input}/{model.cost?.output}M
+                  </span>
                 </div>
               </div>
 
               {/* Optional Timing Row */}
               {showTiming && (
-                <div className="flex items-center space-x-1 text-xs text-muted-foreground mt-1">
-                  <Clock className="w-3 h-3" />
-                  <span>{model.responseTime?.estimate}</span>
+                <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                  <Clock className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate min-w-0 flex-1"> {/* Added truncate for long estimates */}
+                    {model.responseTime?.estimate}
+                  </span>
                 </div>
               )}
             </CardContent>
@@ -139,4 +150,4 @@ export function ModelButton({
       </Tooltip>
     </TooltipProvider>
   );
-}
+}
