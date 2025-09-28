@@ -34,6 +34,16 @@ function hashDeviceId(deviceId: string): string {
     .digest('hex');
 }
 
+/**
+ * Hash Stripe IDs for privacy - ensures no direct Stripe identifiers stored
+ * Uses SHA-256 with different salt to create consistent but private hashes
+ */
+function hashStripeId(stripeId: string): string {
+  return createHash('sha256')
+    .update(`stripe_${stripeId}`)
+    .digest('hex');
+}
+
 export interface IStorage {
   createComparison(comparison: InsertComparison): Promise<Comparison>;
   getComparison(id: string): Promise<Comparison | undefined>;
@@ -52,7 +62,6 @@ export interface IStorage {
   
   // User authentication operations
   getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
   getUserByDeviceId(deviceId: string): Promise<User | undefined>;
   upsertUser(userData: UpsertUser): Promise<User>;
   createAnonymousUser(deviceId: string): Promise<User>;
@@ -153,10 +162,6 @@ export class DbStorage implements IStorage {
     return result;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [result] = await requireDb().select().from(users).where(eq(users.email, email));
-    return result;
-  }
 
   async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
     const hashedDeviceId = hashDeviceId(deviceId);
@@ -193,13 +198,9 @@ export class DbStorage implements IStorage {
       const [result] = await requireDb()
         .update(users)
         .set({
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          profileImageUrl: userData.profileImageUrl,
           credits: userData.credits,
-          stripeCustomerId: userData.stripeCustomerId,
-          stripeSubscriptionId: userData.stripeSubscriptionId,
+          stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : null,
+          stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : null,
           updatedAt: new Date(),
         })
         .where(eq(users.id, userData.id))
@@ -210,14 +211,10 @@ export class DbStorage implements IStorage {
       const [result] = await requireDb()
         .insert(users)
         .values({
-          email: userData.email!,
-          deviceId: userData.deviceId || null,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          profileImageUrl: userData.profileImageUrl,
+          deviceId: userData.deviceId ? hashDeviceId(userData.deviceId) : null,
           credits: userData.credits ?? 500,
-          stripeCustomerId: userData.stripeCustomerId,
-          stripeSubscriptionId: userData.stripeSubscriptionId,
+          stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : null,
+          stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : null,
         })
         .returning();
       return result;
@@ -262,7 +259,7 @@ export class DbStorage implements IStorage {
     const [result] = await requireDb()
       .update(users)
       .set({
-        stripeCustomerId: customerId,
+        stripeCustomerId: hashStripeId(customerId),
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
@@ -274,8 +271,8 @@ export class DbStorage implements IStorage {
     const [result] = await requireDb()
       .update(users)
       .set({
-        stripeCustomerId: info.stripeCustomerId,
-        stripeSubscriptionId: info.stripeSubscriptionId,
+        stripeCustomerId: info.stripeCustomerId ? hashStripeId(info.stripeCustomerId) : null,
+        stripeSubscriptionId: info.stripeSubscriptionId ? hashStripeId(info.stripeSubscriptionId) : null,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
@@ -419,10 +416,6 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const users = Array.from(this.users.values());
-    return users.find(user => user.email === email);
-  }
 
   async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
     const hashedDeviceId = hashDeviceId(deviceId);
@@ -435,11 +428,7 @@ export class MemStorage implements IStorage {
     const id = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2)}`;
     const user: User = {
       id,
-      email: null,
       deviceId: hashedDeviceId,
-      firstName: null,
-      lastName: null,
-      profileImageUrl: null,
       credits: 500, // Anonymous users start with 500 credits
       stripeCustomerId: null,
       stripeSubscriptionId: null,
@@ -471,13 +460,9 @@ export class MemStorage implements IStorage {
       
       const updated: User = {
         ...existing,
-        email: userData.email || existing.email,
-        firstName: userData.firstName ?? existing.firstName,
-        lastName: userData.lastName ?? existing.lastName,
-        profileImageUrl: userData.profileImageUrl ?? existing.profileImageUrl,
         credits: userData.credits ?? existing.credits,
-        stripeCustomerId: userData.stripeCustomerId ?? existing.stripeCustomerId,
-        stripeSubscriptionId: userData.stripeSubscriptionId ?? existing.stripeSubscriptionId,
+        stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : existing.stripeCustomerId,
+        stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : existing.stripeSubscriptionId,
         updatedAt: new Date(),
       };
       
@@ -488,14 +473,10 @@ export class MemStorage implements IStorage {
       const id = randomUUID();
       const newUser: User = {
         id,
-        email: userData.email!,
-        deviceId: userData.deviceId || null,
-        firstName: userData.firstName ?? null,
-        lastName: userData.lastName ?? null,
-        profileImageUrl: userData.profileImageUrl ?? null,
+        deviceId: userData.deviceId ? hashDeviceId(userData.deviceId) : null,
         credits: userData.credits ?? 500,
-        stripeCustomerId: userData.stripeCustomerId ?? null,
-        stripeSubscriptionId: userData.stripeSubscriptionId ?? null,
+        stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : null,
+        stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -554,7 +535,7 @@ export class MemStorage implements IStorage {
     
     const updated: User = {
       ...user,
-      stripeCustomerId: customerId,
+      stripeCustomerId: hashStripeId(customerId),
       updatedAt: new Date(),
     };
     
@@ -570,8 +551,8 @@ export class MemStorage implements IStorage {
     
     const updated: User = {
       ...user,
-      stripeCustomerId: info.stripeCustomerId ?? user.stripeCustomerId,
-      stripeSubscriptionId: info.stripeSubscriptionId ?? user.stripeSubscriptionId,
+      stripeCustomerId: info.stripeCustomerId ? hashStripeId(info.stripeCustomerId) : user.stripeCustomerId,
+      stripeSubscriptionId: info.stripeSubscriptionId ? hashStripeId(info.stripeSubscriptionId) : user.stripeSubscriptionId,
       updatedAt: new Date(),
     };
     

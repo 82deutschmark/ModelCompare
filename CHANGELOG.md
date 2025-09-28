@@ -12,6 +12,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **TypeScript Null Safety & PII Removal Phase 1:** Complete resolution of TypeScript compilation errors and initial privacy compliance fixes:
+  - **UserMenu.tsx:** Fixed null safety issues for email, credits, and profileImageUrl fields; replaced PII display with device-based user identification (`User XXXX` format)
+  - **Stripe Integration:** Removed email dependency from payment intent creation in routes.ts and stripe.ts
+  - **ModelSelector.tsx:** Fixed pricing null checks using optional chaining operators
+  - **Stripe Types:** Removed invalid default export from type-only module
+  - **User Display:** Updated getUserDisplayName and getUserInitials to use device ID instead of personal information
+  - **Avatar System:** Replaced profile images with generic avatars, no longer storing or displaying profile pictures
+
 ### Added
 - **shadcn/ui Component Modernization:** Systematic modernization of UI components using shadcn/ui design system for consistent, professional appearance:
   - **ModelButton.tsx:** Complete rewrite using Card, Badge, Tooltip, Avatar with proper provider theming and rich model information tooltips

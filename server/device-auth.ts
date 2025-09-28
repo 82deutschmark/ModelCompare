@@ -43,7 +43,7 @@ export async function ensureDeviceUser(req: Request, res: Response, next: NextFu
     // Attach user to request for downstream middleware
     req.deviceUser = user;
 
-    contextLog(`Device user ensured: ${user.id} (${user.email || 'anonymous'}) - ${user.credits} credits`);
+    contextLog(`Device user ensured: ${user.id} (device user) - ${user.credits} credits`);
     next();
   } catch (error) {
     contextError('Failed to ensure device user:', error);
@@ -108,7 +108,7 @@ export async function deductDeviceCredits(
     const storage = await getStorage();
     await storage.deductCredits(user.id, creditsToDeduct);
 
-    contextLog(`Deducted ${creditsToDeduct} credits from user ${user.id} (${user.email || 'anonymous'})`);
+    contextLog(`Deducted ${creditsToDeduct} credits from user ${user.id} (device user)`);
     next();
   } catch (error) {
     contextError('Failed to deduct device credits:', error);

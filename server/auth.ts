@@ -57,33 +57,18 @@ export function configurePassport() {
   async (accessToken, refreshToken, profile, done) => {
     try {
       const storage = await getStorage();
-      
-      // Extract user information from Google profile
-      const userData = {
-        email: profile.emails?.[0]?.value || '',
-        firstName: profile.name?.givenName || '',
-        lastName: profile.name?.familyName || '',
-        profileImageUrl: profile.photos?.[0]?.value || '',
-      };
 
-      // Check if user exists, create if not
-      let user = await storage.getUserByEmail(userData.email);
-      
+      // Use Google profile ID as a device-like identifier
+      // This provides consistent identity verification without storing PII
+      const googleId = profile.id;
+      const deviceId = `google_${googleId}`;
+
+      // Find or create user based on device ID (hashed)
+      let user = await storage.getUserByDeviceId(deviceId);
+
       if (!user) {
-        // Create new user with 500 starting credits
-        user = await storage.upsertUser({
-          ...userData,
-          credits: 500,
-        });
-      } else {
-        // Update existing user's profile information
-        user = await storage.upsertUser({
-          ...userData,
-          id: user.id,
-          credits: user.credits, // Preserve existing credits
-          stripeCustomerId: user.stripeCustomerId,
-          stripeSubscriptionId: user.stripeSubscriptionId,
-        });
+        // Create new user with 500 starting credits - no PII stored
+        user = await storage.createAnonymousUser(deviceId);
       }
 
       return done(null, user);

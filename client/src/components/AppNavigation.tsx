@@ -19,7 +19,6 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { UserMenu } from "@/components/UserMenu";
-import { CreditBalance } from "@/components/CreditBalance";
 import { cn } from "@/lib/utils";
 import {
   Brain,
@@ -285,7 +284,6 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
             {/* Credit Balance - only show if authenticated */}
             {isAuthenticated && user && (
               <div className="hidden md:block">
-                <CreditBalance compact={true} showBuyButton={false} />
               </div>
             )}
 

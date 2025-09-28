@@ -74,8 +74,7 @@ function CheckoutForm({ clientSecret, packageInfo, onSuccess, onCancel }: Checko
         payment_method: {
           card: cardElement,
           billing_details: {
-            name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email,
-            email: user.email,
+            name: `User ${user.id.slice(-4)}`,
           },
         },
       });

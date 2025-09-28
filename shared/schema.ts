@@ -81,14 +81,10 @@ export const promptAudits = pgTable("prompt_audits", {
 // User authentication and billing tables
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(), // Made nullable for anonymous users
-  deviceId: varchar("device_id"), // Device-based identification for anonymous users (non-unique for shared devices)
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
+  deviceId: varchar("device_id"), // Hashed device-based identification for anonymous users
   credits: integer("credits").default(500), // Starting credits
-  stripeCustomerId: varchar("stripe_customer_id"),
-  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  stripeCustomerId: varchar("stripe_customer_id"), // Hashed Stripe customer ID
+  stripeSubscriptionId: varchar("stripe_subscription_id"), // Hashed Stripe subscription ID
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

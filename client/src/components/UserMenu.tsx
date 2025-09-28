@@ -21,7 +21,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { CreditBalance } from "@/components/CreditBalance";
 import {
   User,
   CreditCard,
