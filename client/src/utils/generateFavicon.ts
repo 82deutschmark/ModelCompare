@@ -317,9 +317,10 @@ export function generateDynamicFavicon(): string {
   const squareSize = canvas.width / GRID_SIZE;
   const shape = getRandomShape();
 
-  // Pure black background for maximum contrast
+  // Pure black background for maximum contrast - slightly larger than canvas
   ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const padding = 2; // Extra pixels to ensure full coverage
+  ctx.fillRect(-padding, -padding, canvas.width + padding * 2, canvas.height + padding * 2);
 
   // Draw the 2x2 grid with electric colors
   for (let row = 0; row < GRID_SIZE; row++) {
