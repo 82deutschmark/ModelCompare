@@ -10,18 +10,39 @@ Date: 2025-08-17
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [Version 0.1.0] - 2025-09-28
 
 ### Fixed
-- **TypeScript Null Safety & PII Removal Phase 1:** Complete resolution of TypeScript compilation errors and initial privacy compliance fixes:
-  - **UserMenu.tsx:** Fixed null safety issues for email, credits, and profileImageUrl fields; replaced PII display with device-based user identification (`User XXXX` format)
-  - **Stripe Integration:** Removed email dependency from payment intent creation in routes.ts and stripe.ts
-  - **ModelSelector.tsx:** Fixed pricing null checks using optional chaining operators
-  - **Stripe Types:** Removed invalid default export from type-only module
-  - **User Display:** Updated getUserDisplayName and getUserInitials to use device ID instead of personal information
-  - **Avatar System:** Replaced profile images with generic avatars, no longer storing or displaying profile pictures
+- **🎨 COMPLETE COMPARE PAGE LAYOUT REDESIGN:** Comprehensive UI/UX overhaul addressing all major layout issues:
+  - **Responsive Grid System:** Upgraded from rigid `xl:grid-cols-3` to adaptive `md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4` layout
+  - **Viewport Management:** Implemented full-height layout with proper scrolling regions and container constraints
+  - **ModelButton Enhancement:** Increased card size (`min-h-[120px]`) to eliminate text truncation, show full model names and complete pricing information
+  - **Navigation Optimization:** Streamlined header height from `h-16` to `h-14` with compact logo, breadcrumbs, and theme toggle
+  - **ModelSelectionPanel Redesign:** Enhanced provider grouping with visual separators, model counts, and improved action buttons
+  - **PromptInput Modernization:** Larger textarea (`min-h-64`), character counter in header, and enhanced template selection UI
+  - **Responsive Breakpoints:** Mobile-first design with proper container constraints and adaptive component sizing
+  - **shadcn/ui Maximization:** Leveraged existing design system for consistent spacing, colors, and typography throughout
+
+### Fixed
+- **🔒 COMPLETE ZDR/GDPR COMPLIANCE IMPLEMENTATION:** Full privacy compliance with zero PII storage:
+  - **Database Schema Migration:** Removed email, firstName, lastName, profileImageUrl columns (11→7 columns in users table)
+  - **Stripe ID Hashing:** All Stripe identifiers (customer ID, subscription ID) hashed before storage using SHA-256
+  - **Device ID Privacy:** Device IDs hashed with salt before database storage
+  - **Google OAuth Redesign:** Uses Google ID as device identifier without storing any profile data
+  - **Storage Layer Cleanup:** Removed getUserByEmail and all email-based user lookups
+  - **Frontend Privacy:** Updated all user displays to device-based identification, removed PII components
+  - **TypeScript Compliance:** Fixed null safety issues and updated all type signatures for privacy-compliant architecture
+  - **Authentication Type Safety:** Enhanced Passport.js serialization/deserialization with proper Express.User interface compliance and null safety checks
 
 ### Added
+
+- **🔍 Comprehensive E2E Health Check System:** Complete health monitoring with detailed system metrics, database connectivity checks, and provider status validation
+- **📊 Model Provider Migration (xAI → OpenRouter):** Migrated Grok models from direct xAI integration to OpenRouter for improved reliability and performance
+- **🏠 Dynamic Home Page System:** Complete redesign with user-focused landing experience and modular component architecture
+- **👤 Device-Based Anonymous User System:** Full implementation of privacy-first user management using device fingerprinting instead of traditional authentication
+- **🔐 Real Google OAuth + Stripe Integration:** Production-ready authentication and billing system replacing placeholder implementations
+- **🎨 Dynamic Favicon Generation:** Client-side favicon generation system for personalized user experience
+- **🛠️ Agent System Enhancements:** Expanded agent definitions and improved payment component integration
 - **shadcn/ui Component Modernization:** Systematic modernization of UI components using shadcn/ui design system for consistent, professional appearance:
   - **ModelButton.tsx:** Complete rewrite using Card, Badge, Tooltip, Avatar with proper provider theming and rich model information tooltips
   - **ResponseCard.tsx:** Enhanced with Alert, Skeleton, Separator, Collapsible components for better loading states, error handling, and content organization
