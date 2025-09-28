@@ -30,7 +30,7 @@ const PgSession = connectPgSimple(session);
  */
 export function configurePassport() {
   // Serialize user for session storage (only store user ID)
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
@@ -39,7 +39,24 @@ export function configurePassport() {
     try {
       const storage = await getStorage();
       const user = await storage.getUser(id);
-      done(null, user);
+      if (!user) {
+        return done(new Error('User not found'), null);
+      }
+      // Ensure we return a properly shaped user object
+      const fullUser: Express.User = {
+        id: user.id,
+        email: null,
+        deviceId: user.deviceId || null,
+        firstName: null,
+        lastName: null,
+        profileImageUrl: null,
+        credits: user.credits || 500,
+        stripeCustomerId: user.stripeCustomerId || null,
+        stripeSubscriptionId: user.stripeSubscriptionId || null,
+        createdAt: user.createdAt || new Date(),
+        updatedAt: user.updatedAt || new Date()
+      };
+      done(null, fullUser);
     } catch (error) {
       done(error, null);
     }
@@ -71,7 +88,22 @@ export function configurePassport() {
         user = await storage.createAnonymousUser(deviceId);
       }
 
-      return done(null, user);
+      // Ensure we return a properly shaped user object
+      const fullUser: Express.User = {
+        id: user.id,
+        email: profile.emails?.[0]?.value || null,
+        deviceId: deviceId,
+        firstName: profile.name?.givenName || null,
+        lastName: profile.name?.familyName || null,
+        profileImageUrl: profile.photos?.[0]?.value || null,
+        credits: user.credits || 500,
+        stripeCustomerId: user.stripeCustomerId || null,
+        stripeSubscriptionId: user.stripeSubscriptionId || null,
+        createdAt: user.createdAt || new Date(),
+        updatedAt: user.updatedAt || new Date()
+      };
+
+      return done(null, fullUser);
     } catch (error) {
       console.error('Google OAuth error:', error);
       return done(error, undefined);
