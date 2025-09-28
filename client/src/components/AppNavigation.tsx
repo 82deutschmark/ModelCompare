@@ -137,7 +137,7 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
   const advancedModes = navigationModes.filter(mode => mode.category === 'advanced');
   const experimentalModes = navigationModes.filter(mode => mode.category === 'experimental');
 
-  const renderModeButton = (mode: NavigationMode, size: 'sm' | 'default' = 'sm') => {
+  const renderModeButton = (mode: NavigationMode, size: 'xs' | 'sm' | 'default' = 'xs') => {
     const isCurrentMode = location === mode.path;
     const IconComponent = mode.icon;
 
@@ -147,13 +147,13 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           variant={isCurrentMode ? "default" : "ghost"}
           size={size}
           className={cn(
-            "flex items-center space-x-2",
+            "flex items-center space-x-1",
             isCurrentMode && "bg-primary text-primary-foreground"
           )}
           disabled={isCurrentMode}
         >
-          <IconComponent className="w-4 h-4" />
-          <span className="text-sm">{mode.name}</span>
+          <IconComponent className="w-3 h-3" />
+          <span className="text-xs">{mode.name}</span>
         </Button>
       </Link>
     );
@@ -161,143 +161,57 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 items-center justify-between">
+      <div className="max-w-7xl mx-auto px-2">
+        <div className="flex h-8 items-center justify-between">
           {/* Compact Logo and Breadcrumb */}
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              {TitleIcon && <TitleIcon className="w-5 h-5 text-primary" />}
-              <span className="font-bold text-base">ModelCompare</span>
+          <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1">
+              {TitleIcon && <TitleIcon className="w-3 h-3 text-primary" />}
+              <span className="font-bold text-sm">ModelCompare</span>
             </div>
 
-            <div className="hidden md:flex">
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="/home" className="text-sm">
-                      <Home className="w-3 h-3" />
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  {currentMode && (
-                    <>
-                      <BreadcrumbSeparator />
-                      <BreadcrumbItem>
-                        <span className="font-medium text-sm">{currentMode.name}</span>
-                      </BreadcrumbItem>
-                    </>
-                  )}
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1">
-            <NavigationMenu>
-              <NavigationMenuList>
-                {/* Core Modes - Always Visible */}
-                {coreMode.map(mode => (
-                  <NavigationMenuItem key={mode.id}>
-                    {renderModeButton(mode)}
-                  </NavigationMenuItem>
-                ))}
+          {/* Desktop Navigation - All modes visible */}
+          <div className="hidden lg:flex items-center gap-1">
+            {/* Core Modes */}
+            {coreMode.map(mode => renderModeButton(mode))}
 
-                {/* Advanced Modes Dropdown */}
-                {advancedModes.length > 0 && (
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="h-9">
-                      Advanced
-                      <Badge variant="outline" className="ml-1 px-1 py-0 text-xs">
-                        {advancedModes.length}
-                      </Badge>
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <div className="grid w-[300px] gap-2 p-4">
-                        {advancedModes.map(mode => {
-                          const IconComponent = mode.icon;
-                          const isCurrentMode = location === mode.path;
+            {/* Visual separator */}
+            <div className="h-4 w-px bg-border mx-1" />
 
-                          return (
-                            <Link key={mode.id} href={mode.path}>
-                              <NavigationMenuLink
-                                className={cn(
-                                  "flex items-start space-x-3 rounded-md p-3 hover:bg-accent hover:text-accent-foreground",
-                                  isCurrentMode && "bg-accent text-accent-foreground"
-                                )}
-                              >
-                                <IconComponent className="w-5 h-5 mt-0.5 text-muted-foreground" />
-                                <div>
-                                  <div className="text-sm font-medium">{mode.name}</div>
-                                  <div className="text-xs text-muted-foreground">{mode.description}</div>
-                                </div>
-                              </NavigationMenuLink>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                )}
+            {/* Advanced Modes - now directly visible */}
+            {advancedModes.map(mode => renderModeButton(mode))}
 
-                {/* Experimental Modes Dropdown */}
-                {experimentalModes.length > 0 && (
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="h-9">
-                      Experimental
-                      <Badge variant="secondary" className="ml-1 px-1 py-0 text-xs">
-                        β
-                      </Badge>
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <div className="grid w-[300px] gap-2 p-4">
-                        {experimentalModes.map(mode => {
-                          const IconComponent = mode.icon;
-                          const isCurrentMode = location === mode.path;
+            {/* Visual separator */}
+            <div className="h-4 w-px bg-border mx-1" />
 
-                          return (
-                            <Link key={mode.id} href={mode.path}>
-                              <NavigationMenuLink
-                                className={cn(
-                                  "flex items-start space-x-3 rounded-md p-3 hover:bg-accent hover:text-accent-foreground",
-                                  isCurrentMode && "bg-accent text-accent-foreground"
-                                )}
-                              >
-                                <IconComponent className="w-5 h-5 mt-0.5 text-muted-foreground" />
-                                <div>
-                                  <div className="text-sm font-medium">{mode.name}</div>
-                                  <div className="text-xs text-muted-foreground">{mode.description}</div>
-                                </div>
-                              </NavigationMenuLink>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                )}
-              </NavigationMenuList>
-            </NavigationMenu>
+            {/* Experimental Modes */}
+            {experimentalModes.map(mode => (
+              <div key={mode.id} className="relative">
+                {renderModeButton(mode)}
+                <Badge variant="secondary" className="absolute -top-1 -right-1 px-1 py-0 text-xs scale-75">
+                  β
+                </Badge>
+              </div>
+            ))}
           </div>
 
           {/* Compact Authentication & Theme */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1">
             {/* Credit Balance - only show if authenticated */}
             {isAuthenticated && user && (
               <div className="hidden lg:block">
               </div>
             )}
 
-            {/* Compact Theme Toggle */}
-            <div className="flex items-center space-x-1.5">
-              <Sun className="h-3 w-3 text-muted-foreground" />
-              <Switch
-                checked={theme === 'dark'}
-                onCheckedChange={toggleTheme}
-                aria-label="Toggle theme"
-                className="scale-90"
-              />
-              <Moon className="h-3 w-3 text-muted-foreground" />
-            </div>
+            {/* Ultra-compact Theme Toggle */}
+            <Switch
+              checked={theme === 'dark'}
+              onCheckedChange={toggleTheme}
+              aria-label="Toggle theme"
+              className="scale-75"
+            />
 
             {/* Authentication */}
             {authLoading ? (
@@ -305,43 +219,43 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
             ) : isAuthenticated ? (
               <UserMenu />
             ) : (
-              <GoogleSignInButton size="sm" variant="outline" />
+              <GoogleSignInButton size="xs" variant="outline" />
             )}
 
             {/* Mobile Menu */}
             <div className="lg:hidden">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <Menu className="w-4 h-4" />
+                  <Button variant="ghost" size="xs" className="h-6 w-6 p-0">
+                    <Menu className="w-3 h-3" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80">
-                  <div className="mt-6 space-y-6">
+                <SheetContent side="right" className="w-64">
+                  <div className="mt-4 space-y-4">
                     <div>
-                      <h3 className="text-sm font-semibold mb-3">Core Features</h3>
-                      <div className="space-y-2">
-                        {coreMode.map(mode => renderModeButton(mode, 'default'))}
+                      <h3 className="text-xs font-semibold mb-2">Core</h3>
+                      <div className="space-y-1">
+                        {coreMode.map(mode => renderModeButton(mode, 'sm'))}
                       </div>
                     </div>
 
                     {advancedModes.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold mb-3">Advanced Features</h3>
-                        <div className="space-y-2">
-                          {advancedModes.map(mode => renderModeButton(mode, 'default'))}
+                        <h3 className="text-xs font-semibold mb-2">Advanced</h3>
+                        <div className="space-y-1">
+                          {advancedModes.map(mode => renderModeButton(mode, 'sm'))}
                         </div>
                       </div>
                     )}
 
                     {experimentalModes.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold mb-3 flex items-center">
+                        <h3 className="text-xs font-semibold mb-2 flex items-center">
                           Experimental
-                          <Badge variant="secondary" className="ml-2 px-1 py-0 text-xs">β</Badge>
+                          <Badge variant="secondary" className="ml-1 px-1 py-0 text-xs scale-75">β</Badge>
                         </h3>
-                        <div className="space-y-2">
-                          {experimentalModes.map(mode => renderModeButton(mode, 'default'))}
+                        <div className="space-y-1">
+                          {experimentalModes.map(mode => renderModeButton(mode, 'sm'))}
                         </div>
                       </div>
                     )}
@@ -354,7 +268,7 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
 
         {/* Compact Current Page Info */}
         {currentMode && subtitle && (
-          <div className="pb-2 pt-1">
+          <div className="pb-1 pt-0.5">
             <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
         )}
