@@ -25,7 +25,8 @@ import {
   Eye,
   Zap,
   AlertCircle,
-  Check
+  Check,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { parsePromptsFromMarkdown, type PromptCategory } from "@/lib/promptParser";
@@ -272,39 +273,45 @@ export function EnhancedPromptArea({
               </h3>
 
               <div className="flex items-center gap-1.5">
-                <FloatingModelPicker
-                  models={models}
-                  selectedModels={selectedModels}
-                  onToggleModel={onToggleModel}
-                  onSelectAllModels={onSelectAllModels}
-                  onClearAllModels={onClearAllModels}
-                  disabled={disabled}
-                />
+                {/* The Add Models button is now inline with the pills */}
               </div>
             </div>
 
             {/* Selected Model Pills */}
-            {selectedModels.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedModelObjects.map((model) => (
-                  <ModelPill
-                    key={model.id}
-                    model={model}
-                    isLoading={loadingModels.has(model.id)}
-                    hasResponse={!!responses[model.id]}
-                    onRemove={onToggleModel}
-                    onClick={handleModelPillClick}
-                    variant="compact"
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground border border-dashed rounded">
-                <Zap className="w-5 h-5 mx-auto mb-1 opacity-50" />
-                <p className="text-xs">No models selected</p>
-                <p className="text-xs opacity-75">Click "Add Models" to get started</p>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-1.5">
+              {selectedModelObjects.map((model) => (
+                <ModelPill
+                  key={model.id}
+                  model={model}
+                  isLoading={loadingModels.has(model.id)}
+                  hasResponse={!!responses[model.id]}
+                  onRemove={onToggleModel}
+                  onClick={handleModelPillClick}
+                  variant="compact"
+                />
+              ))}
+
+              {/* Add Models Button - Always visible now */}
+              <FloatingModelPicker
+                models={models}
+                selectedModels={selectedModels}
+                onToggleModel={onToggleModel}
+                onSelectAllModels={onSelectAllModels}
+                onClearAllModels={onClearAllModels}
+                disabled={disabled}
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 border-dashed border-2 hover:border-primary/50 h-7"
+                    disabled={disabled}
+                  >
+                    <Plus className="w-3 h-3" />
+                    {selectedModels.length === 0 ? 'Add Models' : 'Add More'}
+                  </Button>
+                }
+              />
+            </div>
           </div>
 
           <Separator />

@@ -9,7 +9,7 @@
  * shadcn/ui: Pass - Uses enhanced shadcn/ui components with modern patterns
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Brain, Sparkles } from "lucide-react";
 
@@ -35,6 +35,7 @@ export default function Compare() {
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
   const [showTiming, setShowTiming] = useState(true);
   const [showPromptPreview, setShowPromptPreview] = useState(false);
+  const [initialModelsSelected, setInitialModelsSelected] = useState(false);
 
   // Comparison state management via custom hook
   const { state, actions, status } = useComparison();
@@ -48,6 +49,22 @@ export default function Compare() {
       return response.json() as Promise<AIModel[]>;
     },
   });
+
+  // Pre-select default models when they become available
+  useEffect(() => {
+    if (!initialModelsSelected && models.length > 0 && state.selectedModels.length === 0) {
+      const defaultModels = [
+        'gpt-5-nano-2025-08-07',        // GPT-5 Nano - fast and efficient
+        'claude-sonnet-4-20250514',     // Claude Sonnet 4 - powerful reasoning
+        'gpt-4.1-nano-2025-04-14'       // GPT-4.1 Nano - good balance
+      ].filter(modelId => models.some(m => m.id === modelId));
+
+      if (defaultModels.length > 0) {
+        actions.selectAllModels(defaultModels);
+        setInitialModelsSelected(true);
+      }
+    }
+  }, [models, state.selectedModels.length, initialModelsSelected, actions]);
 
   // Handler for prompt submission
   const handleSubmit = () => {
