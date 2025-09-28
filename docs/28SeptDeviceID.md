@@ -221,6 +221,9 @@ headers['x-device-id'] = deviceId;
 **Before deployment, verify:**
 - [ ] Anonymous users can use `/api/compare` without signing in
 - [ ] Anonymous users can use and access ALL features and all pages
+- [ ] Has no PII stored in the database
+- [ ] Hash the device ID before storing it in the database
+- [ ] ZDR all auth is via Google OAuth
 - [ ] Device ID is generated and persisted in localStorage
 - [ ] Session ID is generated and persisted in localStorage for that device
 - [ ] Credit tracking works (new users get 500 credits)
@@ -273,7 +276,8 @@ When complete, new users should:
 - [ ] All existing features continue working unchanged
 - [ ] Performance impact minimal (single database lookup per request)
 
-## Risk Mitigation
+## Risk Mitigation   NOT A BIG DEAL!!!  NOT A PRIORITY!!!
+
 
 **Device ID Loss**:
 - LocalStorage cleared → User gets new device ID and 500 fresh credits
@@ -288,3 +292,12 @@ When complete, new users should:
 - Anonymous users create database records
 - Implement cleanup policy for inactive anonymous users
 - Monitor storage usage and implement archival if needed
+
+### Critical Issues
+
+**Database Schema**: UNIQUE constraint on `device_id` will break when multiple users share devices. Remove UNIQUE constraint - use non-unique index instead.
+
+**Race Conditions**: Simultaneous requests from same device could create duplicate users. `ensureDeviceUser` needs proper locking or atomic upsert logic.
+
+
+Also don't store any PII in the database.  Hash the device ID and store that instead.

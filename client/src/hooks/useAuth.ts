@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import type { User } from '@/types/ai-models';
+import type { User } from '@shared/schema';
 
 interface AuthState {
   user: User | null;

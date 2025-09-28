@@ -20,9 +20,19 @@
  */
 
 import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, comparisons, vixraSessions, promptAudits, users } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 import { db, ensureTablesExist } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
+
+/**
+ * Hash device ID for privacy - ensures no PII is stored in database
+ * Uses SHA-256 with a salt to create consistent but private hashes
+ */
+function hashDeviceId(deviceId: string): string {
+  return createHash('sha256')
+    .update(`modelcompare_${deviceId}`)
+    .digest('hex');
+}
 
 export interface IStorage {
   createComparison(comparison: InsertComparison): Promise<Comparison>;
@@ -149,15 +159,17 @@ export class DbStorage implements IStorage {
   }
 
   async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
-    const [result] = await requireDb().select().from(users).where(eq(users.deviceId, deviceId));
+    const hashedDeviceId = hashDeviceId(deviceId);
+    const [result] = await requireDb().select().from(users).where(eq(users.deviceId, hashedDeviceId));
     return result;
   }
 
   async createAnonymousUser(deviceId: string): Promise<User> {
+    const hashedDeviceId = hashDeviceId(deviceId);
     const [result] = await requireDb()
       .insert(users)
       .values({
-        deviceId: deviceId,
+        deviceId: hashedDeviceId,
         credits: 500, // Anonymous users start with 500 credits
       })
       .returning();
@@ -412,24 +424,26 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
+    const hashedDeviceId = hashDeviceId(deviceId);
     const users = Array.from(this.users.values());
-    return users.find(user => user.deviceId === deviceId);
+    return users.find(user => user.deviceId === hashedDeviceId);
   }
 
   async createAnonymousUser(deviceId: string): Promise<User> {
+    const hashedDeviceId = hashDeviceId(deviceId);
     const id = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2)}`;
     const user: User = {
       id,
       email: null,
-      deviceId: deviceId,
+      deviceId: hashedDeviceId,
       firstName: null,
       lastName: null,
       profileImageUrl: null,
       credits: 500, // Anonymous users start with 500 credits
       stripeCustomerId: null,
       stripeSubscriptionId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     this.users.set(id, user);
     return user;
