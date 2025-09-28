@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { useSimpleDynamicFavicon } from "@/hooks/useDynamicFavicon";
 import Compare from "@/pages/compare";
 import Home from "@/pages/home";
 import Battle from "@/pages/battle-chat";
@@ -35,6 +36,9 @@ function Router() {
 }
 
 function App() {
+  // Generate unique favicon for this tab/session
+  useSimpleDynamicFavicon();
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
