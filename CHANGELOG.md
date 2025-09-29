@@ -10,6 +10,25 @@ Date: 2025-08-17
 
 All notable changes to this project will be documented in this file.
 
+## [Version 0.1.1] - 2025-09-28
+
+### Added
+- **Smart Default Model Selection:** Compare page now pre-populates with 3 popular models (GPT-5 Nano, Claude Sonnet 4, GPT-4.1 Nano) to eliminate empty state and improve onboarding experience
+- **Centralized Format Utilities:** Added `formatUtils.ts` for consistent cost and token formatting across all components
+
+### Fixed
+- **UI Spacing Restoration:** Restored proper UI spacing and sizing that was overly reduced, improving accessibility and usability
+- **Cost Calculation Standardization:** Fixed getTotals selector logic to avoid double-counting and handle missing data properly, with centralized formatting utilities
+- **AppNavigation Simplification:** Streamlined navigation component by reducing complexity from 192 lines to 53 lines while maintaining functionality
+
+### Changed
+- **Compact UI Design:** Implemented space-efficient design with ~40% reduction in vertical space usage and ~30% reduction in horizontal padding across:
+  - EnhancedPromptArea: Reduced padding, smaller inputs, compact cards
+  - ModelPill: 25-30% smaller padding, compact avatars and icons
+  - FloatingModelPicker: Narrower popover, condensed filters, efficient layout
+- **Enhanced Model Selection UX:** Dynamic "Add Models" button text changes to "Add More" when models are selected
+- **Improved Onboarding Flow:** Users can immediately start typing without empty state barriers
+
 ## [Version 0.1.0] - 2025-09-28
 
 ### Fixed
