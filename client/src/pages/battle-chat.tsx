@@ -366,8 +366,8 @@ export default function BattleChat() {
         icon={Sword}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-120px)]">
+      <div className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-2">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 h-[calc(100vh-120px)]">
           
           {/* Model Seats Sidebar */}
           <div className="lg:col-span-1">
@@ -378,12 +378,12 @@ export default function BattleChat() {
                   <span>Model Seats</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2">
                 {modelSeats.map((seat) => (
                   <div
                     key={seat.id}
                     onClick={() => handleSeatClick(seat)}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                    className={`p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                       seat.modelId 
                         ? `${seat.color} opacity-100`
                         : 'border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400'
@@ -467,7 +467,7 @@ export default function BattleChat() {
               {showSetup && (
                 <>
                 <Separator />
-                <div className="px-6 pb-4">
+                <div className="px-4 pb-2">
                   {/* Template Selection */}
                   {!promptsLoading && battlePromptCategories.length > 0 && (
                     <Alert className="mb-4">
@@ -590,7 +590,7 @@ export default function BattleChat() {
 
               {/* Chat Messages */}
               <CardContent className="flex-1 overflow-y-auto p-0">
-                <div className="space-y-4 p-6">
+                <div className="space-y-3 p-3">
                   {messages.length === 0 ? (
                     <div className="text-center py-12">
                       <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
@@ -635,14 +635,14 @@ export default function BattleChat() {
                       };
 
                       return (
-                        <MessageCard 
+                        <MessageCard
                           key={message.id}
                           message={convertToMessageCardData(message)}
-                          variant="detailed"
+                          variant="compact"
                           showHeader={true}
                           showFooter={true}
                           seatColor={seat?.color}
-                          className="mb-4"
+                          className="mb-2"
                         />
                       );
                     })

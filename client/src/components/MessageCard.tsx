@@ -140,7 +140,7 @@ export function MessageCard({
   return (
     <Card className={`${className} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200`}>
       {showHeader && (
-        <CardHeader className={`${headerPadding} px-4 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
+        <CardHeader className={`${headerPadding} px-3 py-2 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {message.modelConfig?.provider && (
@@ -211,7 +211,7 @@ export function MessageCard({
 
       <CardContent className={variant === 'compact' ? 'p-3' : 'p-4'}>
         <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-          <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap p-3 bg-gray-50/30 dark:bg-gray-800/30 rounded-lg border-l-3 border-blue-500">
+          <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap p-2 bg-gray-50/30 dark:bg-gray-800/30 rounded-lg border-l-3 border-blue-500">
             {message.content}
           </div>
         </div>
