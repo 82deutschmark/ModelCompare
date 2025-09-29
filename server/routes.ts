@@ -159,44 +159,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/models", async (req, res) => {
     try {
       // Use MODEL_CATALOG for display metadata
-      const models = Object.values(MODEL_CATALOG).map(model => ({
-        // Map to expected frontend format (AIModel interface)
-        id: model.key,
-        name: model.name,
-        provider: model.provider,
-        color: model.color,
-        premium: model.premium,
-        cost: model.cost,
-        supportsTemperature: model.supportsTemperature || true,
-        responseTime: model.responseTime,
-        isReasoning: model.supportsReasoning || false,
-        apiModelName: model.key, // Use key as apiModelName
-        modelType: 'chat', // Default model type
-        contextWindow: 128000, // Default context window
-        maxOutputTokens: 4000, // Default max output tokens
-        releaseDate: '2024', // Default release date
-        requiresPromptFormat: false, // Default prompt format
-        supportsStructuredOutput: false, // Default structured output
+      const models = Object.values(MODEL_CATALOG).map(model => {
+        // Helper function to parse cost ranges like "$0.40 - $1.20"
+        const parseCost = (costString: string): number => {
+          const cleaned = costString.replace(/\$/g, '');
+          if (cleaned.includes(' - ')) {
+            // Use the lower bound for ranges
+            return parseFloat(cleaned.split(' - ')[0]);
+          }
+          return parseFloat(cleaned);
+        };
 
-        // Legacy compatibility fields for existing components  
-        model: model.key,
-        knowledgeCutoff: '2024',
-        capabilities: {
-          reasoning: model.supportsReasoning || false,
-          multimodal: false, // TODO: add multimodal support to model definitions
-          functionCalling: false, // TODO: add function calling support to model definitions
-          streaming: true, // Most models support streaming
-        },
-        pricing: {
-          inputPerMillion: parseFloat(model.cost.input.replace(/\$/, '')),
-          outputPerMillion: parseFloat(model.cost.output.replace(/\$/, '')),
-          reasoningPerMillion: model.supportsReasoning ? parseFloat(model.cost.output.replace(/\$/, '')) * 1.5 : undefined,
-        },
-        limits: {
-          maxTokens: 4000,
-          contextWindow: 128000,
-        },
-      }));
+        return {
+          // Map to expected frontend format (AIModel interface)
+          id: model.key,
+          name: model.name,
+          provider: model.provider,
+          color: model.color,
+          premium: model.premium,
+          cost: model.cost,
+          supportsTemperature: model.supportsTemperature ?? true,
+          responseTime: model.responseTime,
+          isReasoning: model.isReasoning ?? false,
+          apiModelName: model.apiModelName || model.key,
+          modelType: model.modelType || 'chat',
+          contextWindow: model.contextWindow || 128000,
+          maxOutputTokens: model.maxOutputTokens || 4000,
+          releaseDate: model.releaseDate || '2024',
+          requiresPromptFormat: model.requiresPromptFormat ?? false,
+          supportsStructuredOutput: model.supportsStructuredOutput ?? false,
+
+          // Legacy compatibility fields for existing components
+          model: model.key,
+          knowledgeCutoff: model.releaseDate || '2024',
+          capabilities: {
+            reasoning: model.isReasoning ?? false,
+            multimodal: false, // TODO: add multimodal support to model definitions
+            functionCalling: false, // TODO: add function calling support to model definitions
+            streaming: true, // Most models support streaming
+          },
+          pricing: {
+            inputPerMillion: parseCost(model.cost.input),
+            outputPerMillion: parseCost(model.cost.output),
+            reasoningPerMillion: model.isReasoning ? parseCost(model.cost.output) * 1.5 : undefined,
+          },
+          limits: {
+            maxTokens: model.maxOutputTokens || 4000,
+            contextWindow: model.contextWindow || 128000,
+          },
+        };
+      });
 
       res.json(models);
     } catch (error) {
