@@ -80,7 +80,7 @@ export default function Compare() {
     <div className="min-h-screen bg-background flex flex-col">
       <AppNavigation
         title="AI Model Comparison"
-        subtitle="Compare responses across multiple AI models"
+        
         icon={Sparkles}
       />
 
