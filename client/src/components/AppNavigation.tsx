@@ -128,7 +128,7 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
   const advancedModes = navigationModes.filter(mode => mode.category === 'advanced');
   const experimentalModes = navigationModes.filter(mode => mode.category === 'experimental');
 
-  const renderModeButton = (mode: NavigationMode, size: 'xs' | 'sm' | 'default' = 'xs') => {
+  const renderModeButton = (mode: NavigationMode, size: 'sm' | 'default' = 'sm') => {
     const isCurrentMode = location === mode.path;
     const IconComponent = mode.icon;
 
@@ -210,14 +210,14 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
             ) : isAuthenticated ? (
               <UserMenu />
             ) : (
-              <GoogleSignInButton size="xs" variant="outline" />
+              <GoogleSignInButton size="sm" variant="outline" />
             )}
 
             {/* Mobile Menu */}
             <div className="lg:hidden">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="xs" className="h-6 w-6 p-0">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
                     <Menu className="w-3 h-3" />
                   </Button>
                 </SheetTrigger>
