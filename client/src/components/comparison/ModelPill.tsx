@@ -6,13 +6,12 @@
  *          essential model info: name, provider, status. Includes remove action.
  *          Uses provider color coding and shadcn/ui Badge patterns.
  * SRP/DRY check: Pass - Single responsibility (compact model display), reuses Badge/Tooltip
- * shadcn/ui: Pass - Uses Badge, Tooltip, Avatar components
+ * shadcn/ui: Pass - Uses Badge, Tooltip, Button components
  */
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { X, Loader2, Crown, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -36,16 +35,40 @@ export function ModelPill({
   variant = 'default'
 }: ModelPillProps) {
 
-  // Get provider icon abbreviation
-  const getProviderIcon = (provider: string) => {
-    const icons: Record<string, string> = {
-      'OpenAI': 'OAI',
-      'Anthropic': 'ANT',
-      'Gemini': 'GEM',
-      'DeepSeek': 'DS',
-      'xAI': 'XAI',
+  // Get provider base color for consistent theming
+  const getProviderColorClasses = (provider: string) => {
+    const providerColors: Record<string, { bg: string; border: string; avatar: string }> = {
+      'OpenAI': {
+        bg: 'bg-emerald-50/50',
+        border: 'border-emerald-500/30 hover:border-emerald-500/50',
+        avatar: 'bg-emerald-500'
+      },
+      'Anthropic': {
+        bg: 'bg-indigo-50/50',
+        border: 'border-indigo-500/30 hover:border-indigo-500/50',
+        avatar: 'bg-indigo-500'
+      },
+      'Gemini': {
+        bg: 'bg-teal-50/50',
+        border: 'border-teal-500/30 hover:border-teal-500/50',
+        avatar: 'bg-teal-500'
+      },
+      'DeepSeek': {
+        bg: 'bg-cyan-50/50',
+        border: 'border-cyan-500/30 hover:border-cyan-500/50',
+        avatar: 'bg-cyan-500'
+      },
+      'OpenRouter': {
+        bg: 'bg-slate-50/50',
+        border: 'border-slate-500/30 hover:border-slate-500/50',
+        avatar: 'bg-slate-500'
+      },
     };
-    return icons[provider] || provider.substring(0, 2).toUpperCase();
+    return providerColors[provider] || {
+      bg: 'bg-gray-50/50',
+      border: 'border-gray-500/30 hover:border-gray-500/50',
+      avatar: 'bg-gray-500'
+    };
   };
 
   // Handle pill click
@@ -68,11 +91,7 @@ export function ModelPill({
     minimal: "px-1.5 py-1 gap-1"
   };
 
-  const avatarSizes = {
-    default: "h-6 w-6",
-    compact: "h-5 w-5",
-    minimal: "h-4 w-4"
-  };
+  const providerColors = getProviderColorClasses(model.provider);
 
   return (
     <TooltipProvider>
@@ -82,24 +101,24 @@ export function ModelPill({
             variant="outline"
             className={cn(
               "inline-flex items-center border-2 transition-all duration-200 cursor-pointer",
-              "hover:shadow-sm hover:border-primary/50",
+              "hover:shadow-sm",
               isLoading && "animate-pulse",
               hasResponse && "border-green-500/50 bg-green-50/50",
-              model.color && `border-${model.color}-500/30`,
+              !hasResponse && providerColors.bg,
+              !hasResponse && providerColors.border,
+              model.color && `hover:border-${model.color.replace('bg-', '')}-500/50`,
               pillStyles[variant]
             )}
             onClick={handleClick}
           >
-            {/* Provider Avatar */}
-            <Avatar className={avatarSizes[variant]}>
-              <AvatarFallback className={cn(
-                "text-xs font-bold text-white",
-                model.color,
-                variant === 'minimal' && "text-[10px]"
-              )}>
-                {getProviderIcon(model.provider)}
-              </AvatarFallback>
-            </Avatar>
+            {/* Provider Color Dot */}
+            <div className={cn(
+              "rounded-full",
+              model.color || providerColors.avatar,
+              variant === 'default' && "w-3 h-3",
+              variant === 'compact' && "w-2.5 h-2.5",
+              variant === 'minimal' && "w-2 h-2"
+            )} />
 
             {/* Model Name */}
             <span className={cn(

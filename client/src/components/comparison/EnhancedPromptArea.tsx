@@ -189,9 +189,7 @@ export function EnhancedPromptArea({
               <span>Compare Models</span>
             </div>
             <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-              <span>{wordCount}w</span>
-              <span>•</span>
-              <span>{characterCount}c</span>
+              <span>{wordCount} words</span>
             </div>
           </CardTitle>
         </CardHeader>
@@ -215,10 +213,10 @@ export function EnhancedPromptArea({
             {/* Character/Word Count Overlay */}
             <div className="absolute bottom-2 right-2 flex items-center gap-1">
               <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                {characterCount > 4000 && (
+                {characterCount > 16000 && (
                   <AlertCircle className="w-2.5 h-2.5 mr-0.5 text-amber-500" />
                 )}
-                {characterCount}/8k
+                {characterCount}/16k
               </Badge>
             </div>
           </div>
@@ -375,4 +373,4 @@ export function EnhancedPromptArea({
       )}
     </div>
   );
-}
+}

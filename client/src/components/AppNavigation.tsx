@@ -32,8 +32,7 @@ import {
   FileText,
   Monitor,
   Menu,
-  Home,
-  CreditCard
+  Home
 } from "lucide-react";
 
 interface NavigationMode {
@@ -93,14 +92,6 @@ const navigationModes: NavigationMode[] = [
     path: "/research-synthesis",
     icon: Users,
     description: "Collaborative research synthesis",
-    category: 'advanced'
-  },
-  {
-    id: "billing",
-    name: "Billing",
-    path: "/billing",
-    icon: CreditCard,
-    description: "Manage credits & payments",
     category: 'advanced'
   },
   {
