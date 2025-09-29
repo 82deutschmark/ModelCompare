@@ -55,7 +55,7 @@ export default function Compare() {
     if (!initialModelsSelected && models.length > 0 && state.selectedModels.length === 0) {
       const defaultModels = [
         'gpt-5-nano-2025-08-07',        // GPT-5 Nano - fast and efficient
-        'claude-sonnet-4-20250514',     // Claude Sonnet 4 - powerful reasoning
+        'gemini-2.0-flash',             // Gemini 2.0 Flash - fast and cost-effective
         'gpt-4.1-nano-2025-04-14'       // GPT-4.1 Nano - good balance
       ].filter(modelId => models.some(m => m.id === modelId));
 
