@@ -28,7 +28,12 @@ const definition: AgentDefinition = {
   id: 'edgar-the-engineer',
   displayName: 'Edgar the Engineer',
   publisher: 'mark-barney',
-  model: 'anthropic/claude-sonnet-4-5-20250929',
+  model: 'openai/gpt-5-mini',
+  reasoningOptions: {
+    enabled: true,
+    exclude: false,
+    effort: 'high'
+  },
 
   /**
    * Spawner prompt for code analysis requests
