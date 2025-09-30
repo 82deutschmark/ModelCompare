@@ -499,7 +499,7 @@ If ANY check fails: Gather more information before proceeding.`,
     yield {
       toolName: 'think_deeply',
       input: {
-        prompt: `Analyze this request and consider:
+        thought: `Analyze this request and consider:
 1. Complexity level (1-10)
 2. Risk factors
 3. Affected systems
@@ -508,7 +508,7 @@ If ANY check fails: Gather more information before proceeding.`,
 
 Request: ${prompt}`
       }
-    }
+    } as const
 
     // Step 2: Parallel research and critical analysis
     logger.info('🔍 Step 2: Spawning parallel research and critical analysis')
@@ -526,7 +526,7 @@ Request: ${prompt}`
           }
         ]
       }
-    }
+    } as const
 
     // Step 3: Let model process results
     logger.info('🤔 Step 3: Processing research and critical analysis results')
@@ -544,17 +544,17 @@ Request: ${prompt}`
           }
         ]
       }
-    }
+    } as const
 
     // Step 5: Progress update
     logger.info('📊 Step 5: Logging progress milestone')
     yield {
       toolName: 'add_message',
       input: {
-        role: 'assistant',
+        role: 'assistant' as const,
         content: '✅ Analysis phase complete. Synthesizing execution plan...'
       }
-    }
+    } as const
 
     // Step 6: Final synthesis - let model create complete plan
     logger.info('✨ Step 6: Final plan synthesis')
