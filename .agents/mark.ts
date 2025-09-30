@@ -234,7 +234,7 @@ const definition: AgentDefinition = {
 
   /**
    * Tools available to Mark for project management and orchestration
-   * Includes thinking, file operations, agent spawning, and MCP server access
+   * Includes thinking, file operations, and agent spawning
    */
   toolNames: [
     // Core orchestration
@@ -249,11 +249,7 @@ const definition: AgentDefinition = {
     // File operations for self-service research
     'read_files',
     'find_files',
-    'code_search',
-
-    // MCP server access for external documentation
-    'mcp_list_tools',
-    'mcp_call_tool'
+    'code_search'
   ],
   /**
    * Agents Mark can spawn, organized by function
@@ -261,7 +257,7 @@ const definition: AgentDefinition = {
    */
   spawnableAgents: [
     // Research & Discovery
-    'codebuff/researcher-grok-4-fast@0.0.3',     // General research (web, docs, codebase)
+    'codebuff/web-researcher@0.0.5',     // General research (web, docs, codebase)
     'codebuff/docs-researcher@0.0.7',            // Documentation-focused research
     'codebuff/file-explorer@0.0.6',              // Codebase structure understanding
 
@@ -281,16 +277,17 @@ const definition: AgentDefinition = {
     'codebuff/git-committer@0.0.1',              // Git commit creation
     'mark-barney/windows-powershell-git-committer@0.0.1'  // Windows-specific commits
   ],
-  mcpServers: {
-    exa: {
-      url: "https://mcp.exa.ai/mcp",
-      type: "http"
-    },
-    chlorpromazine: {
-      url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
-      type: 'http'
-    }
-  },
+  // MCP servers temporarily disabled - URLs returning HTML error pages
+  // mcpServers: {
+  //   exa: {
+  //     url: "https://mcp.exa.ai/mcp",
+  //     type: "http"
+  //   },
+  //   chlorpromazine: {
+  //     url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
+  //     type: 'http'
+  //   }
+  // },
   systemPrompt: `You are the product/project manager for the user (the user is the product owner) who has no experience with software development, computer science, or best practices. You will need to explain things in a way that is easy for a non-technical person to understand.
 
   You will need to consider how the user's request impacts the project, the codebase, and the potential for a complex chain of changes across different systems.
@@ -302,9 +299,6 @@ const definition: AgentDefinition = {
   As soon as a coder makes a change, you ensure that all changes are documented in verbose individual file commit messages.
   You use the windows-powershell-git-committer to create git commits using proper Windows PowerShell syntax with multiple -m flags to avoid quote parsing issues.
   You spawn Edgar the Engineer for advice and to help ensure that the junior coders aren't making a mess of the codebase and that plans aren't too complex or too simple.
-
-  You have access to the chlorpromazine MCP server for searching current MCP documentation when needed.
-  You have access to the exa MCP server for web search and research when needed.
 
 **COMPLEXITY ASSESSMENT FRAMEWORK:**
 
@@ -434,11 +428,6 @@ IF ANY FAILS: Ask clarifying questions before spawning agents.
 8. **Documentation**: Create /docs file if complexity ≥ 7
 
 Spawn agents in parallel when possible to save time.
-
-**MCP DOCUMENTATION ACCESS:**
-When you need current MCP server documentation, specifications, or implementation guidance:
-- Use mcp_list_tools to see available chlorpromazine capabilities
-- Use mcp_call_tool to search for relevant MCP docs, examples, and best practices
 
 **ENGINEERING GATE (MANDATORY FOR CODE CHANGES):**
 

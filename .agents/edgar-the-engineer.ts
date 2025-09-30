@@ -148,16 +148,17 @@ const definition: AgentDefinition = {
 
   ],
 
-  mcpServers: {
-    exa: {
-      url: "https://mcp.exa.ai/mcp",
-      type: "http"
-    },
-    chlorpromazine: {
-      url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
-      type: 'http'
-    }
-  },
+  // MCP servers temporarily disabled - URLs returning HTML error pages
+  // mcpServers: {
+  //   exa: {
+  //     url: "https://mcp.exa.ai/mcp",
+  //     type: "http"
+  //   },
+  //   chlorpromazine: {
+  //     url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
+  //     type: 'http'
+  //   }
+  // },
 
   /**
    * Core system prompt defining Edgar's expertise and role
