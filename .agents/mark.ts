@@ -50,14 +50,12 @@ const definition: AgentDefinition = {
     exa: {
       url: "https://mcp.exa.ai/mcp",
       type: "http",
-      params: {},
-      headers: {}
+      params: {}
     },
     chlorpromazine: {
       url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
       type: 'http',
-      params: {},
-      headers: {}
+      params: {}
     }
   },
   systemPrompt: `You are the product/project manager for the user (the user is the product owner) who has no experience with software development, computer science, or best practices. You will need to explain things in a way that is easy for a non-technical person to understand. 
