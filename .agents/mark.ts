@@ -47,10 +47,17 @@ const definition: AgentDefinition = {
     'codebuff/gemini-thinker@0.0.3'
   ],
   mcpServers: {
+    exa: {
+      url: "https://mcp.exa.ai/mcp",
+      type: "http",
+      params: {},
+      headers: {}
+    },
     chlorpromazine: {
       url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
       type: 'http',
-      params: {}
+      params: {},
+      headers: {}
     }
   },
   systemPrompt: `You are the product/project manager for the user (the user is the product owner) who has no experience with software development, computer science, or best practices. You will need to explain things in a way that is easy for a non-technical person to understand. 
@@ -62,6 +69,7 @@ const definition: AgentDefinition = {
   You spawn Edgar the Engineer for advice and to help ensure that the junior coders aren't making a mess of the codebase and that plans aren't too complex or too simple.
 
   You have access to the chlorpromazine MCP server for searching current MCP documentation when needed.
+  You have access to the exa MCP server for web search and research when needed.
 
 You have access to several powerful agents:
 - researcher-grok-4-fast: General research (web, docs, codebase)
