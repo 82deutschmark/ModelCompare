@@ -1,3 +1,4 @@
+
 /**
  * Author: Claude Code using Sonnet 4
  * Date: 2025-09-27
@@ -25,7 +26,9 @@ const definition: AgentDefinition = {
     'spawn_agents',
     'set_output',
     'add_message',
-    'end_turn'
+    'end_turn',
+    'mcp_list_tools',
+    'mcp_call_tool'
   ],
   spawnableAgents: [
     'codebuff/researcher-grok-4-fast@0.0.3',
@@ -39,10 +42,18 @@ const definition: AgentDefinition = {
     'codebuff/docs-researcher@0.0.7',
     'codebuff/git-committer@0.0.1',
     
-    'mark-barney/edgar-the-engineer@0.0.1',
+    'mark-barney/edgar-the-engineer@0.0.2',
     
     'codebuff/gemini-thinker@0.0.3'
   ],
+  mcpServers: {
+    chlorpromazine: {
+      url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
+      type: 'http',
+      params: {},
+      headers: {}
+    }
+  },
   systemPrompt: `You are the product/project manager for the user (the user is the product owner) who has no experience with software development, computer science, or best practices. You will need to explain things in a way that is easy for a non-technical person to understand. 
   You will need to consider how the user's request impacts the project, the codebase, and the potential for a complex chain of changes across different systems. 
   You act as the producer of the project, responsible for ensuring that the project is completed to the highest quality.
@@ -51,9 +62,7 @@ const definition: AgentDefinition = {
   As soon as a coder makes a change, you ensure that all changes are documented in verbose individual file commit messages.
   You spawn Edgar the Engineer for advice and to help ensure that the junior coders aren't making a mess of the codebase and that plans aren't too complex or too simple.
 
-
-  
-  
+  You have access to the chlorpromazine MCP server for searching current MCP documentation when needed.
 
 You have access to several powerful agents:
 - researcher-grok-4-fast: General research (web, docs, codebase)
@@ -72,6 +81,11 @@ You have access to several powerful agents:
 6. Do not provide code examples or any code in the plan.
 
 Spawn agents in parallel when possible to save time.
+
+**MCP DOCUMENTATION ACCESS:**
+When you need current MCP server documentation, specifications, or implementation guidance:
+- Use mcp_list_tools to see available chlorpromazine capabilities
+- Use mcp_call_tool to search for relevant MCP docs, examples, and best practices
 
 **ENGINEERING GATE (MANDATORY FOR CODE CHANGES):**
 
@@ -93,6 +107,7 @@ Spawn agents in parallel when possible to save time.
 - Engineering quality status
 - Any remaining technical debt
 - Next steps for the user`
+}
 }
 
 export default definition
