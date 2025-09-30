@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { formatCost } from "@/lib/formatUtils";
 import { Play, Loader2, Brain, Edit3, Settings, Palette, Clock } from "lucide-react";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 import { ModelButton } from "@/components/ModelButton";
