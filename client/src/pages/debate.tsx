@@ -30,6 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { apiRequest } from "@/lib/queryClient";
+import { formatCost } from "@/lib/formatUtils";
 import { useTheme } from "@/components/ThemeProvider";
 import { generateMarkdownExport, generateTextExport, downloadFile, generateSafeFilename, copyToClipboard, type ExportData } from '@/lib/exportUtils';
 import type { AIModel, ModelResponse } from '@/types/ai-models';
