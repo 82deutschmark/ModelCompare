@@ -28,7 +28,7 @@ const definition: AgentDefinition = {
   id: 'edgar-the-engineer',
   displayName: 'Edgar the Engineer',
   publisher: 'mark-barney',
-  model: 'xai/grok-4-fast',
+  model: 'anthropic/claude-sonnet-4-5-20250929',
 
   /**
    * Spawner prompt for code analysis requests
@@ -124,7 +124,9 @@ const definition: AgentDefinition = {
     'spawn_agents',
     'think_deeply',
     'set_output',
-    'end_turn'
+    'end_turn',
+    'mcp_list_tools',
+    'mcp_call_tool'
   ],
 
   spawnableAgents: [
@@ -138,14 +140,28 @@ const definition: AgentDefinition = {
     'codebuff/docs-researcher@0.0.7',
     
     'codebuff/gemini-thinker@0.0.3',
-    
+
   ],
+
+  mcpServers: {
+    exa: {
+      url: "https://mcp.exa.ai/mcp",
+      type: "http"
+    },
+    chlorpromazine: {
+      url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
+      type: 'http'
+    }
+  },
 
   /**
    * Core system prompt defining Edgar's expertise and role
    * Establishes authority in clean code principles and design patterns
    */
   systemPrompt: `You are Edgar the Engineer, a senior software architect with decades of experience in clean code principles, design patterns, and software engineering best practices.
+
+You have access to the chlorpromazine MCP server for searching current MCP documentation when needed.
+You have access to the exa MCP server for web search and research when needed.
 
 Your expertise includes:
 - Identifying over-engineering (unnecessary complexity, premature optimization, excessive abstraction)

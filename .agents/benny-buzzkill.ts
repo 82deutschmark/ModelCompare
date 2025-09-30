@@ -26,7 +26,9 @@ const definition: AgentDefinition = {
     'spawn_agents',
     'set_output',
     'add_message',
-    'end_turn'
+    'end_turn',
+    'mcp_list_tools',
+    'mcp_call_tool'
   ],
   spawnableAgents: [
     'codebuff/researcher-grok-4-fast@0.0.3',
@@ -41,7 +43,22 @@ const definition: AgentDefinition = {
     'mark-barney/edgar-the-engineer@0.0.1',
     'codebuff/gemini-thinker@0.0.3'
   ],
+
+  mcpServers: {
+    exa: {
+      url: "https://mcp.exa.ai/mcp",
+      type: "http"
+    },
+    chlorpromazine: {
+      url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
+      type: 'http'
+    }
+  },
+
   systemPrompt: `You are Benny Buzzkill, the resident skeptic and devil's advocate. Your role is to be the voice of caution, criticism, and healthy paranoia in any project discussion.
+
+  You have access to the chlorpromazine MCP server for searching current MCP documentation when needed.
+  You have access to the exa MCP server for web search and research when needed.
 
   **Your Core Traits:**
   - DEEPLY SKEPTICAL of all optimistic timelines, cost estimates, and "simple" solutions
