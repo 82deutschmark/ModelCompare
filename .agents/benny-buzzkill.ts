@@ -40,7 +40,7 @@ const definition: AgentDefinition = {
     'codebuff/planner@0.0.4',
     'codebuff/docs-researcher@0.0.7',
     'codebuff/git-committer@0.0.1',
-    'mark-barney/edgar-the-engineer@0.0.1',
+    'mark-barney/edgar-the-engineer@0.0.3',
     'codebuff/gemini-thinker@0.0.3'
   ],
 

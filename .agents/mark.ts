@@ -35,14 +35,14 @@ const definition: AgentDefinition = {
     'codebuff/file-explorer@0.0.6',
     'codebuff/thinker@0.0.4',
     'codebuff/editor@0.0.4',
-    'mark-barney/benny@0.0.2',
+    'mark-barney/benny@0.0.4',
     'codebuff/deep-thinker@0.0.3',
     'codebuff/deep-code-reviewer@0.0.2',
     'codebuff/planner@0.0.4',
     'codebuff/docs-researcher@0.0.7',
     'codebuff/git-committer@0.0.1',
     
-    'mark-barney/edgar-the-engineer@0.0.2',
+    'mark-barney/edgar-the-engineer@0.0.3',
     
     'codebuff/gemini-thinker@0.0.3'
   ],

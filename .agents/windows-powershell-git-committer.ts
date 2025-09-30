@@ -19,6 +19,7 @@ import type {
 const definition: AgentDefinition = {
   id: 'windows-powershell-git-committer',
   displayName: 'Windows PowerShell Git Committer',
+  publisher: 'mark-barney',
   // Use a cheap and fast model for this task
   model: 'qwen/qwen3-coder-flash',
   
@@ -158,4 +159,4 @@ Implement JWT system"\`
   },
 }
 
-export default definition
+export default definition

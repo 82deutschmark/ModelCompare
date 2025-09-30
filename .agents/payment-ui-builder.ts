@@ -3,7 +3,8 @@ import type { AgentDefinition } from './types/agent-definition'
 const definition: AgentDefinition = {
   id: 'payment-ui-builder',
   displayName: 'Payment UI Builder',
-  model: 'anthropic/claude-4-sonnet-20250522',
+  publisher: 'mark-barney',
+  model: 'anthropic/claude-sonnet-4-5-20250929',
   spawnerPrompt: 'Build payment-related UI components including checkout forms, subscription management, billing displays, and Stripe integration components.',
   toolNames: [
     'read_files',
@@ -13,7 +14,7 @@ const definition: AgentDefinition = {
     'spawn_agents'
   ],
   spawnableAgents: [
-    'component-builder',
+    'mark-barney/component-builder@0.0.1',
     'codebuff/editor@0.0.4'
   ],
   

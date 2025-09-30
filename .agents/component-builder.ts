@@ -3,7 +3,8 @@ import type { AgentDefinition } from './types/agent-definition'
 const definition: AgentDefinition = {
   id: 'component-builder',
   displayName: 'React Component Builder',
-  model: 'anthropic/claude-4-sonnet-20250522',
+  publisher: 'mark-barney',
+  model: 'anthropic/claude-sonnet-4-5-20250929',
   spawnerPrompt: 'Build individual React/TypeScript components following shadcn/ui patterns and existing project conventions.',
   inputSchema: {
     prompt: {
