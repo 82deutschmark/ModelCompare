@@ -12,7 +12,7 @@ const definition: AgentDefinition = {
   id: 'benny',
   displayName: 'Benny Buzzkill',
   publisher: 'mark-barney',
-  model: 'openai/gpt-5-mini',
+  model: 'openai/gpt-5-nano',
   reasoningOptions: {
     enabled: true,
     exclude: false,
