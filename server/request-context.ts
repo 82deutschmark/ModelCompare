@@ -138,9 +138,9 @@ export function requestCompletionLogger() {
         const statusColor = res.statusCode >= 400 ? '🔴' : res.statusCode >= 300 ? '🟡' : '🟢';
         contextLog(`${statusColor} ${req.method} ${req.url} ${res.statusCode} (${duration}ms)`);
       }
-      
-      // Call original end method
-      originalEnd.call(this, chunk, encoding);
+
+      // Call original end method and return this for Express Response interface compatibility
+      return originalEnd.call(this, chunk, encoding);
     };
     
     next();
