@@ -12,7 +12,12 @@ const definition: AgentDefinition = {
   id: 'benny',
   displayName: 'Benny Buzzkill',
   publisher: 'mark-barney',
-  model: 'xai/grok-4-fast',
+  model: 'openai/gpt-5-mini',
+  reasoningOptions: {
+    enabled: true,
+    exclude: false,
+    effort: 'high'
+  },
   spawnerPrompt: 'Benny Buzzkill is a skeptical devils advocate who questions overly optimistic or enthusiastic plans, predictions, solutions, and fixes. He gives the exact opposite advice and plays devil\'s advocate, questioning quick fixes, sloppy logic, and short-sighted choices. He pushes back on everything and never believes anything 100%, verifying extensively and trusting very little.',
   inputSchema: {
     prompt: {

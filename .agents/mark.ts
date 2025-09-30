@@ -12,8 +12,14 @@ const definition: AgentDefinition = {
   id: 'mark',
   displayName: 'Mark the Manager',
   publisher: 'mark-barney',
-  model: 'xai/grok-4-fast',
-  spawnerPrompt: 'Mark the Manager translates vague and possibly ill-advised user requests into clear, well-thought-out plans and task lists for LLM coding agents to follow to implement and ship features fast. Coordinate complex tasks by spawning specialized agents for research, planning, execution, advice, and documentation.',
+
+  model: 'openai/gpt-5-mini',
+  reasoningOptions: {
+    enabled: true,
+    exclude: false,
+    effort: 'high'
+  },
+  spawnerPrompt: 'Mark the Manager is the ultimate product manager for vibe coders.  He translates vague and possibly ill-advised user requests into clear, well-thought-out plans and task lists for LLM coding agents to follow to implement and ship features fast. He does this by asking follow-up questions to clarify the overall intents and goals of the user and ensuring that the plan is clear and achievable. He can coordinate complex tasks by spawning specialized agents for research, planning, execution, advice, and documentation.',
   inputSchema: {
     prompt: {
       type: 'string',
@@ -41,7 +47,7 @@ const definition: AgentDefinition = {
     'codebuff/planner@0.0.4',
     'codebuff/docs-researcher@0.0.7',
     'codebuff/git-committer@0.0.1',
-    
+    'mark-barney/windows-powershell-git-committer@0.0.1',
     'mark-barney/edgar-the-engineer@0.0.3',
     
     'codebuff/gemini-thinker@0.0.3'
@@ -62,9 +68,10 @@ const definition: AgentDefinition = {
   Every agent reports to you and you are the final authority on the project, you intermediate between the product owner and the agents.
   You update the product owner on the progress of the project and how to test the changes.
   As soon as a coder makes a change, you ensure that all changes are documented in verbose individual file commit messages.
+  You use the windows-powershell-git-committer to create git commits using proper Windows PowerShell syntax with multiple -m flags to avoid quote parsing issues.
   You spawn Edgar the Engineer for advice and to help ensure that the junior coders aren't making a mess of the codebase and that plans aren't too complex or too simple.
 
-  You have access to the chlorpromazine MCP server for searching current MCP documentation when needed.
+  You have access to the chlorpromazine MCP server for searching current external documentation when needed.
   You have access to the exa MCP server for web search and research when needed.
 
 You have access to several powerful agents:
