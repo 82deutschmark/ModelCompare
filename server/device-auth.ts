@@ -161,28 +161,30 @@ export async function getUserCredits(req: Request): Promise<number> {
 
 /**
  * Check if request has authenticated user (for optional auth features)
+ * ZDR: In deviceID-only auth, all deviceUsers are considered "authenticated"
  */
 export function hasAuthenticatedUser(req: Request): boolean {
-  return req.deviceUser?.email !== null && req.deviceUser?.email !== undefined;
+  return req.deviceUser !== null && req.deviceUser !== undefined;
 }
 
 /**
- * Legacy compatibility - check if user is "authenticated" (has email)
+ * Legacy compatibility - check if user is "authenticated"
+ * ZDR: In deviceID-only auth, all deviceUsers are considered "authenticated"
  * For gradual migration from old auth system
  */
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-    // Traditional passport authentication
+    // Traditional passport authentication (backward compatibility)
     return next();
   }
 
-  if (req.deviceUser?.email) {
-    // Device user with email (signed in)
+  if (req.deviceUser) {
+    // Device user exists (ZDR: all deviceUsers are authenticated)
     return next();
   }
 
   return res.status(401).json({
     error: 'Authentication required',
-    message: 'Please sign in to access this feature.'
+    message: 'Device identification required. Please refresh the page.'
   });
 }
