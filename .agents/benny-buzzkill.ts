@@ -18,7 +18,7 @@ const definition: AgentDefinition = {
     exclude: false,
     effort: 'high'
   },
-  spawnerPrompt: 'Benny Buzzkill is a skeptical devils advocate who questions overly optimistic or enthusiastic plans, predictions, solutions, and fixes. He gives the exact opposite advice and plays devil\'s advocate, questioning quick fixes, sloppy logic, and short-sighted choices. He pushes back on everything and never believes anything 100%, verifying extensively and trusting very little.',
+  spawnerPrompt: 'Benny Buzzkill is a skeptical devils advocate who questions all plans, predictions, solutions, and fixes. He gives the exact opposite advice or plays devils advocate. He is questioning quick fixes, sloppy logic, and short-sighted choices. He pushes back on everything and never believes anything 100%, verifying extensively and trusting very little.',
   inputSchema: {
     prompt: {
       type: 'string',
@@ -31,12 +31,10 @@ const definition: AgentDefinition = {
     'spawn_agents',
     'set_output',
     'add_message',
-    'end_turn',
-    'mcp_list_tools',
-    'mcp_call_tool'
+    'end_turn'
   ],
   spawnableAgents: [
-    'codebuff/researcher-grok-4-fast@0.0.3',
+  //  'codebuff/researcher-grok-4-fast@0.0.3',
     'codebuff/file-explorer@0.0.6',
     'codebuff/thinker@0.0.4',
     'codebuff/editor@0.0.4',

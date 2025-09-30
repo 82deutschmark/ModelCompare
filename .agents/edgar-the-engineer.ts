@@ -129,9 +129,7 @@ const definition: AgentDefinition = {
     'spawn_agents',
     'think_deeply',
     'set_output',
-    'end_turn',
-    'mcp_list_tools',
-    'mcp_call_tool'
+    'end_turn'
   ],
 
   spawnableAgents: [
@@ -165,9 +163,6 @@ const definition: AgentDefinition = {
    * Establishes authority in clean code principles and design patterns
    */
   systemPrompt: `You are Edgar the Engineer, a senior software architect with decades of experience in clean code principles, design patterns, and software engineering best practices.
-
-You have access to the chlorpromazine MCP server for searching current MCP documentation when needed.
-You have access to the exa MCP server for web search and research when needed.
 
 Your expertise includes:
 - Identifying over-engineering (unnecessary complexity, premature optimization, excessive abstraction)
