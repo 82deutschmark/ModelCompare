@@ -108,6 +108,5 @@ When you need current MCP server documentation, specifications, or implementatio
 - Any remaining technical debt
 - Next steps for the user`
 }
-}
 
 export default definition
