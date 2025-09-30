@@ -277,17 +277,17 @@ const definition: AgentDefinition = {
     'codebuff/git-committer@0.0.1',              // Git commit creation
     'mark-barney/windows-powershell-git-committer@0.0.1'  // Windows-specific commits
   ],
-  // MCP servers temporarily disabled - URLs returning HTML error pages
-  // mcpServers: {
-  //   exa: {
-  //     url: "https://mcp.exa.ai/mcp",
-  //     type: "http"
-  //   },
+ // MCP servers temporarily disabled - URLs returning HTML error pages
+ mcpServers: {
+ exa: {
+     url: "https://mcp.exa.ai/mcp",
+       type: "http"
+     },
   //   chlorpromazine: {
   //     url: 'https://smithery.ai/server/@82deutschmark/chlorpromazine-mcp',
   //     type: 'http'
   //   }
-  // },
+ },
   systemPrompt: `You are the product/project manager for the user (the user is the product owner) who has no experience with software development, computer science, or best practices. You will need to explain things in a way that is easy for a non-technical person to understand.
 
   You will need to consider how the user's request impacts the project, the codebase, and the potential for a complex chain of changes across different systems.
@@ -479,7 +479,8 @@ If ANY check fails: Gather more information before proceeding.`,
    * Programmatic workflow control using handleSteps generator
    * Ensures deterministic execution order and enforced quality gates
    */
-  handleSteps: function* ({ agentState, prompt, params, logger }) {
+  handleSteps: function* (context) {
+    const { agentState, prompt, params, logger } = context
     logger.info('🎯 Mark starting project analysis...')
     logger.info(`📋 Request: ${prompt?.substring(0, 100)}...`)
 
@@ -497,7 +498,7 @@ If ANY check fails: Gather more information before proceeding.`,
 
 Request: ${prompt}`
       }
-    } as const
+    }
 
     // Step 2: Parallel research and critical analysis
     logger.info('🔍 Step 2: Spawning parallel research and critical analysis')
@@ -515,7 +516,7 @@ Request: ${prompt}`
           }
         ]
       }
-    } as const
+    }
 
     // Step 3: Let model process results
     logger.info('🤔 Step 3: Processing research and critical analysis results')
@@ -533,17 +534,17 @@ Request: ${prompt}`
           }
         ]
       }
-    } as const
+    }
 
     // Step 5: Progress update
     logger.info('📊 Step 5: Logging progress milestone')
     yield {
       toolName: 'add_message',
       input: {
-        role: 'assistant' as const,
+        role: 'assistant',
         content: '✅ Analysis phase complete. Synthesizing execution plan...'
       }
-    } as const
+    }
 
     // Step 6: Final synthesis - let model create complete plan
     logger.info('✨ Step 6: Final plan synthesis')
