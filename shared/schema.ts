@@ -79,9 +79,10 @@ export const promptAudits = pgTable("prompt_audits", {
 });
 
 // User authentication and billing tables
+// ZDR (Zero Data Retention): NO PII - deviceID-only authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  deviceId: varchar("device_id"), // Hashed device-based identification for anonymous users
+  deviceId: varchar("device_id"), // Hashed device-based identification (NO PII)
   credits: integer("credits").default(500), // Starting credits
   stripeCustomerId: varchar("stripe_customer_id"), // Hashed Stripe customer ID
   stripeSubscriptionId: varchar("stripe_subscription_id"), // Hashed Stripe subscription ID
@@ -127,6 +128,7 @@ export type VixraSession = typeof vixraSessions.$inferSelect;
 export type InsertPromptAudit = z.infer<typeof insertPromptAuditSchema>;
 export type PromptAuditRecord = typeof promptAudits.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+// Force TypeScript to regenerate this inferred type
 export type User = typeof users.$inferSelect;
 export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
