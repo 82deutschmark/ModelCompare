@@ -57,42 +57,6 @@ A sophisticated web application for comparing responses from multiple AI models 
 ├── shared/                 # Shared types and schemas
 └── attached_assets/        # Static assets and generated images
 ```
-
-## AI Provider Integration
-
-### Supported Providers & Models
-
-**OpenAI** - Source of Truth: server/providers/openai.ts
-- GPT-5 (2025-08-07) - Flagship model for coding, reasoning, and agentic tasks
-  * 400k context window, 128k max output, reasoning token support
-  * $1.25 input / $10.00 output per 1M tokens
-- GPT-4.1 series (Nano, Mini, Standard) - Latest GPT-4 improvements  
-- o3/o4 series - Advanced reasoning models with Responses API support
-- GPT-4o Mini - Cost-optimized multimodal model
-
-**Anthropic Claude**
-- Claude Opus 4.1 (most capable)
-- Claude Sonnet 4 (balanced performance)
-- Claude 3.7 Sonnet (enhanced version)
-- Claude 3 Sonnet (standard)
-- Claude 3 Haiku (fastest)
-
-**Google Gemini**
-- Gemini 2.5 Pro (flagship model)
-- Gemini 2.5 Flash (optimized speed)
-- Gemini 2.5 Flash 8B (lightweight)
-- Gemini Pro (legacy)
-
-**DeepSeek**
-- DeepSeek V3 Chat (conversational AI)
-- DeepSeek R1 Reasoner (advanced reasoning)
-
-**xAI Grok**
-- Grok 4 (latest version)
-- Grok 2 Vision (multimodal)
-- Grok 2 1212 (text-only)
-- Grok Beta (experimental)
-
 ## Model Source of Truth
 
 All AI model configurations, capabilities, pricing, and specifications are maintained in the modular provider system located in `server/providers/`. This serves as the single source of truth for:
@@ -411,21 +375,9 @@ Multi-layered error handling:
 - **Documentation**: API documentation with OpenAPI
 
 ## Environment Setup
+ARE ALL IN THE .ENV FILE!!!
 
-### Required Environment Variables
-
-```bash
-# Database (optional - falls back to in-memory)
-DATABASE_URL=postgresql://user:pass@host:port/db
-
-# AI Provider Keys (at least one required)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-GEMINI_API_KEY=AI...
-GROK_API_KEY=xai-...
-DEEPSEEK_API_KEY=sk-...
-
-# Development
+# Development  ???  Not sure wtf this is for???
 NODE_ENV=development
 ```
 
