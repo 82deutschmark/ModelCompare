@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Luigi API Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; cursor: pointer; }
+        pre { background: #2d2d2d; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .log { margin: 10px 0; padding: 10px; background: #2d2d2d; border-left: 3px solid #007acc; }
+        .error { border-left-color: #f48771; }
+        .success { border-left-color: #89d185; }
+    </style>
+</head>
+<body>
+    <h1>Luigi Pipeline API Test</h1>
+    <button onclick="testCreateRun()">Create Luigi Run</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            output.appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearLogs() {
+            output.innerHTML = '';
+        }
+
+        async function testCreateRun() {
+            log('🚀 Starting Luigi Run creation test...', 'log');
+            
+            const payload = {
+                missionName: "Stump Grinding Business",
+                objective: "Start a stump grinding business in Eastern Connecticut",
+                constraints: "Limited budget, need to start within 3 months",
+                successCriteria: "Profitable within 6 months",
+                stakeholderNotes: "Focus on residential customers first"
+            };
+
+            log(`📤 Sending POST /api/luigi/runs<br><pre>${JSON.stringify(payload, null, 2)}</pre>`, 'log');
+
+            try {
+                const response = await fetch('http://localhost:5000/api/luigi/runs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log(`📥 Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+                log(`📊 Response body:<br><pre>${JSON.stringify(data, null, 2)}</pre>`, response.ok ? 'success' : 'error');
+
+                if (response.ok && data.run) {
+                    const runId = data.run.id;
+                    log(`✅ Run created successfully! ID: ${runId}`, 'success');
+                    
+                    // Start polling for updates
+                    pollRunStatus(runId);
+                    pollMessages(runId);
+                }
+            } catch (error) {
+                log(`❌ ERROR: ${error.message}<br><pre>${error.stack}</pre>`, 'error');
+            }
+        }
+
+        async function pollRunStatus(runId) {
+            log(`🔄 Starting to poll run status for ${runId}...`, 'log');
+            
+            let attempts = 0;
+            const maxAttempts = 20;
+            
+            const interval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await fetch(`http://localhost:5000/api/luigi/runs/${runId}`);
+                    const data = await response.json();
+                    
+                    log(`📡 Poll ${attempts}/${maxAttempts} - Status: ${data.run.status}, Stage: ${data.run.currentStageId || 'none'}`, 'log');
+                    
+                    if (data.run.status === 'completed' || data.run.status === 'failed' || attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        log(`🏁 Polling stopped. Final status: ${data.run.status}`, data.run.status === 'completed' ? 'success' : 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Poll error: ${error.message}`, 'error');
+                }
+            }, 3000);
+        }
+
+        async function pollMessages(runId) {
+            log(`💬 Starting to poll messages for ${runId}...`, 'log');
+            
+            let lastMessageCount = 0;
+            let attempts = 0;
+            const maxAttempts = 20;
+            
+            const interval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await fetch(`http://localhost:5000/api/luigi/runs/${runId}/messages?limit=200`);
+                    const data = await response.json();
+                    
+                    if (data.messages && data.messages.length > lastMessageCount) {
+                        const newMessages = data.messages.slice(lastMessageCount);
+                        newMessages.forEach(msg => {
+                            log(`💬 [${msg.role}] ${msg.content}`, 'log');
+                        });
+                        lastMessageCount = data.messages.length;
+                    }
+                    
+                    if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        log(`🏁 Message polling stopped after ${attempts} attempts`, 'log');
+                    }
+                } catch (error) {
+                    log(`❌ Message poll error: ${error.message}`, 'error');
+                }
+            }, 3000);
+        }
+
+        // Auto-run on load
+        log('✨ Test page loaded. Click "Create Luigi Run" to test the API.', 'success');
+    </script>
+</body>
+</html>
