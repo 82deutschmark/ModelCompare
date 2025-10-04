@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Storage Layer - Data Persistence and Database Management
  * 
  * This module provides a unified storage interface that supports both PostgreSQL
@@ -78,110 +78,116 @@ export interface IStorage {
   getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]>;
   
   // Luigi pipeline operations
-  async createLuigiRun(run: InsertLuigiRun): Promise<LuigiRun> {
-    const id = randomUUID();
-    const now = new Date();
-    const luigiRun: LuigiRun = {
-      id,
-      missionName: run.missionName,
-      objective: run.objective,
-      constraints: run.constraints ?? null,
-      successCriteria: run.successCriteria ?? null,
-      stakeholderNotes: run.stakeholderNotes ?? null,
-      userPrompt: run.userPrompt,
-      status: run.status,
-      currentStageId: run.currentStageId ?? null,
-      stages: run.stages as LuigiStagesPayload,
-      totalCostCents: run.totalCostCents ?? null,
-      createdAt: now,
-      updatedAt: now,
-      completedAt: null,
-    };
-    this.luigiRuns.set(id, luigiRun);
-    this.luigiMessages.set(id, []);
-    this.luigiArtifacts.set(id, []);
-    return luigiRun;
+  createLuigiRun(run: InsertLuigiRun): Promise<LuigiRun>;
+  updateLuigiRun(id: string, update: LuigiRunUpdate): Promise<LuigiRun | undefined>;
+  getLuigiRun(id: string): Promise<LuigiRun | undefined>;
+  listLuigiRuns(limit?: number): Promise<LuigiRun[]>;
+  appendLuigiMessage(message: InsertLuigiMessage): Promise<LuigiMessage>;
+  getLuigiMessages(runId: string, limit?: number): Promise<LuigiMessage[]>;
+  saveLuigiArtifact(artifact: InsertLuigiArtifact): Promise<LuigiArtifact>;
+  getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]>;
+
+  // User authentication operations
+  getUser(id: string): Promise<User | undefined>;
+  getUserByDeviceId(deviceId: string): Promise<User | undefined>;
+  createAnonymousUser(deviceId: string): Promise<User>;
+  ensureDeviceUser(deviceId: string): Promise<User>;
+  upsertUser(userData: UpsertUser): Promise<User>;
+  
+  // Credit management operations
+  getUserCredits(userId: string): Promise<number>;
+  deductCredits(userId: string, amount: number): Promise<User>;
+  addCredits(userId: string, amount: number): Promise<User>;
+  
+  // Stripe integration operations
+  updateStripeCustomerId(userId: string, customerId: string): Promise<User>;
+  updateUserStripeInfo(userId: string, info: StripeInfo): Promise<User>;
+}
+
+// DbStorage class - PostgreSQL implementation
+export class DbStorage implements IStorage {
+  async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
+    const [result] = await requireDb()
+      .insert(comparisons)
+      .values({
+        prompt: insertComparison.prompt,
+        selectedModels: insertComparison.selectedModels,
+        responses: insertComparison.responses,
+      })
+      .returning();
+    return result;
   }
 
-  async updateLuigiRun(id: string, update: LuigiRunUpdate): Promise<LuigiRun | undefined> {
-    const existing = this.luigiRuns.get(id);
-    if (!existing) {
-      return undefined;
+  async getComparison(id: string): Promise<Comparison | undefined> {
+    const [result] = await requireDb().select().from(comparisons).where(eq(comparisons.id, id));
+    return result;
+  }
+
+  async getComparisons(): Promise<Comparison[]> {
+    return await requireDb()
+      .select()
+      .from(comparisons)
+      .orderBy(desc(comparisons.createdAt));
+  }
+
+  async createVixraSession(insertSession: InsertVixraSession): Promise<VixraSession> {
+    const [result] = await requireDb()
+      .insert(vixraSessions)
+      .values({
+        variables: insertSession.variables,
+        template: insertSession.template,
+        responses: insertSession.responses,
+      })
+      .returning();
+    return result;
+  }
+
+  async updateVixraSession(id: string, updates: Partial<InsertVixraSession>): Promise<VixraSession | undefined> {
+    const [result] = await requireDb()
+      .update(vixraSessions)
+      .set(updates)
+      .where(eq(vixraSessions.id, id))
+      .returning();
+    return result;
+  }
+
+  async getVixraSession(id: string): Promise<VixraSession | undefined> {
+    const [result] = await requireDb().select().from(vixraSessions).where(eq(vixraSessions.id, id));
+    return result;
+  }
+
+  async getVixraSessions(): Promise<VixraSession[]> {
+    return await requireDb()
+      .select()
+      .from(vixraSessions)
+      .orderBy(desc(vixraSessions.updatedAt));
+  }
+
+  async createPromptAudit(insertAudit: InsertPromptAudit): Promise<PromptAuditRecord> {
+    const [result] = await requireDb()
+      .insert(promptAudits)
+      .values(insertAudit)
+      .returning();
+    return result;
+  }
+
+  async getPromptAudit(id: string): Promise<PromptAuditRecord | undefined> {
+    const [result] = await requireDb().select().from(promptAudits).where(eq(promptAudits.id, id));
+    return result;
+  }
+
+  async getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]> {
+    if (templateId) {
+      return await requireDb()
+        .select()
+        .from(promptAudits)
+        .where(eq(promptAudits.templateId, templateId))
+        .orderBy(desc(promptAudits.createdAt));
     }
-    const updated: LuigiRun = {
-      ...existing,
-      missionName: update.missionName !== undefined ? update.missionName : existing.missionName,
-      objective: update.objective !== undefined ? update.objective : existing.objective,
-      constraints: update.constraints !== undefined ? update.constraints : existing.constraints ?? null,
-      successCriteria: update.successCriteria !== undefined ? update.successCriteria : existing.successCriteria ?? null,
-      stakeholderNotes: update.stakeholderNotes !== undefined ? update.stakeholderNotes : existing.stakeholderNotes ?? null,
-      userPrompt: update.userPrompt !== undefined ? update.userPrompt : existing.userPrompt,
-      status: update.status !== undefined ? update.status : existing.status,
-      currentStageId: update.currentStageId !== undefined ? update.currentStageId : existing.currentStageId ?? null,
-      stages: update.stages !== undefined ? update.stages as LuigiStagesPayload : existing.stages,
-      totalCostCents: update.totalCostCents !== undefined ? update.totalCostCents : existing.totalCostCents ?? null,
-      updatedAt: new Date(),
-      completedAt: update.completedAt !== undefined ? update.completedAt : existing.completedAt ?? null,
-    };
-    this.luigiRuns.set(id, updated);
-    return updated;
-  }
-
-  async getLuigiRun(id: string): Promise<LuigiRun | undefined> {
-    return this.luigiRuns.get(id);
-  }
-
-  async listLuigiRuns(limit = 50): Promise<LuigiRun[]> {
-    const runs = Array.from(this.luigiRuns.values());
-    return runs
-      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0))
-      .slice(0, limit);
-  }
-
-  async appendLuigiMessage(message: InsertLuigiMessage): Promise<LuigiMessage> {
-    const runMessages = this.luigiMessages.get(message.runId) ?? [];
-    const luigiMessage: LuigiMessage = {
-      id: randomUUID(),
-      runId: message.runId,
-      role: message.role,
-      stageId: message.stageId ?? null,
-      agentId: message.agentId ?? null,
-      toolName: message.toolName ?? null,
-      content: message.content,
-      reasoning: message.reasoning ?? null,
-      metadata: message.metadata as Record<string, unknown> | null ?? null,
-      createdAt: new Date(),
-    };
-    runMessages.push(luigiMessage);
-    this.luigiMessages.set(message.runId, runMessages);
-    return luigiMessage;
-  }
-
-  async getLuigiMessages(runId: string, limit = 200): Promise<LuigiMessage[]> {
-    const messages = this.luigiMessages.get(runId) ?? [];
-    return messages.slice(-limit);
-  }
-
-  async saveLuigiArtifact(artifact: InsertLuigiArtifact): Promise<LuigiArtifact> {
-    const runArtifacts = this.luigiArtifacts.get(artifact.runId) ?? [];
-    const record: LuigiArtifact = {
-      id: randomUUID(),
-      runId: artifact.runId,
-      stageId: artifact.stageId,
-      type: artifact.type,
-      title: artifact.title,
-      description: artifact.description ?? null,
-      storagePath: artifact.storagePath ?? null,
-      data: artifact.data as Record<string, unknown> | null ?? null,
-      createdAt: new Date(),
-    };
-    runArtifacts.push(record);
-    this.luigiArtifacts.set(artifact.runId, runArtifacts);
-    return record;
-  }
-
-  async getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]> {
-    return [...(this.luigiArtifacts.get(runId) ?? [])].sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+    return await requireDb()
+      .select()
+      .from(promptAudits)
+      .orderBy(desc(promptAudits.createdAt));
   }
 
   // Luigi pipeline operations
@@ -205,7 +211,7 @@ export interface IStorage {
   }
 
   async updateLuigiRun(id: string, update: LuigiRunUpdate): Promise<LuigiRun | undefined> {
-    const updateData: Record<string, unknown> = { updatedAt: update.updatedAt ?? new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (update.missionName !== undefined) updateData.missionName = update.missionName;
     if (update.objective !== undefined) updateData.objective = update.objective;
     if (update.constraints !== undefined) updateData.constraints = update.constraints;
@@ -217,7 +223,6 @@ export interface IStorage {
     if (update.stages !== undefined) updateData.stages = update.stages as LuigiStagesPayload;
     if (update.totalCostCents !== undefined) updateData.totalCostCents = update.totalCostCents;
     if (update.completedAt !== undefined) updateData.completedAt = update.completedAt;
-    if (update.updatedAt !== undefined) updateData.updatedAt = update.updatedAt;
 
     const [result] = await requireDb()
       .update(luigiRuns)
@@ -296,7 +301,6 @@ export interface IStorage {
     return result;
   }
 
-
   async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
     const hashedDeviceId = hashDeviceId(deviceId);
     const [result] = await requireDb().select().from(users).where(eq(users.deviceId, hashedDeviceId));
@@ -309,26 +313,22 @@ export interface IStorage {
       .insert(users)
       .values({
         deviceId: hashedDeviceId,
-        credits: 500, // Anonymous users start with 500 credits
+        credits: 500,
       })
       .returning();
     return result;
   }
 
   async ensureDeviceUser(deviceId: string): Promise<User> {
-    // Try to find existing user by device ID
     const existingUser = await this.getUserByDeviceId(deviceId);
     if (existingUser) {
       return existingUser;
     }
-
-    // Create new anonymous user
     return await this.createAnonymousUser(deviceId);
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
     if (userData.id) {
-      // Update existing user
       const [result] = await requireDb()
         .update(users)
         .set({
@@ -341,7 +341,6 @@ export interface IStorage {
         .returning();
       return result;
     } else {
-      // Create new user
       const [result] = await requireDb()
         .insert(users)
         .values({
@@ -355,7 +354,6 @@ export interface IStorage {
     }
   }
 
-  // Credit management operations
   async getUserCredits(userId: string): Promise<number> {
     const [result] = await requireDb()
       .select({ credits: users.credits })
@@ -388,7 +386,6 @@ export interface IStorage {
     return result;
   }
 
-  // Stripe integration operations
   async updateStripeCustomerId(userId: string, customerId: string): Promise<User> {
     const [result] = await requireDb()
       .update(users)
@@ -430,6 +427,9 @@ export class MemStorage implements IStorage {
     this.vixraSessions = new Map();
     this.promptAudits = new Map();
     this.users = new Map();
+    this.luigiRuns = new Map();
+    this.luigiMessages = new Map();
+    this.luigiArtifacts = new Map();
   }
 
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
@@ -547,6 +547,113 @@ export class MemStorage implements IStorage {
     const audits = Array.from(this.promptAudits.values());
     const filtered = templateId ? audits.filter(a => a.templateId === templateId) : audits;
     return filtered.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  // Luigi pipeline operations
+  async createLuigiRun(run: InsertLuigiRun): Promise<LuigiRun> {
+    const id = randomUUID();
+    const now = new Date();
+    const luigiRun: LuigiRun = {
+      id,
+      missionName: run.missionName,
+      objective: run.objective,
+      constraints: run.constraints ?? null,
+      successCriteria: run.successCriteria ?? null,
+      stakeholderNotes: run.stakeholderNotes ?? null,
+      userPrompt: run.userPrompt,
+      status: run.status,
+      currentStageId: run.currentStageId ?? null,
+      stages: run.stages as LuigiStagesPayload,
+      totalCostCents: run.totalCostCents ?? null,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+    };
+    this.luigiRuns.set(id, luigiRun);
+    this.luigiMessages.set(id, []);
+    this.luigiArtifacts.set(id, []);
+    return luigiRun;
+  }
+
+  async updateLuigiRun(id: string, update: LuigiRunUpdate): Promise<LuigiRun | undefined> {
+    const existing = this.luigiRuns.get(id);
+    if (!existing) {
+      return undefined;
+    }
+    const updated: LuigiRun = {
+      ...existing,
+      missionName: update.missionName !== undefined ? update.missionName : existing.missionName,
+      objective: update.objective !== undefined ? update.objective : existing.objective,
+      constraints: update.constraints !== undefined ? update.constraints : existing.constraints ?? null,
+      successCriteria: update.successCriteria !== undefined ? update.successCriteria : existing.successCriteria ?? null,
+      stakeholderNotes: update.stakeholderNotes !== undefined ? update.stakeholderNotes : existing.stakeholderNotes ?? null,
+      userPrompt: update.userPrompt !== undefined ? update.userPrompt : existing.userPrompt,
+      status: update.status !== undefined ? update.status : existing.status,
+      currentStageId: update.currentStageId !== undefined ? update.currentStageId : existing.currentStageId ?? null,
+      stages: update.stages !== undefined ? update.stages as LuigiStagesPayload : existing.stages,
+      totalCostCents: update.totalCostCents !== undefined ? update.totalCostCents : existing.totalCostCents ?? null,
+      updatedAt: new Date(),
+      completedAt: update.completedAt !== undefined ? update.completedAt : existing.completedAt ?? null,
+    };
+    this.luigiRuns.set(id, updated);
+    return updated;
+  }
+
+  async getLuigiRun(id: string): Promise<LuigiRun | undefined> {
+    return this.luigiRuns.get(id);
+  }
+
+  async listLuigiRuns(limit = 50): Promise<LuigiRun[]> {
+    const runs = Array.from(this.luigiRuns.values());
+    return runs
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0))
+      .slice(0, limit);
+  }
+
+  async appendLuigiMessage(message: InsertLuigiMessage): Promise<LuigiMessage> {
+    const runMessages = this.luigiMessages.get(message.runId) ?? [];
+    const luigiMessage: LuigiMessage = {
+      id: randomUUID(),
+      runId: message.runId,
+      role: message.role,
+      stageId: message.stageId ?? null,
+      agentId: message.agentId ?? null,
+      toolName: message.toolName ?? null,
+      content: message.content,
+      reasoning: message.reasoning ?? null,
+      metadata: message.metadata as Record<string, unknown> | null ?? null,
+      createdAt: new Date(),
+    };
+    runMessages.push(luigiMessage);
+    this.luigiMessages.set(message.runId, runMessages);
+    return luigiMessage;
+  }
+
+  async getLuigiMessages(runId: string, limit = 200): Promise<LuigiMessage[]> {
+    const messages = this.luigiMessages.get(runId) ?? [];
+    return messages.slice(-limit);
+  }
+
+  async saveLuigiArtifact(artifact: InsertLuigiArtifact): Promise<LuigiArtifact> {
+    const runArtifacts = this.luigiArtifacts.get(artifact.runId) ?? [];
+    const record: LuigiArtifact = {
+      id: randomUUID(),
+      runId: artifact.runId,
+      stageId: artifact.stageId,
+      type: artifact.type,
+      title: artifact.title,
+      description: artifact.description ?? null,
+      storagePath: artifact.storagePath ?? null,
+      data: artifact.data as Record<string, unknown> | null ?? null,
+      createdAt: new Date(),
+    };
+    runArtifacts.push(record);
+    this.luigiArtifacts.set(artifact.runId, runArtifacts);
+    return record;
+  }
+
+  async getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]> {
+    return [...(this.luigiArtifacts.get(runId) ?? [])].sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   // User authentication operations
