@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Author: Codex using GPT-5
  * Date: 2025-10-04T10:23:48Z
  * PURPOSE: Luigi business plan workspace page integrating form, timeline, conversation, and artifacts with live agents.
@@ -266,7 +266,7 @@ function StatusCard({ run, isLoading, messageCount, artifactCount }: StatusCardP
           <span className="font-medium text-foreground">{artifactCount}</span>
         </div>
         <div className="text-xs text-muted-foreground">
-          {run ? Updated  : 'Launch a run to begin tracking.'}
+          {run ? `Updated ${new Date(run.updatedAt).toLocaleString()}` : 'Launch a run to begin tracking.'}
         </div>
       </CardContent>
     </Card>
