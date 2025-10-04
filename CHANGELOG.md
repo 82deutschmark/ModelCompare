@@ -27,11 +27,18 @@ All notable changes to this project will be documented in this file.
   - **Type Mismatch Errors:** Added type assertions for Drizzle ORM inserts (7 methods) - Zod-inferred types vs. Drizzle native types incompatibility
   - Build now succeeds with 0 TypeScript errors
   
-- **🔐 Authentication Endpoint Fix:** Fixed /api/auth/user returning 401 for anonymous device-based users
-  - Added ensureDeviceUser middleware to /api/auth/user endpoint
-  - Endpoint now returns device-based user when OAuth user is not present
-  - Resolves React error #185 on research-synthesis page
-  - Anonymous users can now access all features without authentication barriers
+- **🔐 Authentication Endpoint 400 Error:** Fixed /api/auth/user returning 400 Bad Request
+  - Endpoint required x-device-id header via ensureDeviceUser middleware
+  - useAuth.ts fetch call didn't include device ID header
+  - Fixed by adding manual device ID check in endpoint handler
+  - Added x-device-id header to useAuth.ts fetch call
+  - Both OAuth and device-based authentication now work seamlessly
+
+- **💥 React Error #185 - Multiple Rendering Bugs:** Fixed objects being rendered as React children
+  - **StatusCard timestamp:** Line 269 tried to render `Updated` object instead of formatted string
+  - **LuigiStageSnapshot type:** Invalid type syntax using type as array index
+  - **LuigiRunControls cost:** Incomplete cost display showing just "Cost:" with no value
+  - All fixed with proper string formatting and correct type references
 
 ### Technical Notes
 - **Storage Type Safety:** Using `as any` assertions on Drizzle inserts is safe because:
