@@ -33,7 +33,7 @@ import type { GenerateRequest, GenerateResponse, UnifiedMessage, ModelMessage } 
 import { PromptBuilder } from "./prompt-builder.js";
 import { getDisplayForModelId, MODEL_CATALOG, type ModelDisplay } from "../shared/model-catalog.js";
 import { getDatabaseManager } from "./db.js";
-import { contextLog } from "./request-context.js";
+import { contextLog, contextError } from "./request-context.js";
 import { isAuthenticated, hasCredits } from "./auth.js";
 import { ensureDeviceUser, checkDeviceCredits, deductCreditsForSuccessfulCalls, getUserCredits } from "./device-auth.js";
 import type { User } from "../shared/schema.js";
@@ -57,18 +57,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication routes
   // Get current user - supports both OAuth and device-based authentication
-  app.get("/api/auth/user", ensureDeviceUser, async (req, res) => {
+  app.get("/api/auth/user", async (req, res) => {
     // First, check for Passport OAuth authentication
     if (typeof req.isAuthenticated === 'function' && req.isAuthenticated() && req.user) {
       return res.json(req.user);
     }
     
-    // Fall back to device-based authentication (ensureDeviceUser middleware)
-    if (req.deviceUser) {
-      return res.json(req.deviceUser);
+    // Fall back to device-based authentication
+    const deviceId = req.headers['x-device-id'] as string;
+    if (deviceId) {
+      try {
+        const storage = await getStorage();
+        const user = await storage.ensureDeviceUser(deviceId);
+        return res.json(user);
+      } catch (error) {
+        contextError('Failed to get device user:', error);
+        return res.status(500).json({ error: 'Failed to retrieve user' });
+      }
     }
     
-    // Should never reach here if ensureDeviceUser middleware is working
+    // No auth method available - return 401
     res.status(401).json({ error: 'Not authenticated' });
   });
 

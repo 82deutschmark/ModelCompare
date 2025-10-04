@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { getDeviceId } from '@/lib/deviceId';
 import type { User } from '@shared/schema';
 
 interface AuthState {
@@ -37,6 +38,9 @@ export function useAuth(): AuthState & AuthActions {
     queryFn: async () => {
       try {
         const response = await fetch('/api/auth/user', {
+          headers: {
+            'x-device-id': getDeviceId(),
+          },
           credentials: 'include',
         });
 
