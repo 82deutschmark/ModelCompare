@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Author: Codex using GPT-5
  * Date: 2025-10-04T10:20:19Z
  * PURPOSE: Luigi run control panel offering pause/resume/cancel actions and status summary.
@@ -40,7 +40,7 @@ export function LuigiRunControls({ run, isMutating, onPause, onResume, onCancel,
               )}
               {typeof run.totalCostCents === 'number' && (
                 <span className="text-xs text-muted-foreground">
-                  Cost: 
+                  Cost: ${(run.totalCostCents / 100).toFixed(2)}
                 </span>
               )}
             </div>
