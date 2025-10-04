@@ -3,7 +3,7 @@ import type { AgentDefinition } from '../types/agent-definition'
 const definition: AgentDefinition = {
   id: 'code-assistant',
   displayName: 'Code Assistant',
-  model: 'anthropic/claude-4-sonnet-20250522',
+  model: 'openai/gpt-5-nano',
   spawnerPrompt: 'Help with code analysis, editing, and file operations in the codebase.',
   inputSchema: {
     prompt: {
