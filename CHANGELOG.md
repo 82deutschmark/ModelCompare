@@ -10,11 +10,14 @@ Date: 2025-08-17
 
 All notable changes to this project will be documented in this file.
 
-## [Version 0.1.1] - 2025-09-28
+## [Version 0.2.0] - 2025-10-04
 
 ### Added
-- **Smart Default Model Selection:** Compare page now pre-populates with 3 popular models (GPT-5 Nano, Claude Sonnet 4, GPT-4.1 Nano) to eliminate empty state and improve onboarding experience
-- **Centralized Format Utilities:** Added `formatUtils.ts` for consistent cost and token formatting across all components
+- **Luigi Agent Workspace Infrastructure:** Complete Phase 1-2 implementation per docs/4OctLuigiAgents.md
+  - Database schema for luigi_runs, luigi_messages, luigi_artifacts tables
+  - Storage layer with DbStorage (PostgreSQL) and MemStorage (in-memory) implementations
+  - Luigi pipeline operations: createLuigiRun, updateLuigiRun, appendLuigiMessage, saveLuigiArtifact
+  - REST API endpoints at /api/luigi/* for runs, messages, artifacts, and user interactions
 
 ### Fixed
 - **UI Spacing Restoration:** Restored proper UI spacing and sizing that was overly reduced, improving accessibility and usability
