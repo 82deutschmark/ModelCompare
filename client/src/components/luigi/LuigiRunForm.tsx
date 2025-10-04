@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Author: Codex using GPT-5
  * Date: 2025-10-04T10:33:02Z
  * PURPOSE: Luigi mission input form leveraging react-hook-form with Zod validation.
@@ -43,11 +43,10 @@ const INITIAL_VALUES: LuigiRunFormValues = {
 };
 
 export function LuigiRunForm({ className, isSubmitting, onSubmit }: LuigiRunFormProps) {
-  const { form, setFormField, resetForm } = useLuigiWorkspaceStore((state) => ({
-    form: state.form,
-    setFormField: state.setFormField,
-    resetForm: state.resetForm,
-  }));
+  // Use individual selectors to avoid infinite re-renders
+  const form = useLuigiWorkspaceStore((state) => state.form);
+  const setFormField = useLuigiWorkspaceStore((state) => state.setFormField);
+  const resetForm = useLuigiWorkspaceStore((state) => state.resetForm);
 
   const { register, handleSubmit, reset, formState } = useForm<LuigiRunFormValues>({
     resolver: zodResolver(formSchema),
