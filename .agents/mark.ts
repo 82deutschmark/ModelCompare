@@ -268,8 +268,8 @@ const definition: AgentDefinition = {
     'codebuff/gemini-thinker@0.0.3',             // Alternative thinking perspective
 
     // Quality & Review
-    'mark-barney/edgar-the-engineer@0.0.4',      // SRP/DRY/shadcn compliance review
-    'mark-barney/benny@0.0.5',                   // Critical analysis and risk assessment
+    // 'mark-barney/edgar-the-engineer@0.0.4',      // SRP/DRY/shadcn compliance review
+    // 'mark-barney/benny@0.0.5',                   // Critical analysis and risk assessment
     'codebuff/deep-code-reviewer@0.0.2',         // Detailed code review
 
     // Execution & DevOps
