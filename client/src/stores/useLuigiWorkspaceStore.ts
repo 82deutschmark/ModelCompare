@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Author: Codex using GPT-5
  * Date: 2025-10-04T10:17:36Z
  * PURPOSE: Zustand store managing Luigi workspace form state, active run context, and UI flags.
@@ -12,6 +12,7 @@ import type {
   LuigiArtifactRecord,
   LuigiRunSummary,
   LuigiStageId,
+  LuigiStageState,
 } from '@shared/luigi-types';
 
 export interface LuigiFormState {
@@ -22,7 +23,7 @@ export interface LuigiFormState {
   stakeholderNotes?: string;
 }
 
-export type LuigiStageSnapshot = LuigiRunSummary['stages'][LuigiStageId];
+export type LuigiStageSnapshot = LuigiStageState;
 
 interface LuigiWorkspaceState {
   form: LuigiFormState;
