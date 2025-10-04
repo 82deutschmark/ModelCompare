@@ -78,112 +78,6 @@ export interface IStorage {
   getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]>;
   
   // Luigi pipeline operations
-  createLuigiRun(run: InsertLuigiRun): Promise<LuigiRun>;
-  updateLuigiRun(id: string, update: LuigiRunUpdate): Promise<LuigiRun | undefined>;
-  getLuigiRun(id: string): Promise<LuigiRun | undefined>;
-  listLuigiRuns(limit?: number): Promise<LuigiRun[]>;
-  appendLuigiMessage(message: InsertLuigiMessage): Promise<LuigiMessage>;
-  getLuigiMessages(runId: string, limit?: number): Promise<LuigiMessage[]>;
-  saveLuigiArtifact(artifact: InsertLuigiArtifact): Promise<LuigiArtifact>;
-  getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]>;
-  
-  // User authentication operations
-  getUser(id: string): Promise<User | undefined>;
-  getUserByDeviceId(deviceId: string): Promise<User | undefined>;
-  upsertUser(userData: UpsertUser): Promise<User>;
-  createAnonymousUser(deviceId: string): Promise<User>;
-  ensureDeviceUser(deviceId: string): Promise<User>;
-  
-  // Credit management operations
-  getUserCredits(userId: string): Promise<number>;
-  deductCredits(userId: string, amount: number): Promise<User>;
-  addCredits(userId: string, amount: number): Promise<User>;
-  
-  // Stripe integration operations
-  updateStripeCustomerId(userId: string, customerId: string): Promise<User>;
-  updateUserStripeInfo(userId: string, info: StripeInfo): Promise<User>;
-}
-
-export class DbStorage implements IStorage {
-  async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
-    const [result] = await requireDb().insert(comparisons).values({
-      prompt: insertComparison.prompt,
-      selectedModels: insertComparison.selectedModels as string[],
-      responses: insertComparison.responses as any
-    }).returning();
-    return result;
-  }
-
-  async getComparison(id: string): Promise<Comparison | undefined> {
-    const [result] = await requireDb().select().from(comparisons).where(eq(comparisons.id, id));
-    return result;
-  }
-
-  async getComparisons(): Promise<Comparison[]> {
-    return await requireDb().select().from(comparisons).orderBy(desc(comparisons.createdAt));
-  }
-
-  async createVixraSession(insertSession: InsertVixraSession): Promise<VixraSession> {
-    const [result] = await requireDb().insert(vixraSessions).values({
-      template: insertSession.template,
-      variables: insertSession.variables,
-      responses: insertSession.responses as any
-    }).returning();
-    return result;
-  }
-
-  async updateVixraSession(id: string, updates: Partial<InsertVixraSession>): Promise<VixraSession | undefined> {
-    const updateData: any = { updatedAt: new Date() };
-    if (updates.template) updateData.template = updates.template;
-    if (updates.variables) updateData.variables = updates.variables;
-    if (updates.responses) updateData.responses = updates.responses;
-    
-    const [result] = await requireDb()
-      .update(vixraSessions)
-      .set(updateData)
-      .where(eq(vixraSessions.id, id))
-      .returning();
-    return result;
-  }
-
-  async getVixraSession(id: string): Promise<VixraSession | undefined> {
-    const [result] = await requireDb().select().from(vixraSessions).where(eq(vixraSessions.id, id));
-    return result;
-  }
-
-  async getVixraSessions(): Promise<VixraSession[]> {
-    return await requireDb().select().from(vixraSessions).orderBy(desc(vixraSessions.updatedAt));
-  }
-
-  async createPromptAudit(insertAudit: InsertPromptAudit): Promise<PromptAuditRecord> {
-    const [result] = await requireDb().insert(promptAudits).values({
-      templateId: insertAudit.templateId,
-      variables: insertAudit.variables,
-      resolvedSections: insertAudit.resolvedSections as any,
-      messageStructure: insertAudit.messageStructure as any,
-      modelId: insertAudit.modelId,
-      responseContent: insertAudit.responseContent,
-      responseTime: insertAudit.responseTime,
-      tokenUsage: insertAudit.tokenUsage as any,
-      cost: insertAudit.cost as any
-    }).returning();
-    return result;
-  }
-
-  async getPromptAudit(id: string): Promise<PromptAuditRecord | undefined> {
-    const [result] = await requireDb().select().from(promptAudits).where(eq(promptAudits.id, id));
-    return result;
-  }
-
-  async getPromptAudits(templateId?: string): Promise<PromptAuditRecord[]> {
-    const query = requireDb().select().from(promptAudits);
-    if (templateId) {
-      return await query.where(eq(promptAudits.templateId, templateId)).orderBy(desc(promptAudits.createdAt));
-    }
-    return await query.orderBy(desc(promptAudits.createdAt));
-  }
-
-  // Luigi pipeline operations
   async createLuigiRun(run: InsertLuigiRun): Promise<LuigiRun> {
     const id = randomUUID();
     const now = new Date();
@@ -849,6 +743,7 @@ function requireDb() {
   }
   return db;
 }
+
 
 
 

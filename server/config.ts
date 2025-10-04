@@ -176,12 +176,37 @@ export function validateConfig(config: AppConfig): void {
   }
 }
 
+const config = loadConfig();
+validateConfig(config);
+
+export { config };
+
+export const isDevelopment = (): boolean => config.server.environment === 'development';
+export const isProduction = (): boolean => config.server.environment === 'production';
+
+export function getSecurityConfig(): SecurityConfig {
+  return config.security;
+}
+
+export function getServerConfig(): ServerConfig {
+  return config.server;
+}
+
+export function getTemplateConfig(): TemplateConfig {
+  return config.templates;
+}
+
+export function getCircuitBreakerConfig(): CircuitBreakerConfig {
+  return config.circuitBreaker;
+}
+
 export function getLuigiConfig(): LuigiConfig {
   return {
-    orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || 'luigi-master-orchestrator',
-    agentRunnerBaseUrl: process.env.AGENT_RUNNER_BASE_URL || 'http://localhost:8700',
+    orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || "luigi-master-orchestrator",
+    agentRunnerBaseUrl: process.env.AGENT_RUNNER_BASE_URL || "http://localhost:8700",
     agentRunnerApiKey: process.env.AGENT_RUNNER_API_KEY,
   };
 }
+
 
 

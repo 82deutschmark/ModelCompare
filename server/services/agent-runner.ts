@@ -1,6 +1,6 @@
 ﻿/*
  * Author: Codex using GPT-5
- * Date: 2025-10-04T02:06:57Z
+ * Date: 2025-10-04T12:56:13Z
  * PURPOSE: REST client for external agent runner service powering Luigi executor.
  * SRP/DRY check: Pass - isolates REST contract and HTTP handling for agent runs.
  * shadcn/ui: Pass - backend utility only.
@@ -61,7 +61,7 @@ export async function callAgentByRest(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(options.apiKey ? { Authorization: Bearer  } : {}),
+        ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),
       },
       body: JSON.stringify(payload),
       signal: controller?.signal,
@@ -69,7 +69,7 @@ export async function callAgentByRest(
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(Agent runner request failed:  );
+      throw new Error(`Agent runner request failed: ${response.status} ${text}`);
     }
 
     const data = (await response.json()) as AgentRunResponse;
