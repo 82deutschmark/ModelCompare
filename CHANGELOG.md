@@ -1,5 +1,4 @@
 # Changelog
-
 <!--
 File: CHANGELOG.md
 Purpose: Human-readable history of notable changes.
@@ -10,7 +9,18 @@ Date: 2025-08-17
 
 All notable changes to this project will be documented in this file.
 
-## [Version 0.2.0] - 2025-10-04
+## [Version 0.2.1] - 2025-10-04
+
+### Added
+- Client-side Billing page at `/billing` with Wouter route; displays credit packages via `PricingTable` and account info
+- Visible auth actions: Sign in with Google (`/api/auth/google`) and Sign out (`/api/auth/logout`)
+- Clarification: Purchasing credits requires Google OAuth session; device ID users can use the app but must sign in to buy credits
+
+### Notes
+- Billing APIs remain under `/api/stripe/*`; `/billing` is a client page consuming them
+- Stripe webhook body must be raw for signature verification; flagged for follow-up reliability check
+
+## [Version 0.2.0] - 2025-10-04 06:13 AM
 
 ### Added
 - **Luigi Agent Workspace Infrastructure:** Complete Phase 1-2 implementation per docs/4OctLuigiAgents.md

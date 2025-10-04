@@ -214,7 +214,7 @@ Content-Type: application/json
 }
 ```
 
-### Technologies This Service Might Use
+### Technologies This Service SHOULD Use
 
 Based on the agent definitions (`.agents/types/agent-definition.ts`):
 
@@ -293,142 +293,6 @@ server/
 - Lots of edge cases to handle
 - Time-consuming
 
-### Option 2: Use Codebuff Agent Runner (EASY - 1-2 days)
-
-**Install and configure Codebuff's agent execution service:**
-
-```bash
-# Install Codebuff CLI
-npm install -g codebuff
-
-# Start agent runner locally
-codebuff serve --port 8700 --agents-dir .agents/luigi
-
-# Update .env
-AGENT_RUNNER_BASE_URL=http://localhost:8700
-AGENT_RUNNER_API_KEY=cb_your_api_key_here
-```
-
-**Pros:**
-- Agent definitions already in correct format
-- Minimal code changes needed
-- Built-in tool system
-- Handles AI model routing
-
-**Cons:**
-- External dependency
-- Need Codebuff account/API keys
-- Service must run separately
-
-### Option 3: Simplify to Direct AI Calls (MEDIUM - 3-5 days)
-
-**Remove agent orchestration, call AI models directly:**
-
-```typescript
-// server/luigi/simple-executor.ts
-async function executeBusinessPlan(params: LuigiRunParams) {
-  // Single Claude 4.1 Opus call with comprehensive prompt
-  const prompt = buildBusinessPlanPrompt(params);
-  
-  const response = await anthropicProvider.generateResponse({
-    model: 'claude-4.1-opus',
-    prompt,
-    maxTokens: 64000
-  });
-  
-  // Parse response into sections (assumptions, risks, WBS, etc.)
-  const sections = parseBusinessPlanSections(response);
-  
-  // Save as artifacts
-  for (const section of sections) {
-    await storage.saveLuigiArtifact({
-      runId,
-      stageId: section.type,
-      type: 'markdown',
-      title: section.title,
-      data: { content: section.content }
-    });
-  }
-}
-```
-
-**Pros:**
-- Uses existing AI provider infrastructure
-- No external service needed
-- Simpler architecture
-- Faster execution
-
-**Cons:**
-- Loses 60-stage granularity
-- No intermediate progress updates
-- Single point of failure
-- Less sophisticated than agent pipeline
-
-### Option 4: Mock for Demo Purposes (FAST - 2-4 hours)
-
-**Create fake responses for testing UI:**
-
-```typescript
-// server/luigi/mock-executor.ts
-async function mockLuigiExecution(runId: string) {
-  const stages = LUIGI_STAGES;
-  
-  for (let i = 0; i < stages.length; i++) {
-    await delay(2000); // 2 seconds per stage
-    
-    await storage.updateLuigiRun(runId, {
-      currentStageId: stages[i].id,
-      stages: { [stages[i].id]: { status: 'completed' } }
-    });
-    
-    await storage.appendLuigiMessage({
-      runId,
-      role: 'agent',
-      stageId: stages[i].id,
-      content: `Completed ${stages[i].label}`
-    });
-  }
-  
-  await storage.updateLuigiRun(runId, { status: 'completed' });
-}
-```
-
-**Pros:**
-- Demonstrates UI functionality
-- Tests database persistence
-- Shows stage progression
-- Quick to implement
-
-**Cons:**
-- No real AI output
-- Not production-ready
-- Doesn't generate actual business plans
-
----
-
-## Recommended Approach
-
-**For Immediate Testing**: **Option 4** (Mock Executor)
-- Lets you see if the UI works correctly
-- Validates database schema
-- Tests polling mechanism
-- Takes 2-4 hours
-
-**For Production**: **Option 3** (Simplified Direct Calls)
-- Pragmatic for hobby project
-- Uses existing provider infrastructure
-- Delivers real value
-- 3-5 days of work
-
-**If You Have Budget**: **Option 2** (Codebuff)
-- Most feature-complete
-- Leverages existing agent definitions
-- Professional orchestration
-- Requires subscription
-
----
-
-## Testing Strategy
 
 ### Test the Current Failure
 
@@ -472,12 +336,11 @@ The Luigi workspace is **architecturally sound but functionally incomplete**. Th
 - ✅ Complete agent definitions (72 files)
 - ❌ **NO execution engine**
 
-It's like they built a complete car except for the engine, then drove away.
+It's like they built a complete car except for the engine!!!!
 
-**Your Options:**
-1. Build the engine from scratch (hard)
-2. Buy a third-party engine (Codebuff)
-3. Simplify to a simpler engine (direct AI calls)
-4. Put a fake engine in for demo purposes (mock)
-
-**My Recommendation**: Start with Option 4 to validate everything works, then implement Option 3 for production use.
+**Your Tasks:**
+1. Build the engine from scratch!
+2. NO MOCKS!!!  
+3. Copy the agent runner from Codebuff!!!
+https://www.npmjs.com/package/@codebuff/sdk
+https://github.com/CodebuffAI/codebuff

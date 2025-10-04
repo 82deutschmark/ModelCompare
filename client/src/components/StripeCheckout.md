@@ -27,7 +27,7 @@ Add your Stripe publishable key to your environment variables:
 
 ```env
 # .env or .env.local
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+VITE_STRIPE_PUBLIC_KEY=pk_test_...
 ```
 
 ### 3. Server-side Setup
@@ -231,7 +231,7 @@ Use Stripe's test card numbers for development:
 Ensure you're using test keys:
 
 ```env
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+VITE_STRIPE_PUBLIC_KEY=pk_test_...
 ```
 
 ## Troubleshooting

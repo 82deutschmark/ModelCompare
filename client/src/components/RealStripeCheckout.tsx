@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 // Initialize Stripe (we'll need to add the publishable key to environment)
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
 interface CreditPackage {
   id: string;
@@ -223,4 +223,4 @@ export function RealStripeCheckout(props: RealStripeCheckoutProps) {
   );
 }
 
-export default RealStripeCheckout;
+export default RealStripeCheckout;

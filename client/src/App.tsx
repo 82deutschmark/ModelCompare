@@ -13,6 +13,7 @@ import Debate from "@/pages/debate";
 import ResearchSynthesis from "@/pages/research-synthesis";
 import PlanAssessmentPage from "@/pages/plan-assessment";
 import NotFound from "@/pages/not-found";
+import BillingPage from "@/pages/billing";
 import VixraPage from "./pages/vixra";
 import ArcAgiPage from "./pages/dashboard";
 
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/arc-agi" component={ArcAgiPage} />
       <Route path="/research-synthesis" component={ResearchSynthesis} />
       <Route path="/plan-assessment" component={PlanAssessmentPage} />
+      <Route path="/billing" component={BillingPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -45,7 +45,7 @@ interface PaymentIntentResponse {
 }
 
 interface PricingTableProps {
-  onPackageSelect?: (packageId: string, clientSecret: string) => void;
+  onPackageSelect?: (packageId: string, clientSecret: string, packageInfo: CreditPackage) => void;
   onClose?: () => void;
   className?: string;
   compact?: boolean;
@@ -96,7 +96,7 @@ export function PricingTable({
     },
     onSuccess: (data, packageId) => {
       if (onPackageSelect) {
-        onPackageSelect(packageId, data.clientSecret);
+        onPackageSelect(packageId, data.clientSecret, data.packageInfo);
       }
       // Invalidate credits query to refresh balance after purchase
       queryClient.invalidateQueries({ queryKey: ['user-credits'] });

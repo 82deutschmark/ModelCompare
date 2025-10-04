@@ -49,7 +49,7 @@ This document outlines the comprehensive Stripe payment UI components built for 
   - CSV/JSON export functionality
   - Summary statistics cards
   - Transaction search and sorting
-- **Note:** Uses placeholder data (ready for backend integration)
+- Status: Not implemented in code (docs example only). No mock data used in runtime.
 
 ### 5. **UsageQuotaDisplay** (`/client/src/components/UsageQuotaDisplay.tsx`)
 - **Purpose:** API usage statistics and quota monitoring
@@ -69,7 +69,7 @@ This document outlines the comprehensive Stripe payment UI components built for 
   - Default payment method selection
   - Card expiry warnings
   - PCI compliance messaging
-- **Note:** Placeholder component (ready for Stripe payment methods API)
+- Status: Not implemented in code (docs example only). No mock data used in runtime.
 
 ### 7. **BillingDashboard** (`/client/src/components/BillingDashboard.tsx`)
 - **Purpose:** Unified billing management interface
@@ -97,7 +97,7 @@ npm install @stripe/stripe-js @stripe/react-stripe-js
 
 ### **Environment Variables Required**
 ```env
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+VITE_STRIPE_PUBLIC_KEY=pk_...
 ```
 
 ### **TypeScript Interfaces**

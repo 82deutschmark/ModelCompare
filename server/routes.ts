@@ -158,7 +158,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Missing stripe-signature header' });
       }
 
-      const result = await handleStripeWebhook(req.body, signature);
+      const rawBody = (req as any).rawBody as Buffer | undefined;
+      const bodyBuffer = rawBody ?? Buffer.from(JSON.stringify(req.body));
+      const result = await handleStripeWebhook(bodyBuffer, signature);
       
       if (result.success) {
         res.json({ received: true, message: result.message });
