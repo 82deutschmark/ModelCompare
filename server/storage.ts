@@ -109,11 +109,7 @@ export class DbStorage implements IStorage {
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
     const [result] = await requireDb()
       .insert(comparisons)
-      .values({
-        prompt: insertComparison.prompt,
-        selectedModels: insertComparison.selectedModels,
-        responses: insertComparison.responses,
-      })
+      .values(insertComparison as any)
       .returning();
     return result;
   }
@@ -133,11 +129,7 @@ export class DbStorage implements IStorage {
   async createVixraSession(insertSession: InsertVixraSession): Promise<VixraSession> {
     const [result] = await requireDb()
       .insert(vixraSessions)
-      .values({
-        variables: insertSession.variables,
-        template: insertSession.template,
-        responses: insertSession.responses,
-      })
+      .values(insertSession as any)
       .returning();
     return result;
   }
@@ -145,7 +137,7 @@ export class DbStorage implements IStorage {
   async updateVixraSession(id: string, updates: Partial<InsertVixraSession>): Promise<VixraSession | undefined> {
     const [result] = await requireDb()
       .update(vixraSessions)
-      .set(updates)
+      .set({ ...updates, updatedAt: new Date() } as any)
       .where(eq(vixraSessions.id, id))
       .returning();
     return result;
@@ -166,7 +158,7 @@ export class DbStorage implements IStorage {
   async createPromptAudit(insertAudit: InsertPromptAudit): Promise<PromptAuditRecord> {
     const [result] = await requireDb()
       .insert(promptAudits)
-      .values(insertAudit)
+      .values(insertAudit as any)
       .returning();
     return result;
   }
@@ -194,18 +186,7 @@ export class DbStorage implements IStorage {
   async createLuigiRun(run: InsertLuigiRun): Promise<LuigiRun> {
     const [result] = await requireDb()
       .insert(luigiRuns)
-      .values({
-        missionName: run.missionName,
-        objective: run.objective,
-        constraints: run.constraints ?? null,
-        successCriteria: run.successCriteria ?? null,
-        stakeholderNotes: run.stakeholderNotes ?? null,
-        userPrompt: run.userPrompt,
-        status: run.status,
-        currentStageId: run.currentStageId ?? null,
-        stages: run.stages as LuigiStagesPayload,
-        totalCostCents: run.totalCostCents ?? null,
-      })
+      .values(run as any)
       .returning();
     return result;
   }
@@ -248,16 +229,7 @@ export class DbStorage implements IStorage {
   async appendLuigiMessage(message: InsertLuigiMessage): Promise<LuigiMessage> {
     const [result] = await requireDb()
       .insert(luigiMessages)
-      .values({
-        runId: message.runId,
-        role: message.role,
-        stageId: message.stageId ?? null,
-        agentId: message.agentId ?? null,
-        toolName: message.toolName ?? null,
-        content: message.content,
-        reasoning: message.reasoning ?? null,
-        metadata: message.metadata ?? null,
-      })
+      .values(message as any)
       .returning();
     return result;
   }
@@ -274,15 +246,7 @@ export class DbStorage implements IStorage {
   async saveLuigiArtifact(artifact: InsertLuigiArtifact): Promise<LuigiArtifact> {
     const [result] = await requireDb()
       .insert(luigiArtifacts)
-      .values({
-        runId: artifact.runId,
-        stageId: artifact.stageId,
-        type: artifact.type,
-        title: artifact.title,
-        description: artifact.description ?? null,
-        storagePath: artifact.storagePath ?? null,
-        data: artifact.data ?? null,
-      })
+      .values(artifact as any)
       .returning();
     return result;
   }
