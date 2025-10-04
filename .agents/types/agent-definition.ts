@@ -316,54 +316,9 @@ export type CodeAnalysisToolSet = FileTools | CodeAnalysisTools | 'end_turn'
  * See available models at https://openrouter.ai/models
  */
 export type ModelName =
-  // Recommended Models
+  // Recommended Models   SHOULD BE GETTING THESE FROM THE SERVER!!!  shared\model-catalog.ts 
 
-  // OpenAI
-  | 'openai/gpt-5'
-  | 'openai/gpt-5-chat'
-  | 'openai/gpt-5-mini'
-  | 'openai/gpt-5-nano'
 
-  // Anthropic
-  | 'anthropic/claude-sonnet-4'
-  | 'anthropic/claude-opus-4.1'
-
-  // Gemini
-  | 'google/gemini-2.5-pro'
-  | 'google/gemini-2.5-flash'
-  | 'google/gemini-2.5-flash-lite'
-  | 'google/gemini-2.5-flash-preview-09-2025'
-  | 'google/gemini-2.5-flash-lite-preview-09-2025'
-
-  // X-AI
-  | 'x-ai/grok-4-07-09'
-  | 'x-ai/grok-4-fast:free'
-  | 'x-ai/grok-code-fast-1'
-
-  // Qwen
-  | 'qwen/qwen3-max'
-  | 'qwen/qwen3-coder-plus'
-  | 'qwen/qwen3-coder'
-  | 'qwen/qwen3-coder:nitro'
-  | 'qwen/qwen3-coder-flash'
-  | 'qwen/qwen3-235b-a22b-2507'
-  | 'qwen/qwen3-235b-a22b-2507:nitro'
-  | 'qwen/qwen3-235b-a22b-thinking-2507'
-  | 'qwen/qwen3-235b-a22b-thinking-2507:nitro'
-  | 'qwen/qwen3-30b-a3b'
-  | 'qwen/qwen3-30b-a3b:nitro'
-
-  // DeepSeek
-  | 'deepseek/deepseek-chat-v3-0324'
-  | 'deepseek/deepseek-chat-v3-0324:nitro'
-  | 'deepseek/deepseek-r1-0528'
-  | 'deepseek/deepseek-r1-0528:nitro'
-
-  // Other open source models
-  | 'moonshotai/kimi-k2'
-  | 'moonshotai/kimi-k2:nitro'
-  | 'z-ai/glm-4.5'
-  | 'z-ai/glm-4.5:nitro'
   | (string & {})
 
 export type { Tools }
