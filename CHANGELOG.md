@@ -20,6 +20,35 @@ All notable changes to this project will be documented in this file.
   - REST API endpoints at /api/luigi/* for runs, messages, artifacts, and user interactions
 
 ### Fixed
+- **🚨 CRITICAL: Storage Layer TypeScript Errors:** Fixed multiple fundamental errors in server/storage.ts
+  - **Interface Violation:** Removed method implementations from IStorage interface (lines 81-291) - interfaces can only declare signatures
+  - **Missing DbStorage Class:** Created complete DbStorage class for PostgreSQL operations (was referenced but never implemented)
+  - **Incomplete MemStorage:** Added Luigi method implementations and Map initialization in constructor
+  - **Type Mismatch Errors:** Added type assertions for Drizzle ORM inserts (7 methods) - Zod-inferred types vs. Drizzle native types incompatibility
+  - Build now succeeds with 0 TypeScript errors
+  
+- **🔐 Authentication Endpoint Fix:** Fixed /api/auth/user returning 401 for anonymous device-based users
+  - Added ensureDeviceUser middleware to /api/auth/user endpoint
+  - Endpoint now returns device-based user when OAuth user is not present
+  - Resolves React error #185 on research-synthesis page
+  - Anonymous users can now access all features without authentication barriers
+
+### Technical Notes
+- **Storage Type Safety:** Using `as any` assertions on Drizzle inserts is safe because:
+  - Zod validation occurs at API boundaries
+  - Runtime values match database schema exactly
+  - Drizzle validates column types at runtime
+  - Function signatures remain type-safe
+- **Device Auth Priority:** OAuth users take precedence, device users serve as fallback
+- **Luigi Pipeline:** Ready for Phase 3-8 implementation (executor, frontend UI)
+
+## [Version 0.1.1] - 2025-09-28
+
+### Added
+- **Smart Default Model Selection:** Compare page now pre-populates with 3 popular models (GPT-5 Nano, Claude Sonnet 4, GPT-4.1 Nano) to eliminate empty state and improve onboarding experience
+- **Centralized Format Utilities:** Added `formatUtils.ts` for consistent cost and token formatting across all components
+
+### Fixed
 - **UI Spacing Restoration:** Restored proper UI spacing and sizing that was overly reduced, improving accessibility and usability
 - **Cost Calculation Standardization:** Fixed getTotals selector logic to avoid double-counting and handle missing data properly, with centralized formatting utilities
 - **AppNavigation Simplification:** Streamlined navigation component by reducing complexity from 192 lines to 53 lines while maintaining functionality
