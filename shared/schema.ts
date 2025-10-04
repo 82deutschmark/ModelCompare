@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared Schema Definitions - Database Models and TypeScript Types
  * 
  * This module defines the central data models and TypeScript types used throughout
@@ -96,6 +96,52 @@ export const sessions = pgTable("sessions", {
   sess: jsonb("sess").notNull(),
   expire: timestamp("expire").notNull(),
 });
+// Luigi pipeline persistence
+export const luigiRuns = pgTable("luigi_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  missionName: text("mission_name").notNull(),
+  objective: text("objective").notNull(),
+  constraints: text("constraints"),
+  successCriteria: text("success_criteria"),
+  stakeholderNotes: text("stakeholder_notes"),
+  userPrompt: text("user_prompt").notNull(),
+  status: varchar("status").notNull(),
+  currentStageId: varchar("current_stage_id"),
+  stages: jsonb("stages").notNull().$type<Record<string, unknown>>(),
+  totalCostCents: integer("total_cost_cents"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const luigiMessages = pgTable("luigi_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id")
+    .notNull()
+    .references(() => luigiRuns.id, { onDelete: 'cascade' }),
+  role: varchar("role").notNull(),
+  stageId: varchar("stage_id"),
+  agentId: varchar("agent_id"),
+  toolName: varchar("tool_name"),
+  content: text("content").notNull(),
+  reasoning: text("reasoning"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const luigiArtifacts = pgTable("luigi_artifacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id")
+    .notNull()
+    .references(() => luigiRuns.id, { onDelete: 'cascade' }),
+  stageId: varchar("stage_id").notNull(),
+  type: varchar("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  storagePath: text("storage_path"),
+  data: jsonb("data").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const insertComparisonSchema = createInsertSchema(comparisons).omit({
   id: true,
@@ -120,6 +166,22 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertSessionSchema = createInsertSchema(sessions);
+export const insertLuigiRunSchema = createInsertSchema(luigiRuns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export const insertLuigiMessageSchema = createInsertSchema(luigiMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLuigiArtifactSchema = createInsertSchema(luigiArtifacts).omit({
+  id: true,
+  createdAt: true,
+});
 
 export type InsertComparison = z.infer<typeof insertComparisonSchema>;
 export type Comparison = typeof comparisons.$inferSelect;
@@ -132,6 +194,13 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
+
+export type InsertLuigiRun = z.infer<typeof insertLuigiRunSchema>;
+export type LuigiRun = typeof luigiRuns.$inferSelect;
+export type InsertLuigiMessage = z.infer<typeof insertLuigiMessageSchema>;
+export type LuigiMessage = typeof luigiMessages.$inferSelect;
+export type InsertLuigiArtifact = z.infer<typeof insertLuigiArtifactSchema>;
+export type LuigiArtifact = typeof luigiArtifacts.$inferSelect;
 
 // Additional types for authentication and billing
 export type UpsertUser = Omit<InsertUser, 'id'> & { id?: string };
@@ -149,3 +218,8 @@ export const aiModelSchema = z.object({
 });
 
 export type AIModel = z.infer<typeof aiModelSchema>;
+
+
+
+
+

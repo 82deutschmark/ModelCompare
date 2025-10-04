@@ -1,5 +1,7 @@
 # Repository Guidelines
-# CLAUDE.md
+# AGENTS.md
+- All environment variables and secrets are properly configured in .env files!
+
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 Every file you create or edit should start with:

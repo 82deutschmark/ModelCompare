@@ -1,4 +1,4 @@
-/**
+﻿/**
  * API Routes - RESTful Endpoints for AI Model Comparison
  * 
  * This module defines the Express.js API routes for the AI model comparison application.
@@ -24,6 +24,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import passport from 'passport';
+import { createLuigiRouter } from './routes/luigi';
 import { callModel, callModelWithMessages, getAllModels, getReasoningModels } from "./providers/index.js";
 import { getStorage } from "./storage.js";
 import { VariableEngine } from "../shared/variable-engine.js";
@@ -52,6 +53,7 @@ const compareModelsSchema = z.object({
 const ENABLE_LEGACY_ROUTES = process.env.ENABLE_LEGACY_ROUTES !== 'false';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.use('/api/luigi', createLuigiRouter());
   
   // Authentication routes
   // Get current user
@@ -513,7 +515,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       console.log('[API] /api/generate received', {
         bodyType: typeof req.body,
         keys: req.body ? Object.keys(req.body) : [],
-        contentPreview: typeof req.body?.template === 'string' ? req.body.template.slice(0, 60) + '…' : undefined,
+        contentPreview: typeof req.body?.template === 'string' ? req.body.template.slice(0, 60) + 'â€¦' : undefined,
         seatsCount: Array.isArray(req.body?.seats) ? req.body.seats.length : 0,
         mode: req.body?.mode,
       });
@@ -778,12 +780,12 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       const metrics = {
         accuracy: 99.89 + (Math.random() - 0.5) * 0.1,
         nodesEvaluated: 47832961 + Math.floor(Math.random() * 100000),
-        searchDepth: '∞ (Quantum)',
+        searchDepth: 'âˆž (Quantum)',
         evalSpeed: '847.3M pos/s',
         cpuUsage: 97.3 + (Math.random() - 0.5) * 2,
         memory: '847.2GB',
         quantumCores: '1,024/1,024',
-        temperature: '-273.15°C',
+        temperature: '-273.15Â°C',
         quantumCoeffs: {
           psi: 0.9987,
           lambda: 42.000,

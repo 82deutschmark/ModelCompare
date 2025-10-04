@@ -157,3 +157,11 @@ All notable changes to this project will be documented in this file.
 - **Prompt File Structure:** Updated creative-combat-prompts.md to follow standard `## Category` / `### Original Prompt` / `### Enhancement Prompt` format for parser compatibility
 
 *Author: Claude 4 Sonnet Thinking BYOK*
+
+## 2025-10-04 02:01 - Luigi Workspace groundwork (partial)
+- Added shared Luigi type definitions (shared/luigi-types.ts).
+- Extended shared schema and created migration stub (luigi_runs, luigi_messages, luigi_artifacts).
+- Expanded storage layer interfaces and in-memory/DB implementations for Luigi runs, messages, artifacts.
+- TODO: Regenerate Drizzle meta snapshots and complete executor/API/UI phases.
+- 2025-10-04 02:07 Added Luigi executor service, REST agent client, and /api/luigi routes (frontend work pending).
+- 2025-10-04 10:29 Completed Luigi workspace client integration (Zustand store, API hooks, page + components).

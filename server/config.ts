@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Configuration Management System
  * 
  * Centralized configuration with environment-aware defaults and validation.
@@ -54,6 +54,12 @@ export interface CircuitBreakerConfig {
   failureThreshold: number;
   recoveryTimeout: number;
   monitoringPeriod: number;
+}
+
+export interface LuigiConfig {
+  orchestratorAgentId: string;
+  agentRunnerBaseUrl: string;
+  agentRunnerApiKey?: string;
 }
 
 export interface AppConfig {
@@ -170,47 +176,12 @@ export function validateConfig(config: AppConfig): void {
   }
 }
 
-/**
- * Global configuration instance
- */
-export const config = loadConfig();
+export function getLuigiConfig(): LuigiConfig {
+  return {
+    orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || 'luigi-master-orchestrator',
+    agentRunnerBaseUrl: process.env.AGENT_RUNNER_BASE_URL || 'http://localhost:8700',
+    agentRunnerApiKey: process.env.AGENT_RUNNER_API_KEY,
+  };
+}
 
-// Validate configuration at module load time
-validateConfig(config);
 
-/**
- * Helper functions for common config access patterns
- */
-export const isDevelopment = () => config.server.environment === 'development';
-export const isProduction = () => config.server.environment === 'production';
-export const isTest = () => config.server.environment === 'test';
-
-/**
- * Get database configuration
- */
-export const getDatabaseConfig = () => config.database;
-
-/**
- * Get server configuration
- */
-export const getServerConfig = () => config.server;
-
-/**
- * Get template configuration
- */
-export const getTemplateConfig = () => config.templates;
-
-/**
- * Get logging configuration
- */
-export const getLoggingConfig = () => config.logging;
-
-/**
- * Get security configuration
- */
-export const getSecurityConfig = () => config.security;
-
-/**
- * Get circuit breaker configuration
- */
-export const getCircuitBreakerConfig = () => config.circuitBreaker;
