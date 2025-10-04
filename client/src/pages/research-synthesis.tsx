@@ -31,34 +31,20 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import type { LuigiRunSummary } from "@shared/luigi-types";
-import { shallow } from "zustand/shallow";
 
 export default function ResearchSynthesis() {
-  const {
-    activeRunId,
-    runSummary,
-    stageMap,
-    messages,
-    artifacts,
-    isSubmitting,
-    error,
-    setSubmitting,
-    setRunContext,
-    setActiveRunId,
-    setError,
-  } = useLuigiWorkspaceStore((state) => ({
-    activeRunId: state.activeRunId,
-    runSummary: state.runSummary,
-    stageMap: state.stageMap,
-    messages: state.messages,
-    artifacts: state.artifacts,
-    isSubmitting: state.isSubmitting,
-    error: state.error,
-    setSubmitting: state.setSubmitting,
-    setRunContext: state.setRunContext,
-    setActiveRunId: state.setActiveRunId,
-    setError: state.setError,
-  }), shallow);
+  // Use individual selectors to avoid infinite re-renders
+  const activeRunId = useLuigiWorkspaceStore((state) => state.activeRunId);
+  const runSummary = useLuigiWorkspaceStore((state) => state.runSummary);
+  const stageMap = useLuigiWorkspaceStore((state) => state.stageMap);
+  const messages = useLuigiWorkspaceStore((state) => state.messages);
+  const artifacts = useLuigiWorkspaceStore((state) => state.artifacts);
+  const isSubmitting = useLuigiWorkspaceStore((state) => state.isSubmitting);
+  const error = useLuigiWorkspaceStore((state) => state.error);
+  const setSubmitting = useLuigiWorkspaceStore((state) => state.setSubmitting);
+  const setRunContext = useLuigiWorkspaceStore((state) => state.setRunContext);
+  const setActiveRunId = useLuigiWorkspaceStore((state) => state.setActiveRunId);
+  const setError = useLuigiWorkspaceStore((state) => state.setError);
 
   const { toast } = useToast();
   const [replyDraft, setReplyDraft] = useState("");
