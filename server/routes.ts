@@ -1,4 +1,4 @@
-﻿/**
+/**
  * API Routes - RESTful Endpoints for AI Model Comparison
  * 
  * This module defines the Express.js API routes for the AI model comparison application.
@@ -56,14 +56,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/luigi', createLuigiRouter());
   
   // Authentication routes
-  // Get current user
-  app.get("/api/auth/user", async (req, res) => {
-    // Handle case where Passport isn't initialized (development mode)
+  // Get current user - supports both OAuth and device-based authentication
+  app.get("/api/auth/user", ensureDeviceUser, async (req, res) => {
+    // First, check for Passport OAuth authentication
     if (typeof req.isAuthenticated === 'function' && req.isAuthenticated() && req.user) {
-      res.json(req.user);
-    } else {
-      res.status(401).json({ error: 'Not authenticated' });
+      return res.json(req.user);
     }
+    
+    // Fall back to device-based authentication (ensureDeviceUser middleware)
+    if (req.deviceUser) {
+      return res.json(req.deviceUser);
+    }
+    
+    // Should never reach here if ensureDeviceUser middleware is working
+    res.status(401).json({ error: 'Not authenticated' });
   });
 
   // Initiate Google OAuth login
