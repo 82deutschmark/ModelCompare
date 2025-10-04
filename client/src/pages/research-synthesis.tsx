@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import type { LuigiRunSummary } from "@shared/luigi-types";
+import { shallow } from "zustand/shallow";
 
 export default function ResearchSynthesis() {
   const {
@@ -57,7 +58,7 @@ export default function ResearchSynthesis() {
     setRunContext: state.setRunContext,
     setActiveRunId: state.setActiveRunId,
     setError: state.setError,
-  }));
+  }), shallow);
 
   const { toast } = useToast();
   const [replyDraft, setReplyDraft] = useState("");
