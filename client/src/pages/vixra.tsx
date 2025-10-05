@@ -131,6 +131,15 @@ export default function VixraPage() {
         }
       );
 
+      // Extract title from Abstract section if generated
+      if (data.sectionId === 'abstract' && data.content && !state.paperConfig.title) {
+        const titleMatch = data.content.match(/Title:\s*["']?(.+?)["']?\s*(?:\n|Science Category)/i);
+        if (titleMatch && titleMatch[1]) {
+          const extractedTitle = titleMatch[1].trim().replace(/^["']|["']$/g, '');
+          actions.updateTitle(extractedTitle);
+        }
+      }
+
       toast({
         title: 'Section Complete',
         description: `${state.sections.find(s => s.id === data.sectionId)?.name || data.sectionId} generated successfully`,
