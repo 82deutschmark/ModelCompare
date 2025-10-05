@@ -135,9 +135,9 @@ export function ModelSelector({ models, selectedModels, onSelectionChange }: Mod
                       </span>
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-500">
-                      ${model.pricing.inputPerMillion}/M in • ${model.pricing.outputPerMillion}/M out
-                      {model.pricing.reasoningPerMillion && (
-                        <span> • ${model.pricing.reasoningPerMillion}/M reasoning</span>
+                      ${model.pricing?.inputPerMillion}/M in • ${model.pricing?.outputPerMillion}/M out
+                      {model.pricing?.reasoningPerMillion && (
+                        <span> • ${model.pricing?.reasoningPerMillion}/M reasoning</span>
                       )}
                     </div>
                   </div>

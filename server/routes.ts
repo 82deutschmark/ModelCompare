@@ -23,20 +23,25 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
+import passport from 'passport';
+import { createLuigiRouter } from './routes/luigi';
 import { callModel, callModelWithMessages, getAllModels, getReasoningModels } from "./providers/index.js";
-import { getStorage } from "./storage";
+import { getStorage } from "./storage.js";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
-import type { GenerateRequest, GenerateResponse, UnifiedMessage } from "../shared/api-types.js";
+import type { GenerateRequest, GenerateResponse, UnifiedMessage, ModelMessage } from "../shared/api-types.js";
 import { PromptBuilder } from "./prompt-builder.js";
-import { getDisplayForModelId } from "../shared/model-catalog.js";
+import { getDisplayForModelId, MODEL_CATALOG, type ModelDisplay } from "../shared/model-catalog.js";
 import { getDatabaseManager } from "./db.js";
-import { contextLog } from "./request-context.js";
-import type { ModelMessage } from "../shared/api-types.js";
-import { MODELS, ModelLookup, type ModelConfig } from "../shared/models.js";
+import { contextLog, contextError } from "./request-context.js";
+import { isAuthenticated, hasCredits } from "./auth.js";
+import { ensureDeviceUser, checkDeviceCredits, deductCreditsForSuccessfulCalls, getUserCredits } from "./device-auth.js";
+import type { User } from "../shared/schema.js";
+import { createPaymentIntent, handleStripeWebhook, getCreditPackages, validateStripeConfig } from "./stripe.js";
 
 const compareModelsSchema = z.object({
   prompt: z.string().min(1).max(4000),
+  mode: z.enum(['compare', 'generate', 'reasoning']).default('compare'),
   modelIds: z.array(z.string()).min(1),
 });
 
@@ -48,49 +53,180 @@ const compareModelsSchema = z.object({
 const ENABLE_LEGACY_ROUTES = process.env.ENABLE_LEGACY_ROUTES !== 'false';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.use('/api/luigi', createLuigiRouter());
+  
+  // Authentication routes
+  // Get current user - supports both OAuth and device-based authentication
+  app.get("/api/auth/user", async (req, res) => {
+    // First, check for Passport OAuth authentication
+    if (typeof req.isAuthenticated === 'function' && req.isAuthenticated() && req.user) {
+      return res.json(req.user);
+    }
+    
+    // Fall back to device-based authentication
+    const deviceId = req.headers['x-device-id'] as string;
+    if (deviceId) {
+      try {
+        const storage = await getStorage();
+        const user = await storage.ensureDeviceUser(deviceId);
+        return res.json(user);
+      } catch (error) {
+        contextError('Failed to get device user:', error);
+        return res.status(500).json({ error: 'Failed to retrieve user' });
+      }
+    }
+    
+    // No auth method available - return 401
+    res.status(401).json({ error: 'Not authenticated' });
+  });
+
+  // Initiate Google OAuth login
+  app.get("/api/auth/google", 
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  // Google OAuth callback
+  app.get("/api/auth/google/callback",
+    passport.authenticate('google', { failureRedirect: '/' }),
+    (req, res) => {
+      // Successful authentication, redirect to frontend
+      res.redirect('/');
+    }
+  );
+
+  // Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to logout' });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  // Get user's current credit balance
+  app.get("/api/user/credits", ensureDeviceUser, async (req, res) => {
+    try {
+      const credits = await getUserCredits(req);
+      res.json({ credits });
+    } catch (error) {
+      console.error('Error fetching user credits:', error);
+      res.status(500).json({ error: 'Failed to fetch credits' });
+    }
+  });
+
+  // Stripe payment routes
+  // Get available credit packages
+  app.get("/api/stripe/packages", (req, res) => {
+    try {
+      const packages = getCreditPackages();
+      res.json({ packages });
+    } catch (error) {
+      console.error('Error fetching credit packages:', error);
+      res.status(500).json({ error: 'Failed to fetch credit packages' });
+    }
+  });
+
+  // Create payment intent for credit purchase
+  app.post("/api/stripe/create-payment-intent", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const { packageId } = req.body;
+
+      if (!packageId) {
+        return res.status(400).json({ error: 'Package ID is required' });
+      }
+
+      const result = await createPaymentIntent(user.id, packageId);
+      
+      res.json({
+        clientSecret: result.clientSecret,
+        packageInfo: result.packageInfo,
+      });
+    } catch (error) {
+      console.error('Error creating payment intent:', error);
+      res.status(500).json({ error: 'Failed to create payment intent' });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post("/api/stripe/webhook", async (req, res) => {
+    try {
+      const signature = req.headers['stripe-signature'] as string;
+      
+      if (!signature) {
+        return res.status(400).json({ error: 'Missing stripe-signature header' });
+      }
+
+      const rawBody = (req as any).rawBody as Buffer | undefined;
+      const bodyBuffer = rawBody ?? Buffer.from(JSON.stringify(req.body));
+      const result = await handleStripeWebhook(bodyBuffer, signature);
+      
+      if (result.success) {
+        res.json({ received: true, message: result.message });
+      } else {
+        res.status(400).json({ error: result.message });
+      }
+    } catch (error) {
+      console.error('Error handling webhook:', error);
+      res.status(400).json({ error: 'Webhook processing failed' });
+    }
+  });
   
   // Get available models - using centralized configuration
   app.get("/api/models", async (req, res) => {
     try {
-      // Use centralized model configuration for consistency
-      const models = MODELS.map(model => ({
-        // Map to expected frontend format (AIModel interface)
-        id: model.key,
-        name: model.name,
-        provider: model.provider,
-        color: model.color,
-        premium: model.premium,
-        cost: model.cost,
-        supportsTemperature: model.supportsTemperature,
-        responseTime: model.responseTime,
-        isReasoning: model.isReasoning,
-        apiModelName: model.apiModelName,
-        modelType: model.modelType,
-        contextWindow: model.contextWindow,
-        maxOutputTokens: model.maxOutputTokens,
-        releaseDate: model.releaseDate,
-        requiresPromptFormat: model.requiresPromptFormat,
-        supportsStructuredOutput: model.supportsStructuredOutput,
+      // Use MODEL_CATALOG for display metadata
+      const models = Object.values(MODEL_CATALOG).map(model => {
+        // Helper function to parse cost ranges like "$0.40 - $1.20"
+        const parseCost = (costString: string): number => {
+          const cleaned = costString.replace(/\$/g, '');
+          if (cleaned.includes(' - ')) {
+            // Use the lower bound for ranges
+            return parseFloat(cleaned.split(' - ')[0]);
+          }
+          return parseFloat(cleaned);
+        };
 
-        // Legacy compatibility fields for existing components
-        model: model.apiModelName,
-        knowledgeCutoff: model.releaseDate || 'Unknown',
-        capabilities: {
-          reasoning: model.isReasoning || false,
-          multimodal: false, // TODO: add multimodal support to model definitions
-          functionCalling: false, // TODO: add function calling support to model definitions
-          streaming: true, // Most models support streaming
-        },
-        pricing: {
-          inputPerMillion: parseFloat(model.cost.input.replace(/\$/, '')),
-          outputPerMillion: parseFloat(model.cost.output.replace(/\$/, '')),
-          reasoningPerMillion: model.isReasoning ? parseFloat(model.cost.output.replace(/\$/, '')) * 1.5 : undefined,
-        },
-        limits: {
-          maxTokens: model.maxOutputTokens || 4000,
+        return {
+          // Map to expected frontend format (AIModel interface)
+          id: model.key,
+          name: model.name,
+          provider: model.provider,
+          color: model.color,
+          premium: model.premium,
+          cost: model.cost,
+          supportsTemperature: model.supportsTemperature ?? true,
+          responseTime: model.responseTime,
+          isReasoning: model.isReasoning ?? false,
+          apiModelName: model.apiModelName || model.key,
+          modelType: model.modelType || 'chat',
           contextWindow: model.contextWindow || 128000,
-        },
-      }));
+          maxOutputTokens: model.maxOutputTokens || 4000,
+          releaseDate: model.releaseDate || '2024',
+          requiresPromptFormat: model.requiresPromptFormat ?? false,
+          supportsStructuredOutput: model.supportsStructuredOutput ?? false,
+
+          // Legacy compatibility fields for existing components
+          model: model.key,
+          knowledgeCutoff: model.releaseDate || '2024',
+          capabilities: {
+            reasoning: model.isReasoning ?? false,
+            multimodal: false, // TODO: add multimodal support to model definitions
+            functionCalling: false, // TODO: add function calling support to model definitions
+            streaming: true, // Most models support streaming
+          },
+          pricing: {
+            inputPerMillion: parseCost(model.cost.input),
+            outputPerMillion: parseCost(model.cost.output),
+            reasoningPerMillion: model.isReasoning ? parseCost(model.cost.output) * 1.5 : undefined,
+          },
+          limits: {
+            maxTokens: model.maxOutputTokens || 4000,
+            contextWindow: model.contextWindow || 128000,
+          },
+        };
+      });
 
       res.json(models);
     } catch (error) {
@@ -99,8 +235,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Compare models endpoint
-  app.post("/api/compare", async (req, res) => {
+  // Compare models endpoint - protected with authentication and credit check
+  app.post("/api/compare", ensureDeviceUser, checkDeviceCredits, async (req, res) => {
     try {
       const { prompt, modelIds } = compareModelsSchema.parse(req.body);
       
@@ -133,6 +269,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Wait for all model calls to complete
       await Promise.all(modelPromises);
 
+      // Deduct credits for successful API calls (5 credits per model called)
+      const successfulCalls = modelIds.filter(modelId => responses[modelId]?.status === 'success').length;
+      await deductCreditsForSuccessfulCalls(req, successfulCalls, 5);
+
       // Store the comparison
       const storage = await getStorage();
       const comparison = await storage.createComparison({
@@ -149,7 +289,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid request data", details: error.errors });
       } else {
-        res.status(500).json({ error: "Failed to compare models" });
+        console.error("Compare models error:", error);
+        res.status(500).json({
+          error: "Failed to compare models",
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
   });
@@ -387,7 +531,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       console.log('[API] /api/generate received', {
         bodyType: typeof req.body,
         keys: req.body ? Object.keys(req.body) : [],
-        contentPreview: typeof req.body?.template === 'string' ? req.body.template.slice(0, 60) + '…' : undefined,
+        contentPreview: typeof req.body?.template === 'string' ? req.body.template.slice(0, 60) + 'â€¦' : undefined,
         seatsCount: Array.isArray(req.body?.seats) ? req.body.seats.length : 0,
         mode: req.body?.mode,
       });
@@ -530,7 +674,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
             finishReason: 'stop',
             tokenUsage: result.tokenUsage ?? { input: 0, output: 0 },
             cost: result.cost ?? { total: 0, input: 0, output: 0 },
-            modelConfig: result.modelConfig
+            modelConfig: result.modelConfig as any
           };
 
           const response: GenerateResponse = {
@@ -652,12 +796,12 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       const metrics = {
         accuracy: 99.89 + (Math.random() - 0.5) * 0.1,
         nodesEvaluated: 47832961 + Math.floor(Math.random() * 100000),
-        searchDepth: '∞ (Quantum)',
+        searchDepth: 'âˆž (Quantum)',
         evalSpeed: '847.3M pos/s',
         cpuUsage: 97.3 + (Math.random() - 0.5) * 2,
         memory: '847.2GB',
         quantumCores: '1,024/1,024',
-        temperature: '-273.15°C',
+        temperature: '-273.15Â°C',
         quantumCoeffs: {
           psi: 0.9987,
           lambda: 42.000,

@@ -16,6 +16,9 @@ import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMe
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/ThemeProvider";
+import { useAuth } from "@/hooks/useAuth";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 import {
   Brain,
@@ -117,6 +120,7 @@ interface AppNavigationProps {
 
 export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigationProps) {
   const { theme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [location] = useLocation();
 
   const currentMode = navigationModes.find(mode => mode.path === location);
@@ -134,13 +138,13 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           variant={isCurrentMode ? "default" : "ghost"}
           size={size}
           className={cn(
-            "flex items-center space-x-2",
+            "flex items-center space-x-1",
             isCurrentMode && "bg-primary text-primary-foreground"
           )}
           disabled={isCurrentMode}
         >
-          <IconComponent className="w-4 h-4" />
-          <span className="text-sm">{mode.name}</span>
+          <IconComponent className="w-3 h-3" />
+          <span className="text-xs">{mode.name}</span>
         </Button>
       </Link>
     );
@@ -148,170 +152,101 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo and Breadcrumb */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              {TitleIcon && <TitleIcon className="w-6 h-6 text-primary" />}
-              <span className="font-bold text-lg">ModelCompare</span>
+      <div className="max-w-7xl mx-auto px-2">
+        <div className="flex h-8 items-center justify-between">
+          {/* Compact Logo and Breadcrumb */}
+          <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1">
+              {TitleIcon && <TitleIcon className="w-3 h-3 text-primary" />}
+              <span className="font-bold text-sm">ModelCompare</span>
             </div>
 
-            <div className="hidden sm:flex">
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink href="/">
-                      <Home className="w-4 h-4" />
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  {currentMode && (
-                    <>
-                      <BreadcrumbSeparator />
-                      <BreadcrumbItem>
-                        <span className="font-medium">{currentMode.name}</span>
-                      </BreadcrumbItem>
-                    </>
-                  )}
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1">
-            <NavigationMenu>
-              <NavigationMenuList>
-                {/* Core Modes - Always Visible */}
-                {coreMode.map(mode => (
-                  <NavigationMenuItem key={mode.id}>
-                    {renderModeButton(mode)}
-                  </NavigationMenuItem>
-                ))}
+          {/* Desktop Navigation - All modes visible */}
+          <div className="hidden lg:flex items-center gap-1">
+            {/* Core Modes */}
+            {coreMode.map(mode => renderModeButton(mode))}
 
-                {/* Advanced Modes Dropdown */}
-                {advancedModes.length > 0 && (
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="h-9">
-                      Advanced
-                      <Badge variant="outline" className="ml-1 px-1 py-0 text-xs">
-                        {advancedModes.length}
-                      </Badge>
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <div className="grid w-[300px] gap-2 p-4">
-                        {advancedModes.map(mode => {
-                          const IconComponent = mode.icon;
-                          const isCurrentMode = location === mode.path;
+            {/* Visual separator */}
+            <div className="h-4 w-px bg-border mx-1" />
 
-                          return (
-                            <Link key={mode.id} href={mode.path}>
-                              <NavigationMenuLink
-                                className={cn(
-                                  "flex items-start space-x-3 rounded-md p-3 hover:bg-accent hover:text-accent-foreground",
-                                  isCurrentMode && "bg-accent text-accent-foreground"
-                                )}
-                              >
-                                <IconComponent className="w-5 h-5 mt-0.5 text-muted-foreground" />
-                                <div>
-                                  <div className="text-sm font-medium">{mode.name}</div>
-                                  <div className="text-xs text-muted-foreground">{mode.description}</div>
-                                </div>
-                              </NavigationMenuLink>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                )}
+            {/* Advanced Modes - now directly visible */}
+            {advancedModes.map(mode => renderModeButton(mode))}
 
-                {/* Experimental Modes Dropdown */}
-                {experimentalModes.length > 0 && (
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="h-9">
-                      Experimental
-                      <Badge variant="secondary" className="ml-1 px-1 py-0 text-xs">
-                        β
-                      </Badge>
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <div className="grid w-[300px] gap-2 p-4">
-                        {experimentalModes.map(mode => {
-                          const IconComponent = mode.icon;
-                          const isCurrentMode = location === mode.path;
+            {/* Visual separator */}
+            <div className="h-4 w-px bg-border mx-1" />
 
-                          return (
-                            <Link key={mode.id} href={mode.path}>
-                              <NavigationMenuLink
-                                className={cn(
-                                  "flex items-start space-x-3 rounded-md p-3 hover:bg-accent hover:text-accent-foreground",
-                                  isCurrentMode && "bg-accent text-accent-foreground"
-                                )}
-                              >
-                                <IconComponent className="w-5 h-5 mt-0.5 text-muted-foreground" />
-                                <div>
-                                  <div className="text-sm font-medium">{mode.name}</div>
-                                  <div className="text-xs text-muted-foreground">{mode.description}</div>
-                                </div>
-                              </NavigationMenuLink>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                )}
-              </NavigationMenuList>
-            </NavigationMenu>
+            {/* Experimental Modes */}
+            {experimentalModes.map(mode => (
+              <div key={mode.id} className="relative">
+                {renderModeButton(mode)}
+                <Badge variant="secondary" className="absolute -top-1 -right-1 px-1 py-0 text-xs scale-75">
+                  β
+                </Badge>
+              </div>
+            ))}
           </div>
 
-          {/* Theme Toggle */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Sun className="h-4 w-4" />
-              <Switch
-                checked={theme === 'dark'}
-                onCheckedChange={toggleTheme}
-                aria-label="Toggle theme"
-              />
-              <Moon className="h-4 w-4" />
-            </div>
+          {/* Compact Authentication & Theme */}
+          <div className="flex items-center space-x-1">
+            {/* Credit Balance - only show if authenticated */}
+            {isAuthenticated && user && (
+              <div className="hidden lg:block">
+              </div>
+            )}
+
+            {/* Ultra-compact Theme Toggle */}
+            <Switch
+              checked={theme === 'dark'}
+              onCheckedChange={toggleTheme}
+              aria-label="Toggle theme"
+              className="scale-75"
+            />
+
+            {/* Authentication */}
+            {authLoading ? (
+              <div className="w-7 h-7 rounded-full bg-muted animate-pulse" />
+            ) : isAuthenticated ? (
+              <UserMenu />
+            ) : (
+              <GoogleSignInButton size="sm" variant="outline" />
+            )}
 
             {/* Mobile Menu */}
             <div className="lg:hidden">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Menu className="w-5 h-5" />
+                  <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
+                    <Menu className="w-3 h-3" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80">
-                  <div className="mt-6 space-y-6">
+                <SheetContent side="right" className="w-64">
+                  <div className="mt-4 space-y-4">
                     <div>
-                      <h3 className="text-sm font-semibold mb-3">Core Features</h3>
-                      <div className="space-y-2">
-                        {coreMode.map(mode => renderModeButton(mode, 'default'))}
+                      <h3 className="text-xs font-semibold mb-2">Core</h3>
+                      <div className="space-y-1">
+                        {coreMode.map(mode => renderModeButton(mode, 'sm'))}
                       </div>
                     </div>
 
                     {advancedModes.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold mb-3">Advanced Features</h3>
-                        <div className="space-y-2">
-                          {advancedModes.map(mode => renderModeButton(mode, 'default'))}
+                        <h3 className="text-xs font-semibold mb-2">Advanced</h3>
+                        <div className="space-y-1">
+                          {advancedModes.map(mode => renderModeButton(mode, 'sm'))}
                         </div>
                       </div>
                     )}
 
                     {experimentalModes.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold mb-3 flex items-center">
+                        <h3 className="text-xs font-semibold mb-2 flex items-center">
                           Experimental
-                          <Badge variant="secondary" className="ml-2 px-1 py-0 text-xs">β</Badge>
+                          <Badge variant="secondary" className="ml-1 px-1 py-0 text-xs scale-75">β</Badge>
                         </h3>
-                        <div className="space-y-2">
-                          {experimentalModes.map(mode => renderModeButton(mode, 'default'))}
+                        <div className="space-y-1">
+                          {experimentalModes.map(mode => renderModeButton(mode, 'sm'))}
                         </div>
                       </div>
                     )}
@@ -322,10 +257,10 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           </div>
         </div>
 
-        {/* Current Page Info */}
+        {/* Compact Current Page Info */}
         {currentMode && subtitle && (
-          <div className="pb-3 pt-1">
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+          <div className="pb-1 pt-0.5">
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
         )}
       </div>
@@ -333,4 +268,4 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
   );
 }
 
-export default AppNavigation;
+export default AppNavigation;

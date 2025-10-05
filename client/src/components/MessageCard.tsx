@@ -140,11 +140,11 @@ export function MessageCard({
   return (
     <Card className={`${className} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200`}>
       {showHeader && (
-        <CardHeader className={`${headerPadding} px-4 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
+        <CardHeader className={`${headerPadding} px-1 py-1 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/80`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1">
               {message.modelConfig?.provider && (
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
                   message.modelConfig.provider === 'OpenAI' ? 'bg-green-500' :
                   message.modelConfig.provider === 'Anthropic' ? 'bg-orange-500' :
                   message.modelConfig.provider === 'Google' ? 'bg-blue-500' :
@@ -154,18 +154,18 @@ export function MessageCard({
                   {message.modelConfig.provider.slice(0, 2).toUpperCase()}
                 </div>
               )}
-              <div className="flex items-center space-x-2">
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs px-2 py-1 font-semibold ${seatColor || 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'}`}
+              <div className="flex items-center space-x-1">
+                <Badge
+                  variant="outline"
+                  className={`text-xs px-1 py-0 font-semibold ${seatColor || 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'}`}
                 >
                   {message.modelName}
                 </Badge>
                 
                 {message.modelConfig?.provider && (
-                  <Badge 
+                  <Badge
                     variant="secondary"
-                    className={`text-xs px-2 py-1 ${getProviderColor(message.modelConfig.provider)}`}
+                    className={`text-xs px-1 py-0 ${getProviderColor(message.modelConfig.provider)}`}
                   >
                     {message.modelConfig.provider}
                   </Badge>
@@ -173,13 +173,13 @@ export function MessageCard({
               
               {message.round && (
                 <Badge variant="outline" className="text-xs px-1 py-0">
-                  Round {message.round}
+                  R{message.round}
                 </Badge>
               )}
               
               {message.type === 'rebuttal' && (
                 <Badge variant="destructive" className="text-xs px-1 py-0">
-                  Rebuttal
+                  Rebut
                 </Badge>
               )}
               
@@ -192,16 +192,14 @@ export function MessageCard({
             
             <div className="flex items-center space-x-1.5">
               {message.modelConfig?.capabilities?.reasoning && (
-                <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
-                  <Brain className="w-3 h-3 mr-1" />
-                  Reasoning
+                <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-1 py-0">
+                  <Brain className="w-3 h-3" />
                 </Badge>
               )}
               
               {message.cost && (
-                <Badge variant="outline" className="text-xs">
-                  <DollarSign className="w-3 h-3 mr-1" />
-                  ${message.cost.total.toFixed(4)}
+                <Badge variant="outline" className="text-xs px-1 py-0">
+                  <DollarSign className="w-3 h-3" />
                 </Badge>
               )}
             </div>
@@ -209,9 +207,9 @@ export function MessageCard({
         </CardHeader>
       )}
 
-      <CardContent className={variant === 'compact' ? 'p-3' : 'p-4'}>
+      <CardContent className={variant === 'compact' ? 'p-1' : 'p-2'}>
         <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-          <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap p-3 bg-gray-50/30 dark:bg-gray-800/30 rounded-lg border-l-3 border-blue-500">
+          <div className="text-gray-900 dark:text-gray-100 leading-snug whitespace-pre-wrap p-1 bg-gray-50/30 dark:bg-gray-800/30 rounded border-l-2 border-blue-500">
             {message.content}
           </div>
         </div>
@@ -272,7 +270,7 @@ export function MessageCard({
         )}
 
         {showFooter && (
-          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
               {message.tokenUsage && (
                 <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">

@@ -4,9 +4,15 @@
  * Provides both legacy compatibility and modern database management.
  * Uses DatabaseManager for new implementations while maintaining backward compatibility.
  * 
- * Author: Claude Code (modernized)
- * Date: 2025-08-26
+ * Author: Cascade using Claude Sonnet 4
+ * Date: 2025-10-04
+ * PURPOSE: Manages database connections to PostgreSQL with automatic fallback to in-memory storage.
+ *          Loads environment variables at module initialization to ensure DATABASE_URL is available.
+ * SRP/DRY check: Pass - Single responsibility for database connection management
  */
+
+// Load environment variables FIRST before checking DATABASE_URL
+import 'dotenv/config';
 
 import { DatabaseManager } from './database-manager.js';
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -16,8 +22,6 @@ import * as schema from "../shared/schema";
 
 // Global database manager instance
 let globalDatabaseManager: DatabaseManager | null = null;
-
-// Legacy compatibility - lazily initialized Pool/DB
 let pool: InstanceType<typeof Pool> | null = null;
 export let db: ReturnType<typeof drizzle> | null = null;
 

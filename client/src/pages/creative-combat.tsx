@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { formatCost } from "@/lib/formatUtils";
 import { Play, Loader2, Brain, Edit3, Settings, Palette, Clock } from "lucide-react";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 import { ModelButton } from "@/components/ModelButton";
@@ -363,7 +364,7 @@ export default function CreativeCombat() {
                       {Math.round((Date.now() - workflow.sessionStartTime.getTime()) / 1000)}s
                     </Badge>
                   )}
-                  <Badge variant="outline">${workflow.totalCost.toFixed(4)}</Badge>
+                  <Badge variant="outline">{formatCost(workflow.totalCost)}</Badge>
                 </div>
                 <div className="flex gap-2">
                   <ExportButton
@@ -678,4 +679,4 @@ export default function CreativeCombat() {
       </div>
     </div>
   );
-}
+}

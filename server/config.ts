@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Configuration Management System
  * 
  * Centralized configuration with environment-aware defaults and validation.
@@ -54,6 +54,12 @@ export interface CircuitBreakerConfig {
   failureThreshold: number;
   recoveryTimeout: number;
   monitoringPeriod: number;
+}
+
+export interface LuigiConfig {
+  orchestratorAgentId: string;
+  agentRunnerBaseUrl: string;
+  agentRunnerApiKey?: string;
 }
 
 export interface AppConfig {
@@ -112,11 +118,11 @@ export function loadConfig(): AppConfig {
       enableCors: process.env.ENABLE_CORS !== 'false',
       cspDirectives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", ...(isDevelopment ? ["https://fonts.googleapis.com"] : [])],
-        scriptSrc: ["'self'", ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'", "https://replit.com"] : [])],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        scriptSrc: ["'self'", ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'"] : [])],
         imgSrc: ["'self'", "data:", "blob:"],
         connectSrc: ["'self'", ...(isDevelopment ? ["ws:", "wss:"] : [])],
-        fontSrc: ["'self'", ...(isDevelopment ? ["https://fonts.gstatic.com"] : [])],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
         frameSrc: ["'none'"]
@@ -170,47 +176,37 @@ export function validateConfig(config: AppConfig): void {
   }
 }
 
-/**
- * Global configuration instance
- */
-export const config = loadConfig();
-
-// Validate configuration at module load time
+const config = loadConfig();
 validateConfig(config);
 
-/**
- * Helper functions for common config access patterns
- */
-export const isDevelopment = () => config.server.environment === 'development';
-export const isProduction = () => config.server.environment === 'production';
-export const isTest = () => config.server.environment === 'test';
+export { config };
 
-/**
- * Get database configuration
- */
-export const getDatabaseConfig = () => config.database;
+export const isDevelopment = (): boolean => config.server.environment === 'development';
+export const isProduction = (): boolean => config.server.environment === 'production';
 
-/**
- * Get server configuration
- */
-export const getServerConfig = () => config.server;
+export function getSecurityConfig(): SecurityConfig {
+  return config.security;
+}
 
-/**
- * Get template configuration
- */
-export const getTemplateConfig = () => config.templates;
+export function getServerConfig(): ServerConfig {
+  return config.server;
+}
 
-/**
- * Get logging configuration
- */
-export const getLoggingConfig = () => config.logging;
+export function getTemplateConfig(): TemplateConfig {
+  return config.templates;
+}
 
-/**
- * Get security configuration
- */
-export const getSecurityConfig = () => config.security;
+export function getCircuitBreakerConfig(): CircuitBreakerConfig {
+  return config.circuitBreaker;
+}
 
-/**
- * Get circuit breaker configuration
- */
-export const getCircuitBreakerConfig = () => config.circuitBreaker;
+export function getLuigiConfig(): LuigiConfig {
+  return {
+    orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || "luigi-master-orchestrator",
+    agentRunnerBaseUrl: process.env.AGENT_RUNNER_BASE_URL || "http://localhost:8700",
+    agentRunnerApiKey: process.env.AGENT_RUNNER_API_KEY,
+  };
+}
+
+
+

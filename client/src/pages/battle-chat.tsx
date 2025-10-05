@@ -366,24 +366,24 @@ export default function BattleChat() {
         icon={Sword}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-120px)]">
+      <div className="max-w-7xl mx-auto px-1 py-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-1 h-[calc(100vh-80px)]">
           
           {/* Model Seats Sidebar */}
           <div className="lg:col-span-1">
             <Card className="h-full">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Users className="w-5 h-5" />
+              <CardHeader className="p-2">
+                <CardTitle className="flex items-center space-x-1 text-sm">
+                  <Users className="w-4 h-4" />
                   <span>Model Seats</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-1 p-2">
                 {modelSeats.map((seat) => (
                   <div
                     key={seat.id}
                     onClick={() => handleSeatClick(seat)}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                    className={`p-1 rounded border cursor-pointer transition-all duration-200 ${
                       seat.modelId 
                         ? `${seat.color} opacity-100`
                         : 'border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400'
@@ -429,10 +429,10 @@ export default function BattleChat() {
           {/* Main Chat Area */}
           <div className="lg:col-span-3">
             <Card className="h-full flex flex-col">
-              <CardHeader className="flex-shrink-0">
+              <CardHeader className="flex-shrink-0 p-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <MessageSquare className="w-5 h-5" />
+                  <CardTitle className="flex items-center space-x-1 text-sm">
+                    <MessageSquare className="w-4 h-4" />
                     <span>Chat Conversation</span>
                   </CardTitle>
                   <div className="flex items-center space-x-2">
@@ -467,16 +467,16 @@ export default function BattleChat() {
               {showSetup && (
                 <>
                 <Separator />
-                <div className="px-6 pb-4">
+                <div className="px-2 pb-1">
                   {/* Template Selection */}
                   {!promptsLoading && battlePromptCategories.length > 0 && (
-                    <Alert className="mb-4">
+                    <Alert className="mb-1">
                       <AlertDescription>
-                        <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-1 mb-1">
                           <Settings className="w-4 h-4" />
                           <h3 className="text-sm font-medium">Battle Prompt Templates</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           <div>
                             <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Category</label>
                             <Select value={selectedPromptCategory} onValueChange={setSelectedPromptCategory}>
@@ -521,18 +521,18 @@ export default function BattleChat() {
                     </Alert>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Original Prompt</label>
+                      <label className="text-xs font-medium mb-1 block">Original Prompt</label>
                       <div className="relative">
                         <Textarea
                           value={prompt}
                           onChange={(e) => setPrompt(e.target.value)}
-                          rows={6}
+                          rows={4}
                           className="pr-20"
                           placeholder="Enter the main topic..."
                         />
-                        <div className="absolute bottom-3 right-3 text-xs text-gray-400 flex items-center space-x-2">
+                        <div className="absolute bottom-1 right-1 text-xs text-gray-400 flex items-center space-x-1">
                           {modelSeats.some(seat => seat.isActive) && (
                             <>
                               <DollarSign className="w-3 h-3" />
@@ -545,16 +545,16 @@ export default function BattleChat() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Challenger Template</label>
+                      <label className="text-xs font-medium mb-1 block">Challenger Template</label>
                       <div className="relative">
                         <Textarea
                           value={challengerPrompt}
                           onChange={(e) => setChallengerPrompt(e.target.value)}
-                          rows={6}
+                          rows={4}
                           className="pr-20"
                           placeholder="Template for rebuttals..."
                         />
-                        <div className="absolute bottom-3 right-3 text-xs text-gray-400 flex items-center space-x-2">
+                        <div className="absolute bottom-1 right-1 text-xs text-gray-400 flex items-center space-x-1">
                           <span>{challengerPrompt.length}/32000</span>
                         </div>
                       </div>
@@ -590,7 +590,7 @@ export default function BattleChat() {
 
               {/* Chat Messages */}
               <CardContent className="flex-1 overflow-y-auto p-0">
-                <div className="space-y-4 p-6">
+                <div className="space-y-1 p-2">
                   {messages.length === 0 ? (
                     <div className="text-center py-12">
                       <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
@@ -635,14 +635,14 @@ export default function BattleChat() {
                       };
 
                       return (
-                        <MessageCard 
+                        <MessageCard
                           key={message.id}
                           message={convertToMessageCardData(message)}
-                          variant="detailed"
+                          variant="compact"
                           showHeader={true}
                           showFooter={true}
                           seatColor={seat?.color}
-                          className="mb-4"
+                          className="mb-1"
                         />
                       );
                     })

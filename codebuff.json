@@ -1,0 +1,6 @@
+{
+  "addedSpawnableAgents": [
+    "harsh/generate-landing-page@1.0.1",
+    "windows-powershell-git-committer"
+  ]
+}

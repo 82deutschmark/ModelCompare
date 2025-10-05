@@ -35,6 +35,8 @@ import { initializeDatabaseManager } from "./db.js";
 import { formatErrorResponse } from "./errors.js";
 import { requestContextMiddleware, requestCompletionLogger, contextLog, contextError } from "./request-context.js";
 import { config, isDevelopment, isProduction, getSecurityConfig, getServerConfig } from "./config.js";
+import { configurePassport, configureSession } from "./auth.js";
+import { validateStripeConfig } from "./stripe.js";
 
 const app = express();
 
@@ -67,7 +69,7 @@ if (securityConfig.enableCors) {
 app.use(requestContextMiddleware());
 app.use(requestCompletionLogger());
 
-app.use(express.json({ limit: config.server.jsonSizeLimit }));
+app.use(express.json({ limit: config.server.jsonSizeLimit, verify: (req: any, _res, buf) => { if (req.originalUrl === '/api/stripe/webhook') { req.rawBody = buf; } } }));
 app.use(express.urlencoded({ extended: false, limit: config.server.jsonSizeLimit }));
 
 // JSON response capturing for debugging (optional)
@@ -83,6 +85,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Configure authentication (Passport + Sessions) before routes
+  configurePassport();
+  await configureSession(app);
+
+  const stripeConfig = validateStripeConfig();
+  if (!stripeConfig.isValid) {
+    contextError('Stripe config invalid:', stripeConfig.errors.join('; '));
+  } else {
+    contextLog('✅ Stripe configuration validated');
+  }
+
   const server = await registerRoutes(app);
 
   // Validate all templates at startup

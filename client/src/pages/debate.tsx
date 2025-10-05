@@ -30,6 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { apiRequest } from "@/lib/queryClient";
+import { formatCost } from "@/lib/formatUtils";
 import { useTheme } from "@/components/ThemeProvider";
 import { generateMarkdownExport, generateTextExport, downloadFile, generateSafeFilename, copyToClipboard, type ExportData } from '@/lib/exportUtils';
 import type { AIModel, ModelResponse } from '@/types/ai-models';
@@ -341,10 +342,7 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     setShowSetup(true);
   };
 
-  const formatCost = (cost: any) => {
-    if (!cost || !cost.total) return 'N/A';
-    return `$${cost.total.toFixed(4)}`;
-  };
+
 
   // Convert DebateMessage to MessageCardData format
   const convertToMessageCardData = (message: DebateMessage): MessageCardData => {
@@ -707,7 +705,7 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
                   </div>
                   {totalCost > 0 && (
                     <div className="text-sm font-medium text-green-600">
-                      Total Cost: ${totalCost.toFixed(4)}
+                      Total Cost: {formatCost(totalCost)}
                     </div>
                   )}
                 </div>
@@ -834,4 +832,4 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
       </div>
     </div>
   );
-}
+}
