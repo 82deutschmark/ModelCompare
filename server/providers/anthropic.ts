@@ -2,8 +2,11 @@
  * Anthropic Provider
  * 
  * Handles Claude models with extended thinking capabilities
- * Author: Replit Agent
- * Date: August 9, 2025
+ * Author: Cascade using Claude Sonnet 4
+ * Date: 2025-10-04
+ * PURPOSE: Provides integration with Anthropic's Claude models including Sonnet 4.5, 4, 3.7, 3.5, and Haiku variants.
+ *          Manages reasoning extraction, message formatting, and token usage tracking.
+ * SRP/DRY check: Pass - Single responsibility for Anthropic API integration
  */
 
 import 'dotenv/config';
@@ -18,6 +21,27 @@ export class AnthropicProvider extends BaseProvider {
   name = 'Anthropic';
   
   models: ModelConfig[] = [
+    {
+      id: "claude-sonnet-4-5-20250929",
+      name: "Claude Sonnet 4.5 (Sep 29 2025)",
+      provider: "Anthropic",
+      model: "claude-sonnet-4-5",
+      knowledgeCutoff: "April 2024",
+      capabilities: {
+        reasoning: true, // Extended thinking available
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 3.00,
+        outputPerMillion: 15.00,
+      },
+      limits: {
+        maxTokens: 64000,
+        contextWindow: 200000,
+      },
+    },
     {
       id: "claude-sonnet-4-20250514",
       name: "Claude Sonnet 4",
