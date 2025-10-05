@@ -204,7 +204,7 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
 
   // Anthropic Models - Direct API
   'claude-sonnet-4-5': {
-    key: 'claude-sonnet-4-5-20250929',
+    key: 'claude-sonnet-4-5',
     name: 'Claude Sonnet 4.5 (Sep 29 2025)',
     color: 'bg-indigo-500',
     premium: true,

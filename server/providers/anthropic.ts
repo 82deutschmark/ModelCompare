@@ -22,7 +22,7 @@ export class AnthropicProvider extends BaseProvider {
   
   models: ModelConfig[] = [
     {
-      id: "claude-sonnet-4-5-20250929",
+      id: "claude-sonnet-4-5",
       name: "Claude Sonnet 4.5 (Sep 29 2025)",
       provider: "Anthropic",
       model: "claude-sonnet-4-5",
