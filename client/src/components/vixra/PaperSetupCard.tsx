@@ -19,6 +19,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Zap, Settings, FileText, Sparkles, Dices } from "lucide-react";
+import { FloatingModelPicker } from "@/components/comparison/FloatingModelPicker";
+import { ModelPill } from "@/components/comparison/ModelPill";
 import type { AIModel } from "@/types/ai-models";
 
 interface PaperSetupCardProps {
@@ -36,7 +38,6 @@ interface PaperSetupCardProps {
   selectedModel: string;
   models: AIModel[];
   onModelSelect: (modelId: string) => void;
-  onOpenModelPicker: () => void;
   
   // Mode & generation
   isAutoMode: boolean;
@@ -58,7 +59,6 @@ export function PaperSetupCard({
   selectedModel,
   models,
   onModelSelect,
-  onOpenModelPicker,
   isAutoMode,
   onModeToggle,
   onGenerate,
@@ -69,6 +69,22 @@ export function PaperSetupCard({
 
   const selectedModelData = models.find(m => m.id === selectedModel);
   const canGenerate = !disabled && !isGenerating && author.trim() !== '' && scienceCategory !== '';
+
+  // Handle single model selection (replace current selection)
+  const handleToggleModel = (modelId: string) => {
+    onModelSelect(modelId);
+  };
+
+  const handleSelectAllModels = (modelIds: string[]) => {
+    // For Vixra, just select the first model (single selection)
+    if (modelIds.length > 0) {
+      onModelSelect(modelIds[0]);
+    }
+  };
+
+  const handleClearAllModels = () => {
+    // Keep current model (can't deselect in Vixra)
+  };
 
   return (
     <Card className="border-2 border-primary/20 shadow-lg">
@@ -181,37 +197,30 @@ export function PaperSetupCard({
         <div>
           <Label className="text-sm font-medium">AI Model</Label>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {selectedModelData ? (
-              <Badge 
-                variant="secondary" 
-                className="px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-secondary/80"
-                onClick={onOpenModelPicker}
-              >
-                {selectedModelData.name}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="px-3 py-1.5 text-sm">
-                No model selected
-              </Badge>
+            {selectedModelData && (
+              <ModelPill
+                model={selectedModelData}
+                onRemove={() => {}}
+              />
             )}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={onOpenModelPicker}
-                    disabled={isGenerating}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Change Model
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Select a different AI model</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <FloatingModelPicker
+              models={models}
+              selectedModels={selectedModel ? [selectedModel] : []}
+              onToggleModel={handleToggleModel}
+              onSelectAllModels={handleSelectAllModels}
+              onClearAllModels={handleClearAllModels}
+              disabled={isGenerating}
+              trigger={
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isGenerating}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {selectedModel ? 'Change Model' : 'Select Model'}
+                </Button>
+              }
+            />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {isAutoMode 

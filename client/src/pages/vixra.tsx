@@ -22,6 +22,8 @@ import { PaperSetupCard } from "@/components/vixra/PaperSetupCard";
 import { SectionProgressTracker, type Section } from "@/components/vixra/SectionProgressTracker";
 import { SectionResultsStream } from "@/components/vixra/SectionResultsStream";
 import { PaperExportFooter } from "@/components/vixra/PaperExportFooter";
+import { FloatingModelPicker } from "@/components/comparison/FloatingModelPicker";
+import { ModelPill } from "@/components/comparison/ModelPill";
 
 // State management and utilities
 import { useVixraPaper } from "@/hooks/useVixraPaper";
@@ -41,9 +43,6 @@ import {
 export default function VixraPage() {
   const { toast } = useToast();
   const { state, actions } = useVixraPaper();
-  
-  // Model picker modal state
-  const [showModelPicker, setShowModelPicker] = useState(false);
   
   // Template storage
   const [promptTemplates, setPromptTemplates] = useState<Map<string, string>>(new Map());
@@ -431,7 +430,6 @@ export default function VixraPage() {
               selectedModel={state.selectedModel}
               models={models}
               onModelSelect={actions.selectModel}
-              onOpenModelPicker={() => setShowModelPicker(true)}
               isAutoMode={state.generationMode === 'auto'}
               onModeToggle={(enabled) => actions.setGenerationMode(enabled ? 'auto' : 'manual')}
               onGenerate={handleGeneratePaper}
