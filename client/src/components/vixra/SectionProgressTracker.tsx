@@ -54,7 +54,7 @@ export function SectionProgressTracker({
   // Calculate estimated time remaining based on average section time
   const completedSections = sections.filter(s => s.status === 'completed' && s.metadata?.responseTime);
   const avgTime = completedSections.length > 0
-    ? completedSections.reduce((sum, s) => sum + (s.metadata?.responseTime || 0), 0) / completedSections.length
+    ? completedSections.reduce((sum, s) => sum + (s.metadata?.responseTime || 0), 0) / completedSections.length / 1000
     : 30; // Default 30 seconds per section
   const remainingSections = totalCount - completedCount;
   const estimatedMinutes = Math.ceil((remainingSections * avgTime) / 60);

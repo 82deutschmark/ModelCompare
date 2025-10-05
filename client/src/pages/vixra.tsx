@@ -409,6 +409,12 @@ export default function VixraPage() {
         icon={FileText}
       />
 
+      {/* Screen reader announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {state.currentSectionId && `Now generating ${state.sections.find(s => s.id === state.currentSectionId)?.name || 'section'}`}
+        {state.progress.completed > 0 && !state.isGenerating && `Generated ${state.progress.completed} of ${state.progress.total} sections`}
+      </div>
+
       <div className="flex-1">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           <div className="space-y-6">

@@ -87,8 +87,17 @@ export function useVixraPaper() {
     dependencies: [...section.dependencies],
   }));
 
+  // Try to restore last author from localStorage
+  const getInitialAuthor = () => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vixra-last-author');
+      if (saved && saved.trim()) return saved;
+    }
+    return DEFAULT_AUTHOR;
+  };
+
   const [paperConfig, setPaperConfig] = useState<PaperConfig>({
-    author: DEFAULT_AUTHOR,
+    author: getInitialAuthor(),
     scienceCategory: DEFAULT_CATEGORY,
     title: '',
   });
@@ -120,6 +129,10 @@ export function useVixraPaper() {
   // Actions
   const updateAuthor = useCallback((author: string) => {
     setPaperConfig(prev => ({ ...prev, author }));
+    // Save to localStorage for next time
+    if (typeof window !== 'undefined' && author.trim()) {
+      localStorage.setItem('vixra-last-author', author);
+    }
   }, []);
 
   const updateCategory = useCallback((category: string) => {
