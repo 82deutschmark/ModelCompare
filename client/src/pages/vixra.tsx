@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
@@ -162,21 +163,40 @@ export default function VixraPage() {
       actions.updateSectionStatus(variables.sectionId, 'failed');
       actions.setCurrentSectionId(null);
       
+      const sectionName = state.sections.find(s => s.id === variables.sectionId)?.name || variables.sectionId;
+      
+      // In auto-mode, offer to stop generation
+      const toastAction = state.generationMode === 'auto' ? (
+        <ToastAction 
+          altText="Stop auto-mode generation"
+          onClick={() => {
+            actions.setIsGenerating(false);
+            actions.setCurrentSectionId(null);
+          }}
+        >
+          Stop Auto-Mode
+        </ToastAction>
+      ) : undefined;
+      
       toast({
         title: 'Generation Failed',
-        description: `Failed to generate ${state.sections.find(s => s.id === variables.sectionId)?.name}: ${error.message}`,
+        description: `Failed to generate ${sectionName}: ${error.message}. ${state.generationMode === 'auto' ? 'Continuing to next section...' : 'Try changing models or regenerating.'}`,
         variant: "destructive",
+        action: toastAction,
       });
 
-      // Auto mode: Continue despite error
+      // Auto mode: Continue despite error (but user can stop via toast action)
       if (state.generationMode === 'auto' && state.isGenerating) {
         const completedIds = actions.getCompletedSectionIds();
         const nextSection = getNextEligibleSection(completedIds);
         
         if (nextSection) {
           setTimeout(() => {
-            generateSection(nextSection);
-          }, 1500);
+            // Check if still generating (user might have stopped via toast)
+            if (state.isGenerating) {
+              generateSection(nextSection);
+            }
+          }, 2500); // Slightly longer delay after errors
         } else {
           actions.setIsGenerating(false);
         }

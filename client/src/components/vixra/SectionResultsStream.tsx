@@ -257,18 +257,25 @@ export function SectionResultsStream({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    An error occurred while generating this section. This won't prevent other sections from generating.
-                  </p>
-                  <Button
-                    onClick={() => onRegenerateSection(section.id)}
-                    variant="outline"
-                    size="sm"
-                    disabled={isGenerating}
-                  >
-                    <RotateCw className="w-4 h-4 mr-2" />
-                    Try Again
-                  </Button>
+                  <div className="space-y-4">
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>
+                        An error occurred while generating this section. This won't prevent other sections from generating.
+                      </p>
+                      <p className="text-xs bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded p-2">
+                        💡 <strong>Tip:</strong> If the model is consistently failing, try changing to a different model using the "Change Model" button above. Some models may be experiencing issues or rate limits.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => onRegenerateSection(section.id)}
+                      variant="outline"
+                      size="sm"
+                      disabled={isGenerating}
+                    >
+                      <RotateCw className="w-4 h-4 mr-2" />
+                      Try Again with Current Model
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
