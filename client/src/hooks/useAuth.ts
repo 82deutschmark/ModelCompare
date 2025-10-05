@@ -17,6 +17,7 @@ import type { User } from '@shared/schema';
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isOAuthUser: boolean; // true only for Google OAuth users (email !== null)
   isLoading: boolean;
   error: string | null;
 }
@@ -126,6 +127,7 @@ export function useAuth(): AuthState & AuthActions {
     // State
     user: user || null,
     isAuthenticated: !!user,
+    isOAuthUser: !!(user?.email), // Distinguish OAuth users from device users
     isLoading,
     error,
 
