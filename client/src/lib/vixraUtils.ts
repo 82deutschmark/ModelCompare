@@ -269,19 +269,26 @@ export function autoGenerateVariables(
 
 /**
  * Generate missing variables by calling the shared model response API while preserving user input.
+ * DOES NOT add hardcoded fallbacks - only LLM-generated or user-provided values.
  */
 export async function generateMissingVariables(
   userVariables: VixraVariables,
   promptTemplates: Map<string, string>
 ): Promise<VixraVariables> {
-  const fallback = autoGenerateVariables(userVariables, userVariables.ScienceCategory || DEFAULT_CATEGORY);
-  const result: VixraVariables = { ...fallback, ...userVariables };
+  // Start with ONLY user-provided variables - NO hardcoded fallbacks
+  const result: VixraVariables = { ...userVariables };
+  
+  // Ensure ScienceCategory has a default
+  if (!hasValue(result.ScienceCategory)) {
+    result.ScienceCategory = DEFAULT_CATEGORY;
+  }
 
+  // Try to generate Title via LLM if missing
   const shouldGenerateTitle = !hasValue(userVariables.Title) && promptTemplates.has(VARIABLE_PROMPTS.title);
   if (shouldGenerateTitle) {
     const generatedTitle = await generateSingleVariable(
       VARIABLE_PROMPTS.title,
-      { ScienceCategory: result.ScienceCategory || DEFAULT_CATEGORY },
+      { ScienceCategory: result.ScienceCategory },
       promptTemplates
     );
     if (hasValue(generatedTitle)) {
@@ -289,6 +296,7 @@ export async function generateMissingVariables(
     }
   }
 
+  // Try to generate Author via LLM if missing
   const shouldGenerateAuthor = !hasValue(userVariables.Author) && promptTemplates.has(VARIABLE_PROMPTS.author);
   if (shouldGenerateAuthor) {
     const generatedAuthor = await generateSingleVariable(VARIABLE_PROMPTS.author, {}, promptTemplates);
@@ -299,12 +307,14 @@ export async function generateMissingVariables(
     }
   }
 
-  if (!hasValue(result.ResearcherName)) {
-    result.ResearcherName = result.Author || fallback.Author || "Anonymous Research Collective";
-  }
-
-  if (!hasValue(result.Authors)) {
-    result.Authors = result.Author || result.ResearcherName;
+  // Sync Author aliases if we have Author but not the others
+  if (hasValue(result.Author)) {
+    if (!hasValue(result.ResearcherName)) {
+      result.ResearcherName = result.Author;
+    }
+    if (!hasValue(result.Authors)) {
+      result.Authors = result.Author;
+    }
   }
 
   return result;
@@ -443,6 +453,7 @@ export function countWords(text: string): number {
 
 /**
  * Assemble a markdown representation of the generated paper.
+ * ONLY uses user-provided or LLM-generated variables - NO hardcoded fallbacks.
  */
 export function exportVixraPaper(
   variables: VixraVariables,
@@ -450,19 +461,21 @@ export function exportVixraPaper(
   selectedModels: AIModel[]
 ): string {
   const timestamp = new Date();
-  const completedVariables = autoGenerateVariables(variables, variables.ScienceCategory || DEFAULT_CATEGORY);
-
-  const paperTitle = completedVariables.Title || "Untitled Satirical Paper";
-  const authorLine = completedVariables.Authors || completedVariables.Author || completedVariables.ResearcherName || "Anonymous Research Collective";
+  
+  // Use ONLY the variables that were actually provided - no auto-generation
+  const paperTitle = variables.Title || "Untitled Satirical Paper";
+  const authorLine = variables.Authors || variables.Author || variables.ResearcherName || "Anonymous Research Collective";
+  const scienceCategory = variables.ScienceCategory || DEFAULT_CATEGORY;
 
   let paper = `# ${paperTitle}\n\n`;
   paper += `**Authors:** ${authorLine}\n\n`;
 
-  if (hasValue(completedVariables.Institution)) {
-    paper += `**Institution:** ${completedVariables.Institution}\n\n`;
+  // ONLY include Institution if explicitly provided (not hardcoded)
+  if (hasValue(variables.Institution)) {
+    paper += `**Institution:** ${variables.Institution}\n\n`;
   }
 
-  paper += `**Science Category:** ${completedVariables.ScienceCategory}\n\n`;
+  paper += `**Science Category:** ${scienceCategory}\n\n`;
   paper += `**Generated:** ${timestamp.toLocaleString()}\n\n`;
   paper += `---\n\n`;
 
@@ -515,12 +528,16 @@ export function exportVixraPaper(
   }, 0);
 
   paper += `**Total sections generated:** ${generatedSectionCount}\n\n`;
-  paper += `**Paper variables:**\n`;
-  Object.entries(completedVariables).forEach(([key, value]) => {
-    if (hasValue(value)) {
+  
+  // ONLY show variables that were actually provided (no hardcoded fallbacks)
+  const actualVariables = Object.entries(variables).filter(([_key, value]) => hasValue(value));
+  if (actualVariables.length > 0) {
+    paper += `**Paper variables:**\n`;
+    actualVariables.forEach(([key, value]) => {
       paper += `- ${key}: ${value}\n`;
-    }
-  });
+    });
+    paper += "\n";
+  }
 
   paper += "\n*This satirical academic paper was generated using the Vixra Mode of the AI Model Comparison Tool.*\n";
 
