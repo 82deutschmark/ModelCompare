@@ -14,116 +14,6 @@ export type VixraVariables = Record<string, string>;
 export type VixraSectionResponses = Record<string, Record<string, ModelResponse>>;
 
 const DEFAULT_CATEGORY = "General Science and Philosophy";
-const TITLE_PREFIXES = [
-  "Revolutionary Breakthrough in",
-  "Quantum Insights into",
-  "Advanced Theoretical Framework for",
-  "Pioneering Discovery of",
-  "Fundamental Principles of",
-  "Novel Approach to",
-  "Unprecedented Analysis of",
-  "Groundbreaking Study on"
-] as const;
-
-const CATEGORY_THEMES: Record<string, readonly string[]> = {
-  physics: [
-    "Quantum Coffee Dynamics",
-    "Subatomic Breakfast Particles",
-    "Wave-Particle Sandwich Duality",
-    "Antigravity Sock Containment",
-    "Hyperdimensional Bowling Mechanics"
-  ],
-  mathematics: [
-    "Infinite Pizza Division",
-    "Topology of Lost Keys",
-    "Algebraic Cat Whispering",
-    "Prime Number Tea Leaves",
-    "Tensor Calculus of Naps"
-  ],
-  biology: [
-    "Telepathic Plant Communication",
-    "Quantum Entanglement in Pet Behavior",
-    "Mitochondrial Aura Harmonization",
-    "Symbiotic Dream Circuits",
-    "Biofeedback of Dragon Fruit"
-  ],
-  computational: [
-    "AI-Powered Toaster Intelligence",
-    "Neural Networks in Garden Gnomes",
-    "Blockchain for Laundry Folding",
-    "Quantum-Resistant Origami Algorithms",
-    "Latent Space Karaoke Optimization"
-  ],
-  chemistry: [
-    "Molecular Structure of Happiness",
-    "Catalytic Properties of Procrastination",
-    "Isomerization of Midnight Snacks",
-    "Thermodynamics of Glitter",
-    "Polymerization of Bubble Thoughts"
-  ],
-  humanities: [
-    "Semiotics of Sneezing",
-    "Existential Taxonomy of Coffee Stains",
-    "Mythopoetic Elevator Speeches",
-    "Post-Structuralist Cat Videos",
-    "Phenomenology of Left Socks"
-  ],
-  general: [
-    "Universal Background Radiation",
-    "Cosmic String Theory",
-    "Dimensional Phase Transitions",
-    "Metaphysics of Breakfast Cereals",
-    "Epistemology of Moonlight"
-  ]
-};
-
-const AUTHOR_TITLES = ["Dr.", "Prof.", "Prof. Dr.", "Sir", "Dame", "Arch-Researcher"] as const;
-const AUTHOR_FIRST_NAMES = [
-  "Quantum",
-  "Cosmic",
-  "Infinite",
-  "Ethereal",
-  "Mystical",
-  "Planck",
-  "Tensor",
-  "Aurora"
-] as const;
-const AUTHOR_LAST_NAMES = [
-  "Pseudoscience",
-  "Paradigm",
-  "Breakthrough",
-  "Discovery",
-  "Revolution",
-  "Singularity",
-  "Eigenvector",
-  "Flux"
-] as const;
-
-const INSTITUTIONS = [
-  "Institute for Advanced Pseudoscience",
-  "University of Cosmic Awareness",
-  "Academy of Quantum Enlightenment",
-  "Center for Metaphysical Research",
-  "Institute of Theoretical Everything"
-] as const;
-
-const FUNDING_SOURCES = [
-  "Cosmic Enlightenment Foundation",
-  "Institute for Paradigm Shifting",
-  "Universal Consciousness Grant",
-  "Quantum Awareness Fund",
-  "Interdimensional Research Council"
-] as const;
-
-const METHODOLOGIES = [
-  "quantum consciousness measurement",
-  "interdimensional analysis",
-  "cosmic resonance testing",
-  "metaphysical data collection",
-  "paradigmatic observation"
-] as const;
-
-const DEFAULT_KEYWORDS = "quantum, consciousness, paradigm shift, breakthrough, revolutionary";
 
 const VARIABLE_PROMPTS = {
   title: "generate-title",
@@ -188,100 +78,32 @@ function hasValue(value: string | undefined | null): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function pickRandom<T>(items: readonly T[], fallback: T): T {
-  if (items.length === 0) {
-    return fallback;
-  }
-  const index = Math.floor(Math.random() * items.length);
-  return items[index] ?? fallback;
-}
-
-function resolveCategoryKey(scienceCategory: string): keyof typeof CATEGORY_THEMES {
-  const normalized = scienceCategory.toLowerCase();
-  if (normalized.includes("physics")) return "physics";
-  if (normalized.includes("math")) return "mathematics";
-  if (normalized.includes("biology") || normalized.includes("bio")) return "biology";
-  if (normalized.includes("compute") || normalized.includes("ai") || normalized.includes("algorithm")) {
-    return "computational";
-  }
-  if (normalized.includes("chem")) return "chemistry";
-  if (normalized.includes("humanities") || normalized.includes("philosophy") || normalized.includes("religion")) {
-    return "humanities";
-  }
-  return "general";
-}
-
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
- * Fill in any missing satirical variables without touching user-provided fields.
- */
-export function autoGenerateVariables(
-  userVariables: VixraVariables,
-  scienceCategory: string
-): VixraVariables {
-  const normalizedCategory = hasValue(scienceCategory) ? scienceCategory : DEFAULT_CATEGORY;
-  const result: VixraVariables = { ...userVariables };
-  result.ScienceCategory = normalizedCategory;
-
-  if (!hasValue(result.Title)) {
-    const categoryKey = resolveCategoryKey(normalizedCategory);
-    const subject = pickRandom(CATEGORY_THEMES[categoryKey], CATEGORY_THEMES.general[0]);
-    const prefix = pickRandom(TITLE_PREFIXES, TITLE_PREFIXES[0]);
-    result.Title = `${prefix} ${subject}`;
-  }
-
-  if (!hasValue(result.Author)) {
-    const title = pickRandom(AUTHOR_TITLES, AUTHOR_TITLES[0]);
-    const firstName = pickRandom(AUTHOR_FIRST_NAMES, AUTHOR_FIRST_NAMES[0]);
-    const lastName = pickRandom(AUTHOR_LAST_NAMES, AUTHOR_LAST_NAMES[0]);
-    result.Author = `${title} ${firstName} ${lastName}`;
-  }
-
-  if (!hasValue(result.ResearcherName)) {
-    result.ResearcherName = result.Author!;
-  }
-
-  if (!hasValue(result.Authors)) {
-    result.Authors = result.Author!;
-  }
-
-  if (!hasValue(result.Institution)) {
-    result.Institution = pickRandom(INSTITUTIONS, INSTITUTIONS[0]);
-  }
-
-  if (!hasValue(result.Methodology)) {
-    result.Methodology = pickRandom(METHODOLOGIES, METHODOLOGIES[0]);
-  }
-
-  if (!hasValue(result.Funding)) {
-    result.Funding = pickRandom(FUNDING_SOURCES, FUNDING_SOURCES[0]);
-  }
-
-  if (!hasValue(result.Keywords)) {
-    result.Keywords = DEFAULT_KEYWORDS;
-  }
-
-  return result;
-}
-
-/**
  * Generate missing variables by calling the shared model response API while preserving user input.
+ * DOES NOT add hardcoded fallbacks - only LLM-generated or user-provided values.
  */
 export async function generateMissingVariables(
   userVariables: VixraVariables,
   promptTemplates: Map<string, string>
 ): Promise<VixraVariables> {
-  const fallback = autoGenerateVariables(userVariables, userVariables.ScienceCategory || DEFAULT_CATEGORY);
-  const result: VixraVariables = { ...fallback, ...userVariables };
+  // Start with ONLY user-provided variables - NO hardcoded fallbacks
+  const result: VixraVariables = { ...userVariables };
+  
+  // Ensure ScienceCategory has a default
+  if (!hasValue(result.ScienceCategory)) {
+    result.ScienceCategory = DEFAULT_CATEGORY;
+  }
 
+  // Try to generate Title via LLM if missing
   const shouldGenerateTitle = !hasValue(userVariables.Title) && promptTemplates.has(VARIABLE_PROMPTS.title);
   if (shouldGenerateTitle) {
     const generatedTitle = await generateSingleVariable(
       VARIABLE_PROMPTS.title,
-      { ScienceCategory: result.ScienceCategory || DEFAULT_CATEGORY },
+      { ScienceCategory: result.ScienceCategory },
       promptTemplates
     );
     if (hasValue(generatedTitle)) {
@@ -289,6 +111,7 @@ export async function generateMissingVariables(
     }
   }
 
+  // Try to generate Author via LLM if missing
   const shouldGenerateAuthor = !hasValue(userVariables.Author) && promptTemplates.has(VARIABLE_PROMPTS.author);
   if (shouldGenerateAuthor) {
     const generatedAuthor = await generateSingleVariable(VARIABLE_PROMPTS.author, {}, promptTemplates);
@@ -299,12 +122,14 @@ export async function generateMissingVariables(
     }
   }
 
-  if (!hasValue(result.ResearcherName)) {
-    result.ResearcherName = result.Author || fallback.Author || "Anonymous Research Collective";
-  }
-
-  if (!hasValue(result.Authors)) {
-    result.Authors = result.Author || result.ResearcherName;
+  // Sync Author aliases if we have Author but not the others
+  if (hasValue(result.Author)) {
+    if (!hasValue(result.ResearcherName)) {
+      result.ResearcherName = result.Author;
+    }
+    if (!hasValue(result.Authors)) {
+      result.Authors = result.Author;
+    }
   }
 
   return result;
@@ -386,7 +211,9 @@ const PAPER_SECTIONS: Array<{ id: string; title: string }> = [
  * Get a random science category from the full list.
  */
 export function getRandomCategory(categories: readonly string[] = SCIENCE_CATEGORIES): string {
-  return pickRandom(categories as any, SCIENCE_CATEGORIES[0]);
+  if (categories.length === 0) return SCIENCE_CATEGORIES[0];
+  const index = Math.floor(Math.random() * categories.length);
+  return categories[index] ?? SCIENCE_CATEGORIES[0];
 }
 
 /**
@@ -443,6 +270,7 @@ export function countWords(text: string): number {
 
 /**
  * Assemble a markdown representation of the generated paper.
+ * ONLY uses user-provided or LLM-generated variables - NO hardcoded fallbacks.
  */
 export function exportVixraPaper(
   variables: VixraVariables,
@@ -450,19 +278,21 @@ export function exportVixraPaper(
   selectedModels: AIModel[]
 ): string {
   const timestamp = new Date();
-  const completedVariables = autoGenerateVariables(variables, variables.ScienceCategory || DEFAULT_CATEGORY);
-
-  const paperTitle = completedVariables.Title || "Untitled Satirical Paper";
-  const authorLine = completedVariables.Authors || completedVariables.Author || completedVariables.ResearcherName || "Anonymous Research Collective";
+  
+  // Use ONLY the variables that were actually provided - no auto-generation
+  const paperTitle = variables.Title || "Untitled Satirical Paper";
+  const authorLine = variables.Authors || variables.Author || variables.ResearcherName || "Anonymous Research Collective";
+  const scienceCategory = variables.ScienceCategory || DEFAULT_CATEGORY;
 
   let paper = `# ${paperTitle}\n\n`;
   paper += `**Authors:** ${authorLine}\n\n`;
 
-  if (hasValue(completedVariables.Institution)) {
-    paper += `**Institution:** ${completedVariables.Institution}\n\n`;
+  // ONLY include Institution if explicitly provided (not hardcoded)
+  if (hasValue(variables.Institution)) {
+    paper += `**Institution:** ${variables.Institution}\n\n`;
   }
 
-  paper += `**Science Category:** ${completedVariables.ScienceCategory}\n\n`;
+  paper += `**Science Category:** ${scienceCategory}\n\n`;
   paper += `**Generated:** ${timestamp.toLocaleString()}\n\n`;
   paper += `---\n\n`;
 
@@ -515,12 +345,16 @@ export function exportVixraPaper(
   }, 0);
 
   paper += `**Total sections generated:** ${generatedSectionCount}\n\n`;
-  paper += `**Paper variables:**\n`;
-  Object.entries(completedVariables).forEach(([key, value]) => {
-    if (hasValue(value)) {
+  
+  // ONLY show variables that were actually provided (no hardcoded fallbacks)
+  const actualVariables = Object.entries(variables).filter(([_key, value]) => hasValue(value));
+  if (actualVariables.length > 0) {
+    paper += `**Paper variables:**\n`;
+    actualVariables.forEach(([key, value]) => {
       paper += `- ${key}: ${value}\n`;
-    }
-  });
+    });
+    paper += "\n";
+  }
 
   paper += "\n*This satirical academic paper was generated using the Vixra Mode of the AI Model Comparison Tool.*\n";
 

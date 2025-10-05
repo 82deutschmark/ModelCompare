@@ -156,6 +156,8 @@ export default function VixraPage() {
           });
         }
       } else {
+        // Manual mode: Stop generating, user controls next section
+        actions.setIsGenerating(false);
         actions.setCurrentSectionId(null);
       }
     },
@@ -200,6 +202,9 @@ export default function VixraPage() {
         } else {
           actions.setIsGenerating(false);
         }
+      } else {
+        // Manual mode: Stop generating on error, user must retry manually
+        actions.setIsGenerating(false);
       }
     },
   });
