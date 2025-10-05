@@ -130,6 +130,58 @@ const VARIABLE_PROMPTS = {
   author: "generate-author"
 } as const;
 
+// Section order with dependencies for Vixra paper generation
+export const SECTION_ORDER = [
+  { id: 'abstract', name: 'Abstract', dependencies: [] },
+  { id: 'introduction', name: 'Introduction', dependencies: ['abstract'] },
+  { id: 'methodology', name: 'Methodology', dependencies: ['introduction'] },
+  { id: 'results', name: 'Results', dependencies: ['abstract', 'methodology'] },
+  { id: 'discussion', name: 'Discussion', dependencies: ['results'] },
+  { id: 'conclusion', name: 'Conclusion', dependencies: ['discussion'] },
+  { id: 'citations', name: 'Citations', dependencies: ['abstract', 'results'] },
+  { id: 'acknowledgments', name: 'Acknowledgments', dependencies: ['conclusion'] },
+] as const;
+
+export const SCIENCE_CATEGORIES = [
+  'Physics - High Energy Particle Physics',
+  'Physics - Quantum Gravity and String Theory', 
+  'Physics - Relativity and Cosmology',
+  'Physics - Astrophysics',
+  'Physics - Quantum Physics',
+  'Physics - Nuclear and Atomic Physics',
+  'Physics - Condensed Matter',
+  'Physics - Thermodynamics and Energy',
+  'Physics - Classical Physics',
+  'Physics - Geophysics',
+  'Physics - Climate Research',
+  'Physics - Mathematical Physics',
+  'Physics - History and Philosophy of Physics',
+  'Mathematics - Set Theory and Logic',
+  'Mathematics - Number Theory',
+  'Mathematics - Combinatorics and Graph Theory',
+  'Mathematics - Algebra',
+  'Mathematics - Geometry',
+  'Mathematics - Topology',
+  'Mathematics - Functions and Analysis',
+  'Mathematics - Statistics',
+  'Mathematics - General Mathematics',
+  'Computational Science - DSP',
+  'Computational Science - Data Structures and Algorithms',
+  'Computational Science - Artificial Intelligence',
+  'Biology - Biochemistry',
+  'Biology - Physics of Biology',
+  'Biology - Mind Science',
+  'Biology - Quantitative Biology',
+  'Chemistry',
+  'Humanities - Archaeology',
+  'Humanities - Linguistics',
+  'Humanities - Economics and Finance',
+  'Humanities - Social Science',
+  'Humanities - Religion and Spiritualism',
+  'General Science and Philosophy',
+  'Education and Didactics'
+] as const;
+
 type VariablePromptKey = keyof typeof VARIABLE_PROMPTS;
 
 function hasValue(value: string | undefined | null): value is string {
@@ -329,6 +381,65 @@ const PAPER_SECTIONS: Array<{ id: string; title: string }> = [
   { id: "acknowledgments", title: "Acknowledgments" },
   { id: "peer-review", title: "Peer Review Response" }
 ];
+
+/**
+ * Get a random science category from the full list.
+ */
+export function getRandomCategory(categories: readonly string[] = SCIENCE_CATEGORIES): string {
+  return pickRandom(categories as any, SCIENCE_CATEGORIES[0]);
+}
+
+/**
+ * Check if a section is locked due to incomplete dependencies.
+ */
+export function isSectionLocked(
+  sectionId: string,
+  completedSections: string[]
+): boolean {
+  const section = SECTION_ORDER.find(s => s.id === sectionId);
+  if (!section) return true;
+  return section.dependencies.some(dep => !completedSections.includes(dep));
+}
+
+/**
+ * Get the next eligible section for auto-mode generation.
+ * Returns null if all sections are complete.
+ */
+export function getNextEligibleSection(
+  completedSections: string[]
+): string | null {
+  for (const section of SECTION_ORDER) {
+    if (completedSections.includes(section.id)) continue;
+    if (!isSectionLocked(section.id, completedSections)) {
+      return section.id;
+    }
+  }
+  return null;
+}
+
+/**
+ * Calculate estimated time remaining for paper generation.
+ * @param completedSections - Number of completed sections
+ * @param totalSections - Total number of sections
+ * @param avgSectionTime - Average time per section in seconds
+ * @returns Estimated seconds remaining
+ */
+export function calculateEstimatedTime(
+  completedSections: number,
+  totalSections: number,
+  avgSectionTime: number
+): number {
+  const remainingSections = totalSections - completedSections;
+  return remainingSections * avgSectionTime;
+}
+
+/**
+ * Count words in a text string.
+ */
+export function countWords(text: string): number {
+  if (!text) return 0;
+  return text.trim().split(/\s+/).length;
+}
 
 /**
  * Assemble a markdown representation of the generated paper.
