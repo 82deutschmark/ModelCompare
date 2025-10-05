@@ -211,7 +211,7 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     cost: { input: '$3.00', output: '$15.00' },
     provider: 'Anthropic',
     responseTime: { speed: 'moderate', estimate: '1-3 min' },
-    apiModelName: 'claude-sonnet-4-5-20250929',
+    apiModelName: 'claude-sonnet-4-5',
     modelType: 'claude',
     maxOutputTokens: 64000,
     releaseDate: '2025-09',
