@@ -203,6 +203,22 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
   },
 
   // Anthropic Models - Direct API
+  'claude-sonnet-4-5': {
+    key: 'claude-sonnet-4-5-20250929',
+    name: 'Claude Sonnet 4.5 (Sep 29 2025)',
+    color: 'bg-indigo-500',
+    premium: true,
+    cost: { input: '$3.00', output: '$15.00' },
+    provider: 'Anthropic',
+    responseTime: { speed: 'moderate', estimate: '1-3 min' },
+    apiModelName: 'claude-sonnet-4-5-20250929',
+    modelType: 'claude',
+    maxOutputTokens: 64000,
+    releaseDate: '2025-09',
+    supportsTemperature: true,
+    isReasoning: true,
+  },
+
   'claude-sonnet-4-20250514': {
     key: 'claude-sonnet-4-20250514',
     name: 'Claude Sonnet 4',
@@ -617,8 +633,8 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     supportsTemperature: true,
     isReasoning: true,
   },
-  'x-ai/grok-4-fast:free': {
-    key: 'x-ai/grok-4-fast:free',
+  'x-ai/grok-4-fast': {
+    key: 'x-ai/grok-4-fast',
     name: 'Grok 4 Fast',
     color: 'bg-orange-500',
     premium: false,
