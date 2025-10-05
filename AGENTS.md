@@ -82,8 +82,9 @@ ModelCompare is a sophisticated full-stack TypeScript application for comparing 
 - **OpenAI**: GPT-5, GPT-4.1 series, o3/o4 reasoning models (Responses API)
 - **Anthropic**: Claude 4.1 Opus, Sonnet 4, Claude 3.7 Sonnet
 - **Google**: Gemini 2.5 Pro/Flash, Gemini 2.0 Flash series
-- **xAI**: Grok 4 (reasoning), Grok 3 series variants
+- **xAI**: Grok 4 (reasoning), Grok 3 series variants NOW HANDLED BY OPENROUTER!!
 - **DeepSeek**: R1 Reasoner (CoT), V3 Chat
+- **OpenRouter**: Grok and others!
 
 ## Common Development Commands
 
