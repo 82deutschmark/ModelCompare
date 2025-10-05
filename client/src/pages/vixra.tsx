@@ -123,7 +123,11 @@ export default function VixraPage() {
         data.content,
         {
           responseTime: data.responseTime,
-          tokenUsage: data.tokenUsage,
+          tokenUsage: data.tokenUsage ? {
+            prompt: data.tokenUsage.input || 0,
+            completion: data.tokenUsage.output || 0,
+            total: (data.tokenUsage.input || 0) + (data.tokenUsage.output || 0) + (data.tokenUsage.reasoning || 0)
+          } : undefined,
         }
       );
 
