@@ -19,7 +19,7 @@
  * Date: August 20, 2025
  */
 
-import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, comparisons, vixraSessions, promptAudits, users, luigiRuns, luigiMessages, luigiArtifacts } from "@shared/schema";
+import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, luigiRuns, luigiMessages, luigiArtifacts, debateSessions } from "@shared/schema";
 import type { LuigiRunStatus, LuigiStageId } from "@shared/luigi-types";
 import { randomUUID, createHash } from "crypto";
 import { db, ensureTablesExist } from "./db";
@@ -86,6 +86,18 @@ export interface IStorage {
   getLuigiMessages(runId: string, limit?: number): Promise<LuigiMessage[]>;
   saveLuigiArtifact(artifact: InsertLuigiArtifact): Promise<LuigiArtifact>;
   getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]>;
+
+  // Debate session operations
+  createDebateSession(session: InsertDebateSession): Promise<DebateSession>;
+  updateDebateSession(id: string, turnData: {
+    turn: number;
+    modelId: string;
+    content: string;
+    reasoning: string;
+    responseId: string;
+    cost: number;
+  }): Promise<void>;
+  getDebateSession(id: string): Promise<DebateSession | undefined>;
 
   // User authentication operations
   getUser(id: string): Promise<User | undefined>;
@@ -259,6 +271,74 @@ export class DbStorage implements IStorage {
       .orderBy(desc(luigiArtifacts.createdAt));
   }
 
+  // Debate session operations
+  async createDebateSession(session: InsertDebateSession): Promise<DebateSession> {
+    const id = `debate_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    const [result] = await requireDb()
+      .insert(debateSessions)
+      .values({
+        id,
+        topicText: session.topicText,
+        model1Id: session.model1Id,
+        model2Id: session.model2Id,
+        adversarialLevel: session.adversarialLevel,
+        turnHistory: [],
+        model1ResponseIds: [],
+        model2ResponseIds: [],
+        totalCost: 0
+      } as any)
+      .returning();
+    return result;
+  }
+
+  async updateDebateSession(
+    id: string,
+    turnData: {
+      turn: number;
+      modelId: string;
+      content: string;
+      reasoning: string;
+      responseId: string;
+      cost: number;
+    }
+  ): Promise<void> {
+    const session = await this.getDebateSession(id);
+    if (!session) throw new Error('Session not found');
+
+    const turnHistory = [...(session.turnHistory as any[]), turnData];
+
+    // Update appropriate response ID array
+    const isModel1 = turnData.modelId === session.model1Id;
+    const model1ResponseIds = isModel1
+      ? [...(session.model1ResponseIds as string[]), turnData.responseId]
+      : (session.model1ResponseIds as string[]);
+    const model2ResponseIds = !isModel1
+      ? [...(session.model2ResponseIds as string[]), turnData.responseId]
+      : (session.model2ResponseIds as string[]);
+
+    await requireDb()
+      .update(debateSessions)
+      .set({
+        turnHistory,
+        model1ResponseIds,
+        model2ResponseIds,
+        totalCost: Number(session.totalCost || 0) + turnData.cost,
+        updatedAt: new Date()
+      } as any)
+      .where(eq(debateSessions.id, id));
+  }
+
+  async getDebateSession(id: string): Promise<DebateSession | undefined> {
+    const [result] = await requireDb()
+      .select()
+      .from(debateSessions)
+      .where(eq(debateSessions.id, id))
+      .limit(1);
+
+    return result || undefined;
+  }
+
   // User authentication operations
   async getUser(id: string): Promise<User | undefined> {
     const [result] = await requireDb().select().from(users).where(eq(users.id, id));
@@ -384,6 +464,7 @@ export class MemStorage implements IStorage {
   private luigiRuns: Map<string, LuigiRun>;
   private luigiMessages: Map<string, LuigiMessage[]>;
   private luigiArtifacts: Map<string, LuigiArtifact[]>;
+  private debateSessions: Map<string, DebateSession>;
 
 
   constructor() {
@@ -394,6 +475,7 @@ export class MemStorage implements IStorage {
     this.luigiRuns = new Map();
     this.luigiMessages = new Map();
     this.luigiArtifacts = new Map();
+    this.debateSessions = new Map();
   }
 
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
@@ -618,6 +700,66 @@ export class MemStorage implements IStorage {
 
   async getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]> {
     return [...(this.luigiArtifacts.get(runId) ?? [])].sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  // Debate session operations
+  async createDebateSession(session: InsertDebateSession): Promise<DebateSession> {
+    const id = `debate_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const debateSession: DebateSession = {
+      id,
+      topicText: session.topicText,
+      model1Id: session.model1Id,
+      model2Id: session.model2Id,
+      adversarialLevel: session.adversarialLevel,
+      turnHistory: [],
+      model1ResponseIds: [],
+      model2ResponseIds: [],
+      totalCost: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.debateSessions.set(id, debateSession);
+    return debateSession;
+  }
+
+  async updateDebateSession(
+    id: string,
+    turnData: {
+      turn: number;
+      modelId: string;
+      content: string;
+      reasoning: string;
+      responseId: string;
+      cost: number;
+    }
+  ): Promise<void> {
+    const existing = this.debateSessions.get(id);
+    if (!existing) throw new Error('Session not found');
+
+    const turnHistory = [...(existing.turnHistory as any[]), turnData];
+
+    // Update appropriate response ID array
+    const isModel1 = turnData.modelId === existing.model1Id;
+    const model1ResponseIds = isModel1
+      ? [...(existing.model1ResponseIds as string[]), turnData.responseId]
+      : (existing.model1ResponseIds as string[]);
+    const model2ResponseIds = !isModel1
+      ? [...(existing.model2ResponseIds as string[]), turnData.responseId]
+      : (existing.model2ResponseIds as string[]);
+
+    const updated: DebateSession = {
+      ...existing,
+      turnHistory,
+      model1ResponseIds,
+      model2ResponseIds,
+      totalCost: (existing.totalCost || 0) + turnData.cost,
+      updatedAt: new Date()
+    };
+    this.debateSessions.set(id, updated);
+  }
+
+  async getDebateSession(id: string): Promise<DebateSession | undefined> {
+    return this.debateSessions.get(id);
   }
 
   // User authentication operations

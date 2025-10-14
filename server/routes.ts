@@ -25,7 +25,7 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import passport from 'passport';
 import { createLuigiRouter } from './routes/luigi';
-import { callModel, callModelWithMessages, getAllModels, getReasoningModels } from "./providers/index.js";
+import { callModel, callModelWithMessages, getAllModels, getReasoningModels, getProviderForModel } from "./providers/index.js";
 import { getStorage } from "./storage.js";
 import { VariableEngine } from "../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../shared/variable-registry.js";
@@ -346,9 +346,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Model response error:', error);
       res.status(500).json({ error: 'Failed to get model response' });
     }
-  });
+  // POST /api/debate/stream - Streaming debate with reasoning
+  app.post("/api/debate/stream", async (req, res) => {
+    try {
+      const {
+        modelId,
+        topic,
+        role, // 'AFFIRMATIVE' | 'NEGATIVE'
+        intensity,
+        opponentMessage, // null for Turn 1/2, opponent's content for subsequent turns
+        previousResponseId, // null for Turn 1/2, model's own last response ID
+        turnNumber // 1-10
+      } = req.body;
 
-  // Legacy Battle mode endpoints (deprecated - use /api/generate)
+      // Validation
+      if (!modelId || !topic || !role || !intensity || turnNumber == null) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Set SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+      });
+
+      // Build prompt based on turn number
+      let inputMessages: Array<{ role: string; content: string }>;
+
+      if (turnNumber === 1 || turnNumber === 2) {
+        // Opening statements - no previous context
+        const position = role === 'AFFIRMATIVE' ? 'FOR' : 'AGAINST';
+        const systemPrompt = `You are the ${role} debater ${position} the proposition: "${topic}".
+Present your opening argument following Robert's Rules of Order.
+Adversarial intensity level: ${intensity}.`;
+
+        inputMessages = [{ role: 'user', content: systemPrompt }];
+      } else {
+        // Rebuttals - respond to opponent
+        const rebuttalPrompt = `Your opponent just argued: "${opponentMessage}"
+
+Respond as the ${role} debater:
+1. Address your opponent's specific points
+2. Refute their arguments with evidence and logic
+3. Strengthen your own position
+4. Use adversarial intensity level: ${intensity}`;
+
+        inputMessages = [{ role: 'user', content: rebuttalPrompt }];
+      }
+
+      // Call OpenAI provider with streaming enabled
+      const provider = getProviderForModel(modelId);
+
+      if (!provider.callModelStreaming) {
+        res.write(`event: error\ndata: ${JSON.stringify({
+          message: 'Streaming not supported for this provider'
+        })}\n\n`);
+        res.end();
+        return;
+      }
+
+      await provider.callModelStreaming({
+        modelId,
+        messages: inputMessages,
+        previousResponseId: previousResponseId || undefined,
+        onReasoningChunk: (chunk: string) => {
+          res.write(`event: reasoning\ndata: ${JSON.stringify({ chunk })}\n\n`);
+        },
+        onContentChunk: (chunk: string) => {
+          res.write(`event: content\ndata: ${JSON.stringify({ chunk })}\n\n`);
+        },
+        onComplete: (responseId: string, tokenUsage: any, cost: any) => {
+          res.write(`event: complete\ndata: ${JSON.stringify({
+            responseId,
+            tokenUsage,
+            cost
+          })}\n\n`);
+          res.end();
+        },
+        onError: (error: Error) => {
+          res.write(`event: error\ndata: ${JSON.stringify({
+            message: error.message
+          })}\n\n`);
+          res.end();
+        }
+      });
+
+    } catch (error) {
+      console.error('Debate stream error:', error);
+      res.write(`event: error\ndata: ${JSON.stringify({
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })}\n\n`);
+      res.end();
+    }
+  });
   if (ENABLE_LEGACY_ROUTES) {
     app.post("/api/battle/start", async (req, res) => {
     try {
@@ -1272,4 +1364,4 @@ Continue the debate by responding to the last message. Be analytical, challenge 
 
   const httpServer = createServer(app);
   return httpServer;
-}
+  })}

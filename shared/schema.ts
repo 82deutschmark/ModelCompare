@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared Schema Definitions - Database Models and TypeScript Types
  * 
  * This module defines the central data models and TypeScript types used throughout
@@ -19,7 +19,7 @@
  */
 
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, integer, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -143,6 +143,21 @@ export const luigiArtifacts = pgTable("luigi_artifacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Debate sessions for persisting debate state and conversation chaining
+export const debateSessions = pgTable('debate_sessions', {
+  id: text('id').primaryKey(),
+  topicText: text('topic_text').notNull(),
+  model1Id: text('model1_id').notNull(),
+  model2Id: text('model2_id').notNull(),
+  adversarialLevel: integer('adversarial_level').notNull(),
+  turnHistory: jsonb('turn_history').notNull(), // Array of turn records
+  model1ResponseIds: jsonb('model1_response_ids').notNull(), // Array of response IDs
+  model2ResponseIds: jsonb('model2_response_ids').notNull(), // Array of response IDs
+  totalCost: numeric('total_cost').default('0'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 export const insertComparisonSchema = createInsertSchema(comparisons).omit({
   id: true,
   createdAt: true,
@@ -183,6 +198,12 @@ export const insertLuigiArtifactSchema = createInsertSchema(luigiArtifacts).omit
   createdAt: true,
 });
 
+export const insertDebateSessionSchema = createInsertSchema(debateSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertComparison = z.infer<typeof insertComparisonSchema>;
 export type Comparison = typeof comparisons.$inferSelect;
 export type InsertVixraSession = z.infer<typeof insertVixraSessionSchema>;
@@ -201,6 +222,9 @@ export type InsertLuigiMessage = z.infer<typeof insertLuigiMessageSchema>;
 export type LuigiMessage = typeof luigiMessages.$inferSelect;
 export type InsertLuigiArtifact = z.infer<typeof insertLuigiArtifactSchema>;
 export type LuigiArtifact = typeof luigiArtifacts.$inferSelect;
+
+export type InsertDebateSession = z.infer<typeof insertDebateSessionSchema>;
+export type DebateSession = typeof debateSessions.$inferSelect;
 
 // Additional types for authentication and billing
 export type UpsertUser = Omit<InsertUser, 'id'> & { id?: string };

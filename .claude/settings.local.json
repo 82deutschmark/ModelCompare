@@ -18,7 +18,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "WebFetch(domain:openrouter.ai)"
+      "WebFetch(domain:openrouter.ai)",
+      "Read(//d/GitHub/arc-explainer/server/services/**)",
+      "Read(//d/GitHub/arc-explainer/client/**)",
+      "Read(//d/GitHub/arc-explainer/**)"
     ],
     "deny": [],
     "ask": []

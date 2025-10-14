@@ -86,6 +86,25 @@ export interface CallOptions {
   systemPrompt?: string;
 }
 
+export interface StreamingCallbacks {
+  onReasoningChunk: (chunk: string) => void;
+  onContentChunk: (chunk: string) => void;
+  onComplete: (responseId: string, tokenUsage: any, cost: any) => void;
+  onError: (error: Error) => void;
+}
+
+export interface StreamingCallOptions {
+  modelId: string;
+  messages: Array<{ role: string; content: string }>;
+  previousResponseId?: string; // For conversation chaining
+  temperature?: number;
+  maxTokens?: number;
+  onReasoningChunk: (chunk: string) => void;
+  onContentChunk: (chunk: string) => void;
+  onComplete: (responseId: string, tokenUsage: any, cost: any) => void;
+  onError: (error: Error) => void;
+}
+
 export abstract class BaseProvider {
   abstract name: string;
   abstract models: ModelConfig[];
@@ -99,6 +118,12 @@ export abstract class BaseProvider {
    * @returns Promise resolving to model response with content, reasoning, timing, and costs
    */
   abstract callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse>;
+  
+  /** 
+   * Streaming call with reasoning support
+   * Must be implemented by providers that support reasoning models
+   */
+  abstract callModelStreaming?(options: StreamingCallOptions): Promise<void>;
   
   getModel(modelId: string): ModelConfig | undefined {
     return this.models.find(m => m.id === modelId);

@@ -37,6 +37,7 @@ import type { AIModel, ModelResponse } from '@/types/ai-models';
 import { parseDebatePromptsFromMarkdown, type DebateInstructions } from "@/lib/promptParser";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { AppNavigation } from "@/components/AppNavigation";
+import { useDebateStream } from "@/hooks/useDebateStream";
 import { 
   ChevronLeft, ChevronUp, ChevronDown, Loader2, Play, Settings, Clock, DollarSign, Zap, AlertTriangle, Download, Copy,
   MessageSquare, Square, Brain, RotateCcw, Sword, Palette, Moon, Sun, Gavel, Users, Target
@@ -108,6 +109,10 @@ export default function Debate() {
   const [isRunning, setIsRunning] = useState(false);
   const [showSetup, setShowSetup] = useState(true);
   const [showSystemPrompts, setShowSystemPrompts] = useState(false);
+
+  // Add after existing state declarations
+  const [modelALastResponseId, setModelALastResponseId] = useState<string | null>(null);
+  const [modelBLastResponseId, setModelBLastResponseId] = useState<string | null>(null);
 
   // Load debate instructions/topics from docs
   useEffect(() => {
@@ -183,7 +188,18 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     },
   });
 
-  // Start debate mutation - get the first model's (Affirmative) opening statement
+  // Streaming hook for debate responses
+  const {
+    reasoning: streamReasoning,
+    content: streamContent,
+    isStreaming,
+    error: streamError,
+    responseId: streamResponseId,
+    tokenUsage: streamTokenUsage,
+    cost: streamCost,
+    startStream,
+    cancelStream
+  } = useDebateStream();
   const startDebateMutation = useMutation({
     mutationFn: async (data: { model1Id: string; model2Id: string }) => {
       const prompts = generateDebatePrompts();
@@ -293,22 +309,64 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     },
   });
 
-  // Function to manually continue the debate
-  const continueDebate = () => {
-    if (!model1Id || !model2Id) {
-      return;
-    }
+  const continueDebate = async () => {
+    if (!model1Id || !model2Id) return;
 
-    // Determine which model should respond next (alternate between them)
-    const nextModelId = currentRound % 2 === 1 ? model2Id : model1Id;
+    const prompts = generateDebatePrompts();
+    const lastMessage = messages[messages.length - 1];
 
-    continueDebateMutation.mutate({
-      battleHistory: messages,
-      nextModelId: nextModelId
+    // Determine which model goes next
+    const isModelBTurn = currentRound % 2 === 1;
+    const nextModelId = isModelBTurn ? model2Id : model1Id;
+    const nextRole = isModelBTurn ? 'NEGATIVE' : 'AFFIRMATIVE';
+
+    // Determine previous response ID (model's OWN last turn, not opponent's)
+    const previousResponseId = isModelBTurn
+      ? modelBLastResponseId
+      : modelALastResponseId;
+
+    // Start streaming
+    await startStream({
+      modelId: nextModelId,
+      topic: prompts.topicText,
+      role: nextRole,
+      intensity: adversarialLevel,
+      opponentMessage: lastMessage.content,
+      previousResponseId: previousResponseId,
+      turnNumber: currentRound + 1
     });
+
+    // When complete, add to messages and update response ID
+    if (streamResponseId) {
+      const model = models.find(m => m.id === nextModelId);
+      const nextRound = currentRound + 1;
+
+      setMessages(prev => [...prev, {
+        id: `msg-${nextRound}`,
+        modelId: nextModelId,
+        modelName: model?.name || "Model",
+        content: streamContent,
+        reasoning: streamReasoning,
+        timestamp: Date.now(),
+        round: Math.ceil(nextRound / 2),
+        responseTime: 0,
+        tokenUsage: streamTokenUsage,
+        cost: streamCost,
+        modelConfig: undefined
+      }]);
+
+      // Update the correct model's response ID
+      if (isModelBTurn) {
+        setModelBLastResponseId(streamResponseId);
+      } else {
+        setModelALastResponseId(streamResponseId);
+      }
+
+      setCurrentRound(nextRound);
+    }
   };
 
-  const handleStartDebate = () => {
+  const handleStartDebate = async () => {
     if (!model1Id || !model2Id) {
       toast({
         title: "Select Both Models",
@@ -318,11 +376,39 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
       return;
     }
 
+    const prompts = generateDebatePrompts();
 
-    startDebateMutation.mutate({
-      model1Id: model1Id,
-      model2Id: model2Id,
+    // Start streaming for Model A's opening
+    await startStream({
+      modelId: model1Id,
+      topic: prompts.topicText,
+      role: 'AFFIRMATIVE',
+      intensity: adversarialLevel,
+      opponentMessage: null, // No opponent yet
+      previousResponseId: null, // First turn
+      turnNumber: 1
     });
+
+    // When complete, add to messages and store response ID
+    if (streamResponseId) {
+      const model1 = models.find(m => m.id === model1Id);
+      setMessages([{
+        id: `msg-1`,
+        modelId: model1Id,
+        modelName: model1?.name || "Model 1",
+        content: streamContent,
+        reasoning: streamReasoning,
+        timestamp: Date.now(),
+        round: 1,
+        responseTime: 0, // Not tracked in streaming
+        tokenUsage: streamTokenUsage,
+        cost: streamCost,
+        modelConfig: undefined
+      }]);
+      setModelALastResponseId(streamResponseId);
+      setCurrentRound(1);
+      setShowSetup(false);
+    }
   };
 
   const handleStopDebate = () => {
@@ -340,6 +426,8 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     setCurrentRound(0);
     setIsRunning(false);
     setShowSetup(true);
+    setModelALastResponseId(null);
+    setModelBLastResponseId(null);
   };
 
 
@@ -760,6 +848,40 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
           </Card>
         )}
 
+        {/* Show streaming content in real-time */}
+        {isStreaming && (
+          <Card className="mb-4 border-blue-500">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {streamReasoning && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded">
+                    <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-2">
+                      Reasoning (streaming...)
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                      {streamReasoning}
+                    </div>
+                  </div>
+                )}
+                {streamContent && (
+                  <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                    {streamContent}
+                  </div>
+                )}
+                <Button
+                  onClick={cancelStream}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                >
+                  <Square className="w-4 h-4 mr-2" />
+                  Stop Streaming
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Messages */}
         {messages.length > 0 && (
           <div className="space-y-4">
@@ -792,12 +914,12 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
                       onClick={continueDebate}
                       size="sm"
                       className="bg-green-600 hover:bg-green-700 w-full"
-                      disabled={continueDebateMutation.isPending}
+                      disabled={isStreaming}
                     >
-                      {continueDebateMutation.isPending ? (
+                      {isStreaming ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Getting {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...
+                          Streaming response...
                         </>
                       ) : (
                         <>

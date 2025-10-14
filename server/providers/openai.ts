@@ -10,7 +10,7 @@
 
 import 'dotenv/config';
 import OpenAI from 'openai';
-import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions } from './base.js';
+import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions, StreamingCallOptions } from './base.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -330,5 +330,112 @@ export class OpenAIProvider extends BaseProvider {
     }
     // If loop exits unexpectedly, throw last error
     throw lastError || new Error('OpenAI Responses request failed');
+  }
+
+  /**
+   * Streaming implementation for Responses API with reasoning
+   * Supports conversation chaining via previous_response_id
+   */
+  async callModelStreaming(options: StreamingCallOptions): Promise<void> {
+    const {
+      modelId,
+      messages,
+      previousResponseId,
+      temperature,
+      maxTokens,
+      onReasoningChunk,
+      onContentChunk,
+      onComplete,
+      onError
+    } = options;
+
+    const modelConfig = this.models.find(m => m.id === modelId);
+    if (!modelConfig) {
+      onError(new Error(`Model not found: ${modelId}`));
+      return;
+    }
+
+    // Configure max_output_tokens
+    const isGpt5Series = modelId.startsWith('gpt-5');
+    const defaultMax = isGpt5Series ? 128000 : 16384;
+    const configuredMax = maxTokens || defaultMax;
+
+    try {
+      // Build Responses API request
+      const requestPayload: any = {
+        model: modelId,
+        input: messages, // Array of message objects
+        reasoning: {
+          summary: 'auto',
+          effort: 'high' // High effort for debate quality
+        },
+        max_output_tokens: configuredMax,
+        stream: true // Enable streaming
+      };
+
+      // Add conversation chaining if applicable
+      if (previousResponseId) {
+        requestPayload.previous_response_id = previousResponseId;
+      }
+
+      // Explicitly enable storage for conversation chaining
+      requestPayload.store = true;
+
+      // Create streaming response
+      const response = await openai.responses.create(requestPayload);
+
+      // For streaming, we need to handle the response differently
+      // The OpenAI SDK returns a streaming response that we need to process
+      if (response && (response as any)[Symbol.asyncIterator]) {
+        const stream = response as any;
+
+        let accumulatedReasoning = '';
+        let accumulatedContent = '';
+        let finalResponseId = '';
+        let finalTokenUsage: any = null;
+
+        // Process stream chunks
+        for await (const chunk of stream) {
+          // Reasoning chunks
+          if (chunk.type === 'response.reasoning.delta') {
+            const reasoningText = chunk.delta?.content || '';
+            accumulatedReasoning += reasoningText;
+            onReasoningChunk(reasoningText);
+          }
+
+          // Content chunks
+          if (chunk.type === 'response.output_text.delta') {
+            const contentText = chunk.delta?.content || '';
+            accumulatedContent += contentText;
+            onContentChunk(contentText);
+          }
+
+          // Completion event
+          if (chunk.type === 'response.done') {
+            finalResponseId = chunk.response?.id || '';
+            finalTokenUsage = chunk.response?.usage || null;
+          }
+        }
+
+        // Calculate cost
+        const cost = modelConfig && finalTokenUsage
+          ? this.calculateCost(modelConfig, {
+              input: finalTokenUsage.input_tokens || 0,
+              output: finalTokenUsage.output_tokens || 0,
+              reasoning: finalTokenUsage.output_tokens_details?.reasoning_tokens || 0
+            })
+          : { total: 0, input: 0, output: 0, reasoning: 0 };
+
+        // Call completion callback
+        onComplete(finalResponseId, finalTokenUsage, cost);
+      } else {
+        // Fallback for non-streaming response
+        onError(new Error('Streaming not supported by OpenAI SDK version'));
+      }
+
+    } catch (error: any) {
+      console.error('OpenAI streaming error:', error);
+      onError(error);
+    }
   }
 }
