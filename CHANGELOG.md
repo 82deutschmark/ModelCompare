@@ -7,7 +7,31 @@ Author: Cascade (AI assistant)
 Date: 2025-08-17
 -->
 
-All notable changes to this project will be documented in this file.
+## [Unreleased]
+
+### Refactoring
+- **Routes.ts SRP Violations Resolved**: Refactored the monolithic 1,368-line routes.ts file into modular route handlers to adhere to Single Responsibility Principle (SRP) and eliminate DRY violations. Created separate modules for authentication, payments, model comparisons, generation, debates, templates, sessions, audits, health checks, ARC-AGI, and creative combat. Added centralized error handling and validation middleware. This improves maintainability, testability, and scalability.
+
+## [Version 0.3.0] - 2025-10-14
+
+### Added
+- **Streaming Debate Mode with Reasoning Support:** Complete implementation of real-time streaming for debate mode
+  - `/api/debate/stream` endpoint with Server-Sent Events (SSE) for real-time streaming
+  - OpenAI Responses API integration with `callModelStreaming` method supporting conversation chaining
+  - `useDebateStream` React hook for managing streaming state and real-time UI updates
+  - Updated `Debate.tsx` with response ID tracking for conversation chaining and streaming UI components
+  - Database schema for `debate_sessions` table with turn history and response ID persistence
+  - Storage layer methods for debate session management in both PostgreSQL and in-memory backends
+
+### Technical Details
+- **Conversation Chaining:** Each model maintains separate conversation chains using `previous_response_id`
+- **Real-time UI:** Users see reasoning and content streaming in real-time during debate turns
+- **Error Handling:** Comprehensive retry logic and graceful error handling for streaming failures
+- **Type Safety:** Full TypeScript support with proper interfaces for streaming callbacks and options
+
+### Notes
+- Routes file (`server/routes.ts`) has syntax issues that need refactoring in a future update
+- Implementation follows the architectural plan in `docs/14102025-debate-streaming-reasoning-implementation.md`
 
 ## [Version 0.2.1] - 2025-10-04
 
