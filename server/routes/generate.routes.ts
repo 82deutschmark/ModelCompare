@@ -293,9 +293,28 @@ router.post("/structured", async (req, res) => {
     console.error("Generate structured endpoint error:", error);
     res.status(500).json({
       error: "Failed to generate structured response",
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
   }
+
+  // Return response with audit trail
+  res.json({
+    content: result.content,
+    reasoning: result.reasoning,
+    responseTime: result.responseTime,
+    tokenUsage: result.tokenUsage,
+    cost: result.cost,
+    modelConfig: result.modelConfig,
+    audit: auditInfo,
+    messageStructure: messages.map((m: any) => ({ role: m.role, contentLength: m.content.length }))
+  });
+
+} catch (error) {
+  console.error("Generate structured endpoint error:", error);
+  res.status(500).json({
+    error: "Failed to generate structured response",
+    details: error instanceof Error ? error.message : 'Unknown error'
+  });
+}
 });
 
-export { router as generateRoutes };
+export { router as modelsRoutes };
+*/

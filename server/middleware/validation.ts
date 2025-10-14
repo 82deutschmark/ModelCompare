@@ -12,6 +12,6 @@ export const validateRequest = (schema: ZodSchema) => (req: Request, res: Respon
     schema.parse(req.body);
     next();
   } catch (error) {
-    res.status(400).json({ error: 'Validation failed', details: error.errors });
+    res.status(400).json({ error: 'Validation failed', details: (error as any).errors });
   }
 };
