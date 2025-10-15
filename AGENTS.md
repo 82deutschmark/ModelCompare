@@ -285,3 +285,6 @@ promptAudits: {
 ## Environment & Configuration Tips
 - Load secrets from `.env` (read immediately in `server/index.ts`); do not commit credentials.
 - Keep `drizzle.config.ts` aligned with `server/config.ts` whenever database URLs or migration directories move.
+
+## Git commit failures in PowerShell
+- often stem from complex messages with special characters (colons, quotes) causing Invoke-Expression parsing errors. Use simple, unescaped messages or proper escaping to avoid this!!

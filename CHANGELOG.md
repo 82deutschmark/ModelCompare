@@ -7,6 +7,30 @@ Author: Cascade (AI assistant)
 Date: 2025-08-17
 -->
 
+## [Version 0.4.0] - 2025-10-15
+
+### Refactored
+- **Complete Debate Mode Architecture Overhaul:** Major refactoring for improved maintainability and modularity
+  - **Custom Hooks Architecture:** Extracted state management into `useDebateState`, `useDebatePrompts`, and `useDebateExport` hooks
+  - **Service Layer Implementation:** Created `DebateService` class for centralized business logic (prompt generation, rebuttal building, cost calculation)
+  - **Modular Component System:** Split monolithic debate.tsx into focused components:
+    - `DebateTopicSelector` - Topic selection UI
+    - `ModelSelector` - Model selection and configuration
+    - `AdversarialLevelSelector` - Intensity selection
+    - `DebateControls` - Progress display and action buttons
+    - `DebateMessageList` - Message rendering with continue functionality
+    - `DebateSetupPanel` - Composed setup interface
+  - **Single Responsibility Principle:** Each component/hook has one clear purpose
+  - **DRY Compliance:** Eliminated code duplication through reusable components
+  - **Type Safety:** Full TypeScript support with proper interfaces
+  - **Clean Architecture:** Separation of concerns between UI, business logic, and state management
+
+### Technical Details
+- **File Structure:** Organized code into logical directories (`hooks/`, `services/`, `components/debate/`)
+- **Maintainability:** Reduced main component complexity while preserving all functionality
+- **Testing Ready:** Modular design enables easier unit testing of individual components
+- **Future Extensions:** Architecture supports easy addition of new debate features
+
 ## [Unreleased]
 
 ### Added
