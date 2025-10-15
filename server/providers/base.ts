@@ -99,6 +99,12 @@ export interface StreamingCallOptions {
   previousResponseId?: string; // For conversation chaining
   temperature?: number;
   maxTokens?: number;
+  // Reasoning configuration for advanced models
+  reasoningConfig?: {
+    effort?: 'minimal' | 'low' | 'medium' | 'high';
+    summary?: 'auto' | 'detailed' | 'concise';
+    verbosity?: 'low' | 'medium' | 'high';
+  };
   onReasoningChunk: (chunk: string) => void;
   onContentChunk: (chunk: string) => void;
   onComplete: (responseId: string, tokenUsage: any, cost: any) => void;

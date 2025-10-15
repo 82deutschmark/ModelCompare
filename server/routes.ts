@@ -17,7 +17,7 @@ import { sessionsRoutes } from "./routes/sessions.routes";
 import { auditsRoutes } from "./routes/audits.routes";
 import { healthRoutes } from "./routes/health.routes";
 import { arcAgiRoutes } from "./routes/arc-agi.routes";
-import { creativeRoutes } from "./routes/creative.routes";
+import { webhookRoutes } from "./routes/webhook.routes";
 import { debateRoutes } from "./routes/debate.routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -36,6 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/health', healthRoutes);
   app.use('/api/arc-agi', arcAgiRoutes);
   app.use('/api/creative', creativeRoutes);
+  app.use('/api/webhooks', webhookRoutes);
 
   // Global error handler
   app.use(errorHandler);

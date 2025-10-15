@@ -343,6 +343,7 @@ export class OpenAIProvider extends BaseProvider {
       previousResponseId,
       temperature,
       maxTokens,
+      reasoningConfig,
       onReasoningChunk,
       onContentChunk,
       onComplete,
@@ -361,14 +362,10 @@ export class OpenAIProvider extends BaseProvider {
     const configuredMax = maxTokens || defaultMax;
 
     try {
-      // Build Responses API request
+      // Build Responses API request with proper reasoning configuration
       const requestPayload: any = {
         model: modelId,
         input: messages, // Array of message objects
-        reasoning: {
-          summary: 'auto',
-          effort: 'high' // High effort for debate quality
-        },
         max_output_tokens: configuredMax,
         stream: true // Enable streaming
       };
@@ -376,6 +373,32 @@ export class OpenAIProvider extends BaseProvider {
       // Add conversation chaining if applicable
       if (previousResponseId) {
         requestPayload.previous_response_id = previousResponseId;
+      }
+
+      // Add temperature if provided
+      if (temperature !== undefined) {
+        requestPayload.temperature = temperature;
+      }
+
+      // Configure reasoning based on reasoningConfig or defaults
+      if (reasoningConfig) {
+        requestPayload.reasoning = {
+          effort: reasoningConfig.effort || 'medium',
+          summary: reasoningConfig.summary || 'detailed'
+        };
+
+        requestPayload.text = {
+          verbosity: reasoningConfig.verbosity || 'high'
+        };
+      } else {
+        // Default reasoning configuration
+        requestPayload.reasoning = {
+          summary: 'detailed',
+          effort: 'medium'
+        };
+        requestPayload.text = {
+          verbosity: 'high'
+        };
       }
 
       // Explicitly enable storage for conversation chaining
@@ -396,28 +419,27 @@ export class OpenAIProvider extends BaseProvider {
 
         // Process stream chunks
         for await (const chunk of stream) {
-          // Reasoning chunks
-          if (chunk.type === 'response.reasoning.delta') {
+          // Reasoning chunks - use proper event types from RESPONSES.md
+          if (chunk.type === 'response.reasoning_summary_text.delta') {
             const reasoningText = chunk.delta?.content || '';
             accumulatedReasoning += reasoningText;
             onReasoningChunk(reasoningText);
           }
 
-          // Content chunks
-          if (chunk.type === 'response.output_text.delta') {
-            const contentText = chunk.delta?.content || '';
+          // Content chunks - use proper event types from RESPONSES.md
+          if (chunk.type === 'response.content_part.added') {
+            const contentText = chunk.part?.text || '';
             accumulatedContent += contentText;
             onContentChunk(contentText);
           }
 
-          // Completion event
-          if (chunk.type === 'response.done') {
+          // Completion event - use proper event types from RESPONSES.md
+          if (chunk.type === 'response.completed') {
             finalResponseId = chunk.response?.id || '';
             finalTokenUsage = chunk.response?.usage || null;
           }
         }
 
-        // Calculate cost
         const cost = modelConfig && finalTokenUsage
           ? this.calculateCost(modelConfig, {
               input: finalTokenUsage.input_tokens || 0,

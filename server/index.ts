@@ -69,7 +69,7 @@ if (securityConfig.enableCors) {
 app.use(requestContextMiddleware());
 app.use(requestCompletionLogger());
 
-app.use(express.json({ limit: config.server.jsonSizeLimit, verify: (req: any, _res, buf) => { if (req.originalUrl === '/api/stripe/webhook') { req.rawBody = buf; } } }));
+app.use(express.json({ limit: config.server.jsonSizeLimit, verify: (req: any, _res, buf) => { if (req.originalUrl === '/api/stripe/webhook' || req.originalUrl === '/api/webhooks/webhook') { req.rawBody = buf; } } }));
 app.use(express.urlencoded({ extended: false, limit: config.server.jsonSizeLimit }));
 
 // JSON response capturing for debugging (optional)
