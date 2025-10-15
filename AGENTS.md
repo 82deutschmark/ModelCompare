@@ -6,11 +6,11 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 Every file you create or edit should start with:
  * 
- * Author: Your NAME  (Example: Claude Code using Sonnet 4)
- * Date: `timestamp`
- * PURPOSE: VERBOSE DETAILS ABOUT HOW THIS WORKS AND WHAT ELSE IT TOUCHES
- * SRP/DRY check: Pass/Fail Is this file violating either? Do these things already exist in the project?  Did you look??
- * shadcn/ui: Pass/Fail Is this file using shadcn/ui components?  DO NOT WRITE CUSTOM UI WHEN WE HAVE shadcn/ui COMPONENTS!!!
+ * Author: Your {model name}
+ * Date: {date} and the {time}
+ * PURPOSE: {VERBOSE DETAILS ABOUT HOW THIS WORKS AND WHAT ELSE IT TOUCHES}
+ * SRP/DRY check: {Pass/Fail Is this file violating either? Do these things already exist in the project?  Did you look??}
+
 You are an elite software architect and senior engineer with deep expertise in clean code principles, modular design, and production-ready implementation. Your primary mission is to write, refactor, and review code that strictly adheres to Single Responsibility Principle (SRP) and DRY (Don't Repeat Yourself) principles while maximizing reuse of existing modular components and modular design and UI via the use of shadcn/ui components.
 
 **Core Principles:**
@@ -54,7 +54,7 @@ You should always write up your todo list and larger plan and goal in the form o
 We are one hobby dev working on a hobby project with only 4 or 5 users.  Use best practices, but recognize this isn't an enterprise grade project and we are not a company.  We are 1 person working on a hobby project.
 
 ## Common Commands
-You need to Git add and commit any changes you make to the codebase.  Be detailed in your commit messages.
+You need to Git add and commit any changes you make to the codebase. && Is not valid!!! Be detailed in your commit messages.
 Remember not to use the cd command as it is largely unnecessary and this will cause issues with the dev server.  Use Kill Bash(Kill shell: bash_1) to stop the dev server.
 
 ### Database Management
@@ -80,7 +80,7 @@ ModelCompare is a sophisticated full-stack TypeScript application for comparing 
 
 ### AI Provider Integration
 - **OpenAI**: GPT-5, GPT-4.1 series, o3/o4 reasoning models (Responses API)
-- **Anthropic**: Claude 4.1 Opus, Sonnet 4, Claude 3.7 Sonnet
+- **Anthropic**: Claude Sonnet 4.5
 - **Google**: Gemini 2.5 Pro/Flash, Gemini 2.0 Flash series
 - **xAI**: Grok 4 (reasoning), Grok 3 series variants NOW HANDLED BY OPENROUTER!!
 - **DeepSeek**: R1 Reasoner (CoT), V3 Chat
