@@ -414,8 +414,8 @@ export default function Debate() {
         icon={MessageSquare}
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Setup Panel */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
+        {/* Setup Panel - More Compact */}
         {debateSetup.showSetup && (
           <DebateSetupPanel
             debateData={debateData}
@@ -443,17 +443,17 @@ export default function Debate() {
           />
         )}
 
-        {/* System Prompts Preview - TODO: Extract this into a separate component */}
+        {/* System Prompts Preview - Only show when needed and make more compact */}
         {debateSetup.showSystemPrompts && (debateSetup.model1Id || debateSetup.model2Id) && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Settings className="w-5 h-5" />
+          <Card className="mb-3">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-sm">
+                <Settings className="w-4 h-4" />
                 <span>System Prompts Preview</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 {(() => {
                   const prompts = generateDebatePrompts({
                     selectedTopic: debateSetup.selectedTopic,
@@ -464,21 +464,21 @@ export default function Debate() {
                   return (
                     <>
                       <div>
-                        <h4 className="font-medium mb-2">Opening Statement (Model 1 - Affirmative):</h4>
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                        <h4 className="text-xs font-medium mb-1">Opening (Model 1):</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded border overflow-x-auto whitespace-pre-wrap">
                           {prompts.affirmativePrompt}
                         </pre>
                       </div>
                       <div>
-                        <h4 className="font-medium mb-2">Opening Statement (Model 2 - Negative):</h4>
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                        <h4 className="text-xs font-medium mb-1">Opening (Model 2):</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded border overflow-x-auto whitespace-pre-wrap">
                           {prompts.negativePrompt}
                         </pre>
                       </div>
                       <div>
-                        <h4 className="font-medium mb-2">Rebuttal Template:</h4>
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
-                          {prompts.rebuttalTemplate.replace('{RESPONSE}', '[Previous opponent message will appear here]')}
+                        <h4 className="text-xs font-medium mb-1">Rebuttal Template:</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded border overflow-x-auto whitespace-pre-wrap">
+                          {prompts.rebuttalTemplate.replace('{RESPONSE}', '[Previous opponent message]')}
                         </pre>
                       </div>
                     </>
@@ -489,80 +489,90 @@ export default function Debate() {
           </Card>
         )}
 
-        {/* Debate Progress and Controls */}
-        {debateSession.messages.length > 0 && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <DebateControls
-                currentRound={debateSession.currentRound}
-                totalCost={totalCost}
-                messagesCount={debateSession.messages.length}
-                showSetup={debateSetup.showSetup}
-                setShowSetup={debateSetup.setShowSetup}
-                onExportMarkdown={handleExportMarkdown}
-                onCopyToClipboard={handleCopyToClipboard}
-                onResetDebate={handleResetDebate}
-                isPending={continueDebateMutation.isPending}
-                nextModelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {/* Main Content Area - Better Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
+          {/* Left Column - Controls and Progress */}
+          <div className="xl:col-span-1 space-y-3">
+            {/* Debate Progress and Controls */}
+            {debateSession.messages.length > 0 && (
+              <Card className="p-3">
+                <DebateControls
+                  currentRound={debateSession.currentRound}
+                  totalCost={totalCost}
+                  messagesCount={debateSession.messages.length}
+                  showSetup={debateSetup.showSetup}
+                  setShowSetup={debateSetup.setShowSetup}
+                  onExportMarkdown={handleExportMarkdown}
+                  onCopyToClipboard={handleCopyToClipboard}
+                  onResetDebate={handleResetDebate}
+                  isPending={continueDebateMutation.isPending}
+                  nextModelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
+                />
+              </Card>
+            )}
 
-        {/* Show streaming content in real-time */}
-        {debateStreaming.isStreaming && (
-          <div className="space-y-4 mb-4">
-            <StreamingDisplay
-              reasoning={debateStreaming.reasoning}
-              content={debateStreaming.content}
-              isStreaming={debateStreaming.isStreaming}
-              error={debateStreaming.error}
-              modelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
-              modelProvider={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.provider}
-              progress={debateStreaming.progress}
-              estimatedCost={debateStreaming.estimatedCost}
-            />
-
-            <StreamingControls
-              isStreaming={debateStreaming.isStreaming}
-              progress={debateStreaming.progress}
-              error={debateStreaming.error}
-              estimatedCost={debateStreaming.estimatedCost}
-              onCancel={debateStreaming.cancelStream}
-              onPause={debateStreaming.pauseStream}
-              onResume={debateStreaming.resumeStream}
-            />
+            {/* Streaming Controls - More Compact */}
+            {debateStreaming.isStreaming && (
+              <Card className="p-3">
+                <StreamingControls
+                  isStreaming={debateStreaming.isStreaming}
+                  progress={debateStreaming.progress}
+                  error={debateStreaming.error}
+                  estimatedCost={debateStreaming.estimatedCost}
+                  onCancel={debateStreaming.cancelStream}
+                  onPause={debateStreaming.pauseStream}
+                  onResume={debateStreaming.resumeStream}
+                />
+              </Card>
+            )}
           </div>
-        )}
 
-        {/* Messages */}
-        {debateSession.messages.length > 0 && (
-          <DebateMessageList
-            messages={debateSession.messages}
-            models={models}
-            model1Id={debateSetup.model1Id}
-            model2Id={debateSetup.model2Id}
-            currentRound={debateSession.currentRound}
-            isStreaming={debateStreaming.isStreaming}
-            onContinueDebate={continueDebate}
-          />
-        )}
+          {/* Center Column - Messages */}
+          <div className="xl:col-span-3 space-y-3">
+            {/* Show streaming content in real-time */}
+            {debateStreaming.isStreaming && (
+              <StreamingDisplay
+                reasoning={debateStreaming.reasoning}
+                content={debateStreaming.content}
+                isStreaming={debateStreaming.isStreaming}
+                error={debateStreaming.error}
+                modelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
+                modelProvider={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.provider}
+                progress={debateStreaming.progress}
+                estimatedCost={debateStreaming.estimatedCost}
+              />
+            )}
 
-        {/* Empty State */}
-        {debateSession.messages.length === 0 && !debateSetup.showSetup && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Ready for Debate</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Configure your debate setup above and start a 10-round AI model debate.
-              </p>
-              <Button onClick={() => debateSetup.setShowSetup(true)} variant="outline">
-                Show Setup Panel
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+            {/* Messages */}
+            {debateSession.messages.length > 0 && (
+              <DebateMessageList
+                messages={debateSession.messages}
+                models={models}
+                model1Id={debateSetup.model1Id}
+                model2Id={debateSetup.model2Id}
+                currentRound={debateSession.currentRound}
+                isStreaming={debateStreaming.isStreaming}
+                onContinueDebate={continueDebate}
+              />
+            )}
+
+            {/* Empty State */}
+            {debateSession.messages.length === 0 && !debateSetup.showSetup && (
+              <Card className="p-8">
+                <CardContent className="text-center py-8">
+                  <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">Ready for Debate</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Configure your debate setup and start a 10-round AI model debate.
+                  </p>
+                  <Button onClick={() => debateSetup.setShowSetup(true)} variant="outline" size="sm">
+                    Show Setup Panel
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

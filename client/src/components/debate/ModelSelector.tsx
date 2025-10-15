@@ -39,76 +39,88 @@ export function ModelSelector({
   isStreaming,
 }: ModelSelectorProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2 mb-2">
-        <Users className="w-4 h-4" />
-        <label className="text-sm font-medium">Debaters</label>
+    <div className="space-y-3">
+      <div className="flex items-center space-x-2">
+        <Users className="w-3 h-3" />
+        <label className="text-xs font-medium">Debaters</label>
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-2 block">
-          Affirmative (Pro) - {models.find(m => m.id === model1Id)?.name || 'Select Model'}
-        </label>
-        <Select value={model1Id} onValueChange={setModel1Id}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select Pro debater" />
-          </SelectTrigger>
-          <SelectContent>
-            {models.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
-                <div className="flex items-center space-x-2">
-                  <span>{model.name}</span>
-                  <Badge variant="outline" className="text-xs">{model.provider}</Badge>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium mb-1 block">
+            Affirmative (Pro)
+          </label>
+          <Select value={model1Id} onValueChange={setModel1Id}>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select Pro debater" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm">{model.name}</span>
+                    <Badge variant="outline" className="text-xs">{model.provider}</Badge>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium mb-1 block">
+            Negative (Con)
+          </label>
+          <Select value={model2Id} onValueChange={setModel2Id}>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select Con debater" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm">{model.name}</span>
+                    <Badge variant="outline" className="text-xs">{model.provider}</Badge>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-2 block">
-          Negative (Con) - {models.find(m => m.id === model2Id)?.name || 'Select Model'}
-        </label>
-        <Select value={model2Id} onValueChange={setModel2Id}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select Con debater" />
-          </SelectTrigger>
-          <SelectContent>
-            {models.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
-                <div className="flex items-center space-x-2">
-                  <span>{model.name}</span>
-                  <Badge variant="outline" className="text-xs">{model.provider}</Badge>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Model Configuration Panels */}
+      {/* Model Configuration Panels - More Compact */}
       {model1Id && (
-        <div className="mt-4">
-          <h4 className="text-sm font-medium mb-2">Model 1 Configuration</h4>
+        <div className="pt-2 border-t">
+          <div className="mb-2">
+            <h4 className="text-xs font-medium">Model 1 Config</h4>
+          </div>
           <ModelConfigurationPanel
             configuration={model1Config}
             onConfigurationChange={setModel1Config}
             modelName={models.find(m => m.id === model1Id)?.name}
             modelProvider={models.find(m => m.id === model1Id)?.provider}
+            modelSupportsTemperature={models.find(m => m.id === model1Id)?.supportsTemperature}
+            modelIsReasoning={models.find(m => m.id === model1Id)?.isReasoning}
+            modelSupportsStructuredOutput={models.find(m => m.id === model1Id)?.supportsStructuredOutput}
             isStreaming={isStreaming}
           />
         </div>
       )}
 
       {model2Id && (
-        <div className="mt-4">
-          <h4 className="text-sm font-medium mb-2">Model 2 Configuration</h4>
+        <div className="pt-2 border-t">
+          <div className="mb-2">
+            <h4 className="text-xs font-medium">Model 2 Config</h4>
+          </div>
           <ModelConfigurationPanel
             configuration={model2Config}
             onConfigurationChange={setModel2Config}
             modelName={models.find(m => m.id === model2Id)?.name}
             modelProvider={models.find(m => m.id === model2Id)?.provider}
+            modelSupportsTemperature={models.find(m => m.id === model2Id)?.supportsTemperature}
+            modelIsReasoning={models.find(m => m.id === model2Id)?.isReasoning}
+            modelSupportsStructuredOutput={models.find(m => m.id === model2Id)?.supportsStructuredOutput}
             isStreaming={isStreaming}
           />
         </div>

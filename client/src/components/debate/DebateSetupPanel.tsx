@@ -75,15 +75,15 @@ export function DebateSetupPanel({
     (!useCustomTopic && selectedTopic || useCustomTopic);
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <MessageSquare className="w-5 h-5" />
+    <Card className="mb-3">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center space-x-2 text-base">
+          <MessageSquare className="w-4 h-4" />
           <span>Debate Setup</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Debate Topic Selection */}
           <DebateTopicSelector
             debateData={debateData}
