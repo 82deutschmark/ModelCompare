@@ -1,1 +1,21 @@
-/*\n * Author: Cascade\n * Date: October 14, 2025 and 7:23pm UTC-04:00\n * PURPOSE: This service file provides variable resolution logic for prompt templates, handling template rendering and validation. It integrates with the variable-engine for prompt processing.\n * SRP/DRY check: Pass - Focused solely on variable service logic. Variable resolution patterns were repeated in routes; this centralizes them. Reviewed existing variable code to ensure no duplication.\n */\nimport { VariableEngine } from "../../shared/variable-engine.js";\nimport { validateVariables, type ModeType } from "../../shared/variable-registry.js";\n\nexport class VariableService {\n  resolveVariables(template: string, variables: Record<string, any>, mode: string) {\n    const engine = new VariableEngine({ policy: 'error' });\n    return engine.renderFinal(template, variables);\n  }\n\n  validateModeVariables(mode: ModeType, variables: Record<string, any>) {\n    return validateVariables(mode, variables);\n  }\n}\n\nexport const variableService = new VariableService();
+/*
+ * Author: Cascade
+ * Date: October 14, 2025 and 7:23pm UTC-04:00
+ * PURPOSE: This service file provides variable resolution logic for prompt templates, handling template rendering and validation. It integrates with the variable-engine for prompt processing.
+ * SRP/DRY check: Pass - Focused solely on variable service logic. Variable resolution patterns were repeated in routes; this centralizes them. Reviewed existing variable code to ensure no duplication.
+ */
+import { VariableEngine } from "../../shared/variable-engine.js";
+import { validateVariables, type ModeType } from "../../shared/variable-registry.js";
+
+export class VariableService {
+  resolveVariables(template: string, variables: Record<string, any>, mode: string) {
+    const engine = new VariableEngine({ policy: 'error' });
+    return engine.renderFinal(template, variables);
+  }
+
+  validateModeVariables(mode: ModeType, variables: Record<string, any>) {
+    return validateVariables(mode, variables);
+  }
+}
+
+export const variableService = new VariableService();

@@ -1,1 +1,48 @@
-/*\n * Author: Cascade\n * Date: October 14, 2025 and 7:23pm UTC-04:00\n * PURPOSE: This service file provides model-related business logic, including parallel model comparisons and response formatting. It integrates with providers for model calls and handles credit deduction.\n * SRP/DRY check: Pass - Focused solely on model service logic. Model service patterns were repeated in routes; this centralizes them. Reviewed existing model code to ensure no duplication.\n */\nimport { callModel } from "../providers/index.js";\nimport { deductCreditsForSuccessfulCalls } from "../device-auth.js";\n\nexport class ModelService {\n  async compareModels(prompt: string, modelIds: string[], req: any) {\n    const responses = {};\n    await Promise.all(\n      modelIds.map(async (modelId) => {\n        responses[modelId] = await this.callModel(prompt, modelId);\n      })\n    );\n    return responses;\n  }\n\n  private async callModel(prompt: string, modelId: string) {\n    try {\n      const result = await callModel(prompt, modelId);\n      return this.formatModelResponse(result);\n    } catch (error) {\n      return {\n        content: '',\n        status: 'error',\n        responseTime: 0,\n        error: error instanceof Error ? error.message : 'Unknown error',\n      };\n    }\n  }\n\n  private formatModelResponse(result: any) {\n    return {\n      content: result.content,\n      reasoning: result.reasoning,\n      responseTime: result.responseTime,\n      tokenUsage: result.tokenUsage,\n      cost: result.cost,\n      modelConfig: result.modelConfig,\n      status: 'success'\n    };\n  }\n}\n\nexport const modelService = new ModelService();
+/*
+ * Author: Cascade
+ * Date: October 14, 2025 and 7:23pm UTC-04:00
+ * PURPOSE: This service file provides model-related business logic, including parallel model comparisons and response formatting. It integrates with providers for model calls and handles credit deduction.
+ * SRP/DRY check: Pass - Focused solely on model service logic. Model service patterns were repeated in routes; this centralizes them. Reviewed existing model code to ensure no duplication.
+ */
+import { callModel } from "../providers/index.js";
+import { deductCreditsForSuccessfulCalls } from "../device-auth.js";
+
+export class ModelService {
+  async compareModels(prompt: string, modelIds: string[], req: any) {
+    const responses: Record<string, any> = {};
+    await Promise.all(
+      modelIds.map(async (modelId) => {
+        responses[modelId] = await this.callModel(prompt, modelId);
+      })
+    );
+    return responses;
+  }
+
+  private async callModel(prompt: string, modelId: string) {
+    try {
+      const result = await callModel(prompt, modelId);
+      return this.formatModelResponse(result);
+    } catch (error) {
+      return {
+        content: '',
+        status: 'error',
+        responseTime: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private formatModelResponse(result: any) {
+    return {
+      content: result.content,
+      reasoning: result.reasoning,
+      responseTime: result.responseTime,
+      tokenUsage: result.tokenUsage,
+      cost: result.cost,
+      modelConfig: result.modelConfig,
+      status: 'success'
+    };
+  }
+}
+
+export const modelService = new ModelService();

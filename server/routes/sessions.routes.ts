@@ -1,8 +1,9 @@
 /*
  * Author: Cascade
  * Date: October 14, 2025 and 7:23pm UTC-04:00
- * PURPOSE: This main routes file orchestrates all route modules, registering them with the Express app and applying global middleware like error handling. It integrates with all route modules and touches middleware for application-wide setup.
- * SRP/DRY check: Pass - Focused solely on route registration. Route registration patterns were scattered in the monolithic file; this centralizes them. Reviewed existing route setup to ensure no duplication.
+ * PURPOSE: This routes file handles Vixra session persistence endpoints for saving and retrieving session data. It integrates with storage for session management.
+ * SRP/DRY check: Pass - Focused solely on session logic. Session patterns were repeated in the monolithic routes.ts; this extracts them. Reviewed existing session code to ensure no duplication.
+ */
 import { Router } from "express";
 import { getStorage } from "../storage.js";
 
@@ -78,4 +79,3 @@ router.get("/", async (req, res) => {
 });
 
 export { router as sessionsRoutes };
-*/

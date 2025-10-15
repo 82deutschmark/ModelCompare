@@ -3,10 +3,14 @@
  * Date: October 14, 2025 and 7:23pm UTC-04:00
  * PURPOSE: This routes file handles model-related endpoints, including retrieving available AI models from the catalog, comparing models with parallel processing, and managing comparison history. It integrates with providers for model calls, storage for persistence, and device-auth for credit checks.
  * SRP/DRY check: Pass - Focused solely on model catalog and comparison logic. Model patterns were repeated in the monolithic routes.ts; this extracts them. Reviewed existing model code to ensure no duplication.
+ */
 import { Router } from "express";
+import { z } from "zod";
+import { callModel } from "../providers/index.js";
 import { modelService } from "../services/model.service.js";
 import { getStorage } from "../storage.js";
 import { getDisplayForModelId, MODEL_CATALOG } from "../../shared/model-catalog.js";
+import { ensureDeviceUser, checkDeviceCredits, deductCreditsForSuccessfulCalls } from "../device-auth.js";
 import { ApiResponse } from "../utils/response.js";
 
 const router = Router();
@@ -85,7 +89,7 @@ router.post("/compare", ensureDeviceUser, checkDeviceCredits, async (req, res) =
     const { prompt, modelIds } = compareModelsSchema.parse(req.body);
 
     // Use ModelService for parallel model calls
-    const responses = await modelService.compareModels(prompt, modelIds, req);
+    const responses: Record<string, any> = await modelService.compareModels(prompt, modelIds, req);
 
     // Deduct credits for successful API calls (5 credits per model called)
     const successfulCalls = modelIds.filter(modelId => responses[modelId]?.status === 'success').length;
@@ -164,4 +168,3 @@ router.post("/respond", async (req, res) => {
 });
 
 export { router as modelsRoutes };
-*/

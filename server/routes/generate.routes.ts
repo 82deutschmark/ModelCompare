@@ -3,7 +3,9 @@
  * Date: October 14, 2025 and 7:23pm UTC-04:00
  * PURPOSE: This main routes file orchestrates all route modules, registering them with the Express app and applying global middleware like error handling. It integrates with all route modules and touches middleware for application-wide setup.
  * SRP/DRY check: Pass - Focused solely on route registration. Route registration patterns were scattered in the monolithic file; this centralizes them. Reviewed existing route setup to ensure no duplication.
+ */
 import { Router } from "express";
+import { callModel, callModelWithMessages } from "../providers/index.js";
 import { VariableEngine } from "../../shared/variable-engine.js";
 import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../../shared/variable-registry.js";
 import type { GenerateRequest, GenerateResponse, UnifiedMessage, ModelMessage } from "../../shared/api-types.js";
@@ -293,28 +295,9 @@ router.post("/structured", async (req, res) => {
     console.error("Generate structured endpoint error:", error);
     res.status(500).json({
       error: "Failed to generate structured response",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-
-  // Return response with audit trail
-  res.json({
-    content: result.content,
-    reasoning: result.reasoning,
-    responseTime: result.responseTime,
-    tokenUsage: result.tokenUsage,
-    cost: result.cost,
-    modelConfig: result.modelConfig,
-    audit: auditInfo,
-    messageStructure: messages.map((m: any) => ({ role: m.role, contentLength: m.content.length }))
-  });
-
-} catch (error) {
-  console.error("Generate structured endpoint error:", error);
-  res.status(500).json({
-    error: "Failed to generate structured response",
-    details: error instanceof Error ? error.message : 'Unknown error'
-  });
-}
 });
 
-export { router as modelsRoutes };
-*/
+export { router as generateRoutes };
