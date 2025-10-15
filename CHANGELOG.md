@@ -43,9 +43,14 @@ Date: 2025-08-17
 - **Testing Ready:** Modular design enables easier unit testing of individual components
 - **Future Extensions:** Architecture supports easy addition of new debate features
 
-### Notes
-- **Senior Dev Approved:** All architectural concerns addressed with proper SRP/DRY compliance
-- **Production Ready:** Clean, maintainable codebase following established patterns
+### Fixed
+- **🚨 CRITICAL: Debate Streaming Race Conditions:** Fixed fundamental bugs where streamed responses never appeared in session logs
+  - **Root Cause:** Checking `responseId` immediately after `startStream` resolves, but `responseId` only becomes available when streaming completes
+  - **Solution:** Implemented proper `useEffect` hooks to handle streaming completion and message recording
+  - **Impact:** Opening statements and all subsequent turns now properly recorded in debate transcript
+- **🚨 CRITICAL: Session Loading Bug:** `loadDebateSessionsMutation` was defined but never invoked
+  - **Solution:** Added `useEffect` to automatically load sessions on component mount
+  - **Impact:** Session history now properly loads and `existingDebateSessions` state is populated
 
 ## [Unreleased]
 
