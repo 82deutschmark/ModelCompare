@@ -145,29 +145,7 @@ export default function Debate() {
         maxTokens: debateSetup.model1Config.maxTokens
       });
 
-      // When complete, add to messages and store response ID
-      if (debateStreaming.responseId) {
-        const model1 = debateService.getModel(debateSetup.model1Id);
-        debateSession.setMessages([{
-          id: `msg-1`,
-          modelId: debateSetup.model1Id,
-          modelName: model1?.name || "Model 1",
-          content: debateStreaming.content,
-          reasoning: debateStreaming.reasoning,
-          timestamp: Date.now(),
-          round: 1,
-          responseTime: 0, // Not tracked in streaming
-          tokenUsage: debateStreaming.tokenUsage,
-          cost: debateStreaming.cost,
-          modelConfig: {
-            capabilities: debateSetup.model1Config.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
-            pricing: { inputPerMillion: 0, outputPerMillion: 0 } // Will be filled from API response
-          }
-        }]);
-        debateSession.setModelALastResponseId(debateStreaming.responseId);
-        debateSession.setCurrentRound(1);
-        debateSetup.setShowSetup(false);
-      }
+      // Message recording is now handled in useEffect when streaming completes
     },
     onError: (error) => {
       toast({
@@ -268,6 +246,76 @@ export default function Debate() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [debateSession.messages]);
 
+  // Handle streaming completion for opening statement
+  useEffect(() => {
+    if (debateStreaming.responseId && debateStreaming.content && debateSession.messages.length === 0) {
+      const model1 = debateService?.getModel(debateSetup.model1Id);
+      debateSession.setMessages([{
+        id: `msg-1`,
+        modelId: debateSetup.model1Id,
+        modelName: model1?.name || "Model 1",
+        content: debateStreaming.content,
+        reasoning: debateStreaming.reasoning,
+        timestamp: Date.now(),
+        round: 1,
+        responseTime: 0,
+        tokenUsage: debateStreaming.tokenUsage,
+        cost: debateStreaming.cost,
+        modelConfig: {
+          capabilities: debateSetup.model1Config.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
+          pricing: { inputPerMillion: 0, outputPerMillion: 0 }
+        }
+      }]);
+      debateSession.setModelALastResponseId(debateStreaming.responseId);
+      debateSession.setCurrentRound(1);
+      debateSetup.setShowSetup(false);
+    }
+  }, [debateStreaming.responseId, debateStreaming.content, debateSession.messages.length, debateService, debateSetup.model1Id, debateSetup.model1Config.enableReasoning, debateSetup.model1Config.maxTokens]);
+
+  // Handle streaming completion for subsequent turns
+  useEffect(() => {
+    if (debateStreaming.responseId && debateStreaming.content && debateSession.messages.length > 0 && debateStreaming.responseId !== debateSession.modelALastResponseId) {
+      const lastMessage = debateSession.messages[debateSession.messages.length - 1];
+      const isModelBTurn = debateSession.currentRound % 2 === 1;
+      const nextModelId = isModelBTurn ? debateSetup.model2Id : debateSetup.model1Id;
+      const nextModelConfig = isModelBTurn ? debateSetup.model2Config : debateSetup.model1Config;
+
+      const model = debateService?.getModel(nextModelId);
+      const nextRound = debateSession.currentRound + 1;
+
+      debateSession.addMessage({
+        id: `msg-${nextRound}`,
+        modelId: nextModelId,
+        modelName: model?.name || "Model",
+        content: debateStreaming.content,
+        reasoning: debateStreaming.reasoning,
+        timestamp: Date.now(),
+        round: Math.ceil(nextRound / 2),
+        responseTime: 0,
+        tokenUsage: debateStreaming.tokenUsage,
+        cost: debateStreaming.cost,
+        modelConfig: {
+          capabilities: nextModelConfig.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
+          pricing: { inputPerMillion: 0, outputPerMillion: 0 }
+        }
+      });
+
+      // Update the correct model's response ID
+      if (isModelBTurn) {
+        debateSession.setModelBLastResponseId(debateStreaming.responseId);
+      } else {
+        debateSession.setModelALastResponseId(debateStreaming.responseId);
+      }
+
+      debateSession.setCurrentRound(nextRound);
+    }
+  }, [debateStreaming.responseId, debateStreaming.content, debateSession.messages.length, debateSession.currentRound, debateService, debateSetup.model1Id, debateSetup.model2Id, debateSetup.model1Config.enableReasoning, debateSetup.model2Config.enableReasoning]);
+
+  // Load existing debate sessions on component mount
+  useEffect(() => {
+    loadDebateSessionsMutation.mutate();
+  }, []);
+
   const continueDebate = async () => {
     if (!debateSetup.model1Id || !debateSetup.model2Id || !debateService) return;
 
@@ -286,7 +334,7 @@ export default function Debate() {
       ? debateSession.modelBLastResponseId
       : debateSession.modelALastResponseId;
 
-    // Start streaming with configuration and session ID
+    // Start streaming - message recording is handled in useEffect when streaming completes
     await debateStreaming.startStream({
       modelId: nextModelId,
       topic: debateService.getTopicText(),
@@ -304,38 +352,6 @@ export default function Debate() {
       textVerbosity: nextModelConfig.textVerbosity,
       temperature: nextModelConfig.temperature,
     });
-
-    // When complete, add to messages and update response ID
-    if (debateStreaming.responseId) {
-      const model = debateService.getModel(nextModelId);
-      const nextRound = debateSession.currentRound + 1;
-
-      debateSession.addMessage({
-        id: `msg-${nextRound}`,
-        modelId: nextModelId,
-        modelName: model?.name || "Model",
-        content: debateStreaming.content,
-        reasoning: debateStreaming.reasoning,
-        timestamp: Date.now(),
-        round: Math.ceil(nextRound / 2),
-        responseTime: 0,
-        tokenUsage: debateStreaming.tokenUsage,
-        cost: debateStreaming.cost,
-        modelConfig: {
-          capabilities: nextModelConfig.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
-          pricing: { inputPerMillion: 0, outputPerMillion: 0 } // Will be filled from API response
-        }
-      });
-
-      // Update the correct model's response ID
-      if (isModelBTurn) {
-        debateSession.setModelBLastResponseId(debateStreaming.responseId);
-      } else {
-        debateSession.setModelALastResponseId(debateStreaming.responseId);
-      }
-
-      debateSession.setCurrentRound(nextRound);
-    }
   };
 
   const handleStartDebate = async () => {
