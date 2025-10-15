@@ -33,7 +33,9 @@ import { useTheme } from "@/components/ThemeProvider";
 import type { AIModel, ModelResponse } from '@/types/ai-models';
 
 // Import new hooks and components
-import { useDebateState } from "@/hooks/useDebateState";
+import { useDebateSetup } from "@/hooks/useDebateSetup";
+import { useDebateSession } from "@/hooks/useDebateSession";
+import { useDebateStreaming } from "@/hooks/useDebateStreaming";
 import { useDebatePrompts } from "@/hooks/useDebatePrompts";
 import { useDebateExport } from "@/hooks/useDebateExport";
 import { DebateService } from "@/services/debateService";
@@ -46,13 +48,13 @@ export default function Debate() {
   const { theme, toggleTheme } = useTheme();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Use the new state management hook
-  const debateState = useDebateState();
+  // Use the new granular state management hooks
+  const debateSetup = useDebateSetup();
+  const debateSession = useDebateSession();
+  const debateStreaming = useDebateStreaming();
 
-  // Use the new prompts hook
+  // Use the existing hooks for prompts and export
   const { debateData, loading: debateLoading, error: debateError, generateDebatePrompts } = useDebatePrompts();
-
-  // Use the new export hook
   const { exportMarkdown, copyToClipboard } = useDebateExport();
 
   // Fetch available models
@@ -71,22 +73,22 @@ export default function Debate() {
     return new DebateService({
       debateData,
       models,
-      selectedTopic: debateState.selectedTopic,
-      customTopic: debateState.customTopic,
-      useCustomTopic: debateState.useCustomTopic,
-      adversarialLevel: debateState.adversarialLevel,
-      model1Id: debateState.model1Id,
-      model2Id: debateState.model2Id,
+      selectedTopic: debateSetup.selectedTopic,
+      customTopic: debateSetup.customTopic,
+      useCustomTopic: debateSetup.useCustomTopic,
+      adversarialLevel: debateSetup.adversarialLevel,
+      model1Id: debateSetup.model1Id,
+      model2Id: debateSetup.model2Id,
     });
   }, [
     debateData,
     models,
-    debateState.selectedTopic,
-    debateState.customTopic,
-    debateState.useCustomTopic,
-    debateState.adversarialLevel,
-    debateState.model1Id,
-    debateState.model2Id,
+    debateSetup.selectedTopic,
+    debateSetup.customTopic,
+    debateSetup.useCustomTopic,
+    debateSetup.adversarialLevel,
+    debateSetup.model1Id,
+    debateSetup.model2Id,
   ]);
 
   // Advanced streaming hook
@@ -106,22 +108,89 @@ export default function Debate() {
     resumeStream
   } = useAdvancedStreaming();
 
-  // Create debate session mutation
+  // Create debate session mutation with streaming logic in onSuccess
   const createDebateSessionMutation = useMutation({
     mutationFn: async (data: { topic: string; model1Id: string; model2Id: string; adversarialLevel: number }) => {
       const response = await apiRequest('POST', '/api/debate/session', data);
       return response.json();
     },
-    onSuccess: (data) => {
-      debateState.setDebateSessionId(data.id);
+    onSuccess: async (data) => {
+      debateSession.setDebateSessionId(data.id);
       toast({
         title: "Debate Session Created",
         description: "Starting debate with session tracking",
       });
+
+      // Start streaming for Model A's opening with configuration
+      if (!debateService) return;
+
+      const prompts = debateService.generatePrompts();
+
+      await debateStreaming.startStream({
+        modelId: debateSetup.model1Id,
+        topic: prompts.topicText,
+        role: 'AFFIRMATIVE',
+        intensity: debateSetup.adversarialLevel,
+        opponentMessage: null, // No opponent yet
+        previousResponseId: null, // First turn
+        turnNumber: 1,
+        sessionId: data.id,
+        model1Id: debateSetup.model1Id,
+        model2Id: debateSetup.model2Id,
+        // Pass model configuration
+        reasoningEffort: debateSetup.model1Config.reasoningEffort,
+        reasoningSummary: debateSetup.model1Config.reasoningSummary,
+        textVerbosity: debateSetup.model1Config.textVerbosity,
+        temperature: debateSetup.model1Config.temperature,
+        maxTokens: debateSetup.model1Config.maxTokens
+      });
+
+      // When complete, add to messages and store response ID
+      if (debateStreaming.responseId) {
+        const model1 = debateService.getModel(debateSetup.model1Id);
+        debateSession.setMessages([{
+          id: `msg-1`,
+          modelId: debateSetup.model1Id,
+          modelName: model1?.name || "Model 1",
+          content: debateStreaming.content,
+          reasoning: debateStreaming.reasoning,
+          timestamp: Date.now(),
+          round: 1,
+          responseTime: 0, // Not tracked in streaming
+          tokenUsage: debateStreaming.tokenUsage,
+          cost: debateStreaming.cost,
+          modelConfig: {
+            capabilities: debateSetup.model1Config.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
+            pricing: { inputPerMillion: 0, outputPerMillion: 0 } // Will be filled from API response
+          }
+        }]);
+        debateSession.setModelALastResponseId(debateStreaming.responseId);
+        debateSession.setCurrentRound(1);
+        debateSetup.setShowSetup(false);
+      }
     },
     onError: (error) => {
       toast({
         title: "Failed to Create Session",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Load existing debate sessions mutation
+  const loadDebateSessionsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/debate/sessions');
+      if (!response.ok) throw new Error('Failed to load debate sessions');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      debateSession.setExistingDebateSessions(data);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Load Sessions",
         description: error.message,
         variant: "destructive",
       });
@@ -134,7 +203,7 @@ export default function Debate() {
       if (!debateService) throw new Error('Debate service not initialized');
 
       const prompts = debateService.generatePrompts();
-      const isNegativeDebater = data.nextModelId === debateState.model2Id;
+      const isNegativeDebater = data.nextModelId === debateSetup.model2Id;
       const role = isNegativeDebater ? 'NEGATIVE' : 'AFFIRMATIVE';
       const position = isNegativeDebater ? 'AGAINST' : 'FOR';
       const currentTopic = prompts.topicText;
@@ -159,9 +228,9 @@ export default function Debate() {
       if (!debateService) return;
 
       const model = debateService.getModel(data.modelId);
-      const nextRound = debateState.currentRound + 1;
+      const nextRound = debateSession.currentRound + 1;
 
-      debateState.setMessages([...debateState.messages, {
+      debateSession.addMessage({
         id: `msg-${nextRound}`,
         modelId: data.modelId,
         modelName: model?.name || "Model",
@@ -174,9 +243,9 @@ export default function Debate() {
         tokenUsage: data.response.tokenUsage,
         cost: data.response.cost,
         modelConfig: data.response.modelConfig,
-      }]);
+      });
 
-      debateState.setCurrentRound(nextRound);
+      debateSession.setCurrentRound(nextRound);
 
       const nextModel = debateService.getNextDebater(nextRound);
       toast({
@@ -185,7 +254,7 @@ export default function Debate() {
       });
     },
     onError: (error) => {
-      debateState.setIsRunning(false);
+      debateSession.setIsRunning(false);
       toast({
         title: "Debate Continuation Failed",
         description: error.message,
@@ -197,38 +266,38 @@ export default function Debate() {
   // Auto-scroll to bottom of chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [debateState.messages]);
+  }, [debateSession.messages]);
 
   const continueDebate = async () => {
-    if (!debateState.model1Id || !debateState.model2Id || !debateService) return;
+    if (!debateSetup.model1Id || !debateSetup.model2Id || !debateService) return;
 
-    const lastMessage = debateState.messages[debateState.messages.length - 1];
+    const lastMessage = debateSession.messages[debateSession.messages.length - 1];
 
     // Determine which model goes next
-    const isModelBTurn = debateState.currentRound % 2 === 1;
-    const nextModelId = isModelBTurn ? debateState.model2Id : debateState.model1Id;
+    const isModelBTurn = debateSession.currentRound % 2 === 1;
+    const nextModelId = isModelBTurn ? debateSetup.model2Id : debateSetup.model1Id;
     const nextRole = isModelBTurn ? 'NEGATIVE' : 'AFFIRMATIVE';
 
     // Get the model configuration for the next model
-    const nextModelConfig = isModelBTurn ? debateState.model2Config : debateState.model1Config;
+    const nextModelConfig = isModelBTurn ? debateSetup.model2Config : debateSetup.model1Config;
 
     // Determine previous response ID (model's OWN last turn, not opponent's)
     const previousResponseId = isModelBTurn
-      ? debateState.modelBLastResponseId
-      : debateState.modelALastResponseId;
+      ? debateSession.modelBLastResponseId
+      : debateSession.modelALastResponseId;
 
     // Start streaming with configuration and session ID
-    await startStream({
+    await debateStreaming.startStream({
       modelId: nextModelId,
       topic: debateService.getTopicText(),
       role: nextRole,
-      intensity: debateState.adversarialLevel,
+      intensity: debateSetup.adversarialLevel,
       opponentMessage: lastMessage.content,
       previousResponseId: previousResponseId,
-      turnNumber: debateState.currentRound + 1,
-      sessionId: debateState.debateSessionId ?? undefined,
-      model1Id: debateState.model1Id,
-      model2Id: debateState.model2Id,
+      turnNumber: debateSession.currentRound + 1,
+      sessionId: debateSession.debateSessionId ?? undefined,
+      model1Id: debateSetup.model1Id,
+      model2Id: debateSetup.model2Id,
       // Pass model configuration
       reasoningEffort: nextModelConfig.reasoningEffort,
       reasoningSummary: nextModelConfig.reasoningSummary,
@@ -237,35 +306,35 @@ export default function Debate() {
     });
 
     // When complete, add to messages and update response ID
-    if (streamResponseId) {
+    if (debateStreaming.responseId) {
       const model = debateService.getModel(nextModelId);
-      const nextRound = debateState.currentRound + 1;
+      const nextRound = debateSession.currentRound + 1;
 
-      debateState.setMessages([...debateState.messages, {
+      debateSession.addMessage({
         id: `msg-${nextRound}`,
         modelId: nextModelId,
         modelName: model?.name || "Model",
-        content: streamContent,
-        reasoning: streamReasoning,
+        content: debateStreaming.content,
+        reasoning: debateStreaming.reasoning,
         timestamp: Date.now(),
         round: Math.ceil(nextRound / 2),
         responseTime: 0,
-        tokenUsage: streamTokenUsage,
-        cost: streamCost,
+        tokenUsage: debateStreaming.tokenUsage,
+        cost: debateStreaming.cost,
         modelConfig: {
           capabilities: nextModelConfig.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
           pricing: { inputPerMillion: 0, outputPerMillion: 0 } // Will be filled from API response
         }
-      }]);
+      });
 
       // Update the correct model's response ID
       if (isModelBTurn) {
-        debateState.setModelBLastResponseId(streamResponseId);
+        debateSession.setModelBLastResponseId(debateStreaming.responseId);
       } else {
-        debateState.setModelALastResponseId(streamResponseId);
+        debateSession.setModelALastResponseId(debateStreaming.responseId);
       }
 
-      debateState.setCurrentRound(nextRound);
+      debateSession.setCurrentRound(nextRound);
     }
   };
 
@@ -281,63 +350,18 @@ export default function Debate() {
 
     const prompts = debateService.generatePrompts();
 
-    // First, create a debate session
+    // Create debate session - streaming will start automatically in onSuccess
     await createDebateSessionMutation.mutateAsync({
       topic: prompts.topicText,
-      model1Id: debateState.model1Id,
-      model2Id: debateState.model2Id,
-      adversarialLevel: debateState.adversarialLevel
+      model1Id: debateSetup.model1Id,
+      model2Id: debateSetup.model2Id,
+      adversarialLevel: debateSetup.adversarialLevel
     });
-
-    // Then start streaming for Model A's opening with configuration
-    if (debateState.debateSessionId) {
-      await startStream({
-        modelId: debateState.model1Id,
-        topic: prompts.topicText,
-        role: 'AFFIRMATIVE',
-        intensity: debateState.adversarialLevel,
-        opponentMessage: null, // No opponent yet
-        previousResponseId: null, // First turn
-        turnNumber: 1,
-        sessionId: debateState.debateSessionId ?? undefined,
-        model1Id: debateState.model1Id,
-        model2Id: debateState.model2Id,
-        // Pass model configuration
-        reasoningEffort: debateState.model1Config.reasoningEffort,
-        reasoningSummary: debateState.model1Config.reasoningSummary,
-        textVerbosity: debateState.model1Config.textVerbosity,
-        temperature: debateState.model1Config.temperature,
-        maxTokens: debateState.model1Config.maxTokens
-      });
-
-      // When complete, add to messages and store response ID
-      if (streamResponseId) {
-        const model1 = debateService.getModel(debateState.model1Id);
-        debateState.setMessages([{
-          id: `msg-1`,
-          modelId: debateState.model1Id,
-          modelName: model1?.name || "Model 1",
-          content: streamContent,
-          reasoning: streamReasoning,
-          timestamp: Date.now(),
-          round: 1,
-          responseTime: 0, // Not tracked in streaming
-          tokenUsage: streamTokenUsage,
-          cost: streamCost,
-          modelConfig: {
-            capabilities: debateState.model1Config.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
-            pricing: { inputPerMillion: 0, outputPerMillion: 0 } // Will be filled from API response
-          }
-        }]);
-        debateState.setModelALastResponseId(streamResponseId);
-        debateState.setCurrentRound(1);
-        debateState.setShowSetup(false);
-      }
-    }
   };
 
   const handleResetDebate = () => {
-    debateState.reset();
+    debateSetup.resetSetup();
+    debateSession.resetSession();
     toast({
       title: "Debate Reset",
       description: "All debate data has been cleared.",
@@ -346,25 +370,25 @@ export default function Debate() {
 
   const handleExportMarkdown = () => {
     exportMarkdown({
-      messages: debateState.messages,
+      messages: debateSession.messages,
       models,
-      selectedTopic: debateState.selectedTopic,
-      customTopic: debateState.customTopic,
-      useCustomTopic: debateState.useCustomTopic,
+      selectedTopic: debateSetup.selectedTopic,
+      customTopic: debateSetup.customTopic,
+      useCustomTopic: debateSetup.useCustomTopic,
     });
   };
 
   const handleCopyToClipboard = async () => {
     await copyToClipboard({
-      messages: debateState.messages,
+      messages: debateSession.messages,
       models,
-      selectedTopic: debateState.selectedTopic,
-      customTopic: debateState.customTopic,
-      useCustomTopic: debateState.useCustomTopic,
+      selectedTopic: debateSetup.selectedTopic,
+      customTopic: debateSetup.customTopic,
+      useCustomTopic: debateSetup.useCustomTopic,
     });
   };
 
-  const totalCost = debateService?.calculateTotalCost(debateState.messages) || 0;
+  const totalCost = debateSession.calculateTotalCost();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -376,35 +400,35 @@ export default function Debate() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Setup Panel */}
-        {debateState.showSetup && (
+        {debateSetup.showSetup && (
           <DebateSetupPanel
             debateData={debateData}
             debateLoading={debateLoading}
             debateError={debateError}
             models={models}
-            selectedTopic={debateState.selectedTopic}
-            setSelectedTopic={debateState.setSelectedTopic}
-            customTopic={debateState.customTopic}
-            setCustomTopic={debateState.setCustomTopic}
-            useCustomTopic={debateState.useCustomTopic}
-            setUseCustomTopic={debateState.setUseCustomTopic}
-            adversarialLevel={debateState.adversarialLevel}
-            setAdversarialLevel={debateState.setAdversarialLevel}
-            model1Id={debateState.model1Id}
-            setModel1Id={debateState.setModel1Id}
-            model2Id={debateState.model2Id}
-            setModel2Id={debateState.setModel2Id}
-            model1Config={debateState.model1Config}
-            setModel1Config={debateState.setModel1Config}
-            model2Config={debateState.model2Config}
-            setModel2Config={debateState.setModel2Config}
+            selectedTopic={debateSetup.selectedTopic}
+            setSelectedTopic={debateSetup.setSelectedTopic}
+            customTopic={debateSetup.customTopic}
+            setCustomTopic={debateSetup.setCustomTopic}
+            useCustomTopic={debateSetup.useCustomTopic}
+            setUseCustomTopic={debateSetup.setUseCustomTopic}
+            adversarialLevel={debateSetup.adversarialLevel}
+            setAdversarialLevel={debateSetup.setAdversarialLevel}
+            model1Id={debateSetup.model1Id}
+            setModel1Id={debateSetup.setModel1Id}
+            model2Id={debateSetup.model2Id}
+            setModel2Id={debateSetup.setModel2Id}
+            model1Config={debateSetup.model1Config}
+            setModel1Config={debateSetup.setModel1Config}
+            model2Config={debateSetup.model2Config}
+            setModel2Config={debateSetup.setModel2Config}
             onStartDebate={handleStartDebate}
-            isStreaming={isStreaming}
+            isStreaming={debateStreaming.isStreaming}
           />
         )}
 
         {/* System Prompts Preview - TODO: Extract this into a separate component */}
-        {debateState.showSystemPrompts && (debateState.model1Id || debateState.model2Id) && (
+        {debateSetup.showSystemPrompts && (debateSetup.model1Id || debateSetup.model2Id) && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -416,10 +440,10 @@ export default function Debate() {
               <div className="space-y-4">
                 {(() => {
                   const prompts = generateDebatePrompts({
-                    selectedTopic: debateState.selectedTopic,
-                    customTopic: debateState.customTopic,
-                    useCustomTopic: debateState.useCustomTopic,
-                    adversarialLevel: debateState.adversarialLevel,
+                    selectedTopic: debateSetup.selectedTopic,
+                    customTopic: debateSetup.customTopic,
+                    useCustomTopic: debateSetup.useCustomTopic,
+                    adversarialLevel: debateSetup.adversarialLevel,
                   });
                   return (
                     <>
@@ -450,66 +474,66 @@ export default function Debate() {
         )}
 
         {/* Debate Progress and Controls */}
-        {debateState.messages.length > 0 && (
+        {debateSession.messages.length > 0 && (
           <Card className="mb-6">
             <CardContent className="pt-6">
               <DebateControls
-                currentRound={debateState.currentRound}
+                currentRound={debateSession.currentRound}
                 totalCost={totalCost}
-                messagesCount={debateState.messages.length}
-                showSetup={debateState.showSetup}
-                setShowSetup={debateState.setShowSetup}
+                messagesCount={debateSession.messages.length}
+                showSetup={debateSetup.showSetup}
+                setShowSetup={debateSetup.setShowSetup}
                 onExportMarkdown={handleExportMarkdown}
                 onCopyToClipboard={handleCopyToClipboard}
                 onResetDebate={handleResetDebate}
                 isPending={continueDebateMutation.isPending}
-                nextModelName={debateService?.getModel(debateService.getNextDebater(debateState.currentRound))?.name}
+                nextModelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
               />
             </CardContent>
           </Card>
         )}
 
         {/* Show streaming content in real-time */}
-        {isStreaming && (
+        {debateStreaming.isStreaming && (
           <div className="space-y-4 mb-4">
             <StreamingDisplay
-              reasoning={streamReasoning}
-              content={streamContent}
-              isStreaming={isStreaming}
-              error={streamError}
-              modelName={debateService?.getModel(debateService.getNextDebater(debateState.currentRound))?.name}
-              modelProvider={debateService?.getModel(debateService.getNextDebater(debateState.currentRound))?.provider}
-              progress={streamProgress}
-              estimatedCost={streamEstimatedCost}
+              reasoning={debateStreaming.reasoning}
+              content={debateStreaming.content}
+              isStreaming={debateStreaming.isStreaming}
+              error={debateStreaming.error}
+              modelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
+              modelProvider={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.provider}
+              progress={debateStreaming.progress}
+              estimatedCost={debateStreaming.estimatedCost}
             />
 
             <StreamingControls
-              isStreaming={isStreaming}
-              progress={streamProgress}
-              error={streamError}
-              estimatedCost={streamEstimatedCost}
-              onCancel={cancelStream}
-              onPause={pauseStream}
-              onResume={resumeStream}
+              isStreaming={debateStreaming.isStreaming}
+              progress={debateStreaming.progress}
+              error={debateStreaming.error}
+              estimatedCost={debateStreaming.estimatedCost}
+              onCancel={debateStreaming.cancelStream}
+              onPause={debateStreaming.pauseStream}
+              onResume={debateStreaming.resumeStream}
             />
           </div>
         )}
 
         {/* Messages */}
-        {debateState.messages.length > 0 && (
+        {debateSession.messages.length > 0 && (
           <DebateMessageList
-            messages={debateState.messages}
+            messages={debateSession.messages}
             models={models}
-            model1Id={debateState.model1Id}
-            model2Id={debateState.model2Id}
-            currentRound={debateState.currentRound}
-            isStreaming={isStreaming}
+            model1Id={debateSetup.model1Id}
+            model2Id={debateSetup.model2Id}
+            currentRound={debateSession.currentRound}
+            isStreaming={debateStreaming.isStreaming}
             onContinueDebate={continueDebate}
           />
         )}
 
         {/* Empty State */}
-        {debateState.messages.length === 0 && !debateState.showSetup && (
+        {debateSession.messages.length === 0 && !debateSetup.showSetup && (
           <Card>
             <CardContent className="text-center py-12">
               <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
@@ -517,7 +541,7 @@ export default function Debate() {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Configure your debate setup above and start a 10-round AI model debate.
               </p>
-              <Button onClick={() => debateState.setShowSetup(true)} variant="outline">
+              <Button onClick={() => debateSetup.setShowSetup(true)} variant="outline">
                 Show Setup Panel
               </Button>
             </CardContent>
