@@ -7,6 +7,18 @@ Author: Cascade (AI assistant)
 Date: 2025-08-17
 -->
 
+## [Version 0.4.1] - 2025-10-15
+
+### Fixed
+- **🚨 CRITICAL: Debate Streaming Content Persistence:** Fixed fundamental bug where streamed debate content and reasoning were never saved to database
+  - **Root Cause:** `updateDebateSession` was called with empty strings instead of accumulated streaming content
+  - **Solution:** Updated `StreamingCallOptions` interface and OpenAIProvider to pass final content and reasoning to `onComplete` callback
+  - **Impact:** Debate transcripts now properly populate with both reasoning and content from all turns
+- **🚨 CRITICAL: Missing Route Import:** Fixed deployment failure from undefined `creativeRoutes` reference
+  - **Root Cause:** `routes.ts` referenced `creativeRoutes` but never imported it
+  - **Solution:** Added missing import statement for creative routes module
+  - **Impact:** Server now starts successfully without ReferenceError during route registration
+
 ## [Version 0.4.0] - 2025-10-15
 
 ### Refactored

@@ -11,7 +11,7 @@
  * - Clean debate-focused UI distinct from Battle and Compare modes
  * - Modular prompt loading from docs/debate-prompts.md (no hardcoded topics/instructions)
  *
- * Author: Cascade
+ * Author: Cascade using cloaked Grok model (code-supernova-1-million)
  * Date: October 15, 2025
  * PURPOSE: Refactored debate component using custom hooks and modular components for better maintainability
  * SRP/DRY check: Pass - Single responsibility for debate orchestration, no duplication with other mode components

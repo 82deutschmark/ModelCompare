@@ -89,7 +89,7 @@ export interface CallOptions {
 export interface StreamingCallbacks {
   onReasoningChunk: (chunk: string) => void;
   onContentChunk: (chunk: string) => void;
-  onComplete: (responseId: string, tokenUsage: any, cost: any) => void;
+  onComplete: (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => void;
   onError: (error: Error) => void;
 }
 
@@ -107,7 +107,7 @@ export interface StreamingCallOptions {
   };
   onReasoningChunk: (chunk: string) => void;
   onContentChunk: (chunk: string) => void;
-  onComplete: (responseId: string, tokenUsage: any, cost: any) => void;
+  onComplete: (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => void;
   onError: (error: Error) => void;
 }
 

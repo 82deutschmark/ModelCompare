@@ -242,15 +242,15 @@ Respond as the ${role} debater:
           timestamp: Date.now()
         })}\n\n`);
       },
-      onComplete: async (responseId: string, tokenUsage: any, cost: any) => {
-        // Save turn data to database
+      onComplete: async (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => {
+        // Save turn data to database with actual streamed content
         try {
           const turnCost = cost?.total || 0;
           await storage.updateDebateSession(debateSessionId, {
             turn: turnNumber,
             modelId: modelId,
-            content: '', // Will be filled when we get the complete response
-            reasoning: '', // Will be filled when we get the complete response
+            content: content || '', // Use streamed content if available
+            reasoning: reasoning || '', // Use streamed reasoning if available
             responseId: responseId,
             cost: turnCost
           });

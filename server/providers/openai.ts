@@ -448,8 +448,8 @@ export class OpenAIProvider extends BaseProvider {
             })
           : { total: 0, input: 0, output: 0, reasoning: 0 };
 
-        // Call completion callback
-        onComplete(finalResponseId, finalTokenUsage, cost);
+        // Call completion callback with accumulated content
+        onComplete(finalResponseId, finalTokenUsage, cost, accumulatedContent, accumulatedReasoning);
       } else {
         // Fallback for non-streaming response
         onError(new Error('Streaming not supported by OpenAI SDK version'));

@@ -17,6 +17,7 @@ import { sessionsRoutes } from "./routes/sessions.routes";
 import { auditsRoutes } from "./routes/audits.routes";
 import { healthRoutes } from "./routes/health.routes";
 import { arcAgiRoutes } from "./routes/arc-agi.routes";
+import { creativeRoutes } from "./routes/creative.routes";
 import { webhookRoutes } from "./routes/webhook.routes";
 import { debateRoutes } from "./routes/debate.routes";
 
