@@ -12,6 +12,19 @@ Date: 2025-08-17
 ### Refactoring
 - **Routes.ts SRP Violations Resolved**: Refactored the monolithic 1,368-line routes.ts file into modular route handlers to adhere to Single Responsibility Principle (SRP) and eliminate DRY violations. Created separate modules for authentication, payments, model comparisons, generation, debates, templates, sessions, audits, health checks, ARC-AGI, and creative combat. Added centralized error handling and validation middleware. This improves maintainability, testability, and scalability.
 
+  **Note on Outstanding Issues:** During refactoring, 19 pre-existing TypeScript errors were identified in the following files (unrelated to the refactoring work):
+  - client/src/components/luigi/LuigiArtifactPanel.tsx (1 error)
+  - client/src/hooks/useAuth.ts (1 error)
+  - server/device-auth.ts (1 error)
+  - server/luigi/executor.ts (7 errors)
+  - server/providers/anthropic.ts (1 error)
+  - server/providers/deepseek.ts (1 error)
+  - server/providers/google.ts (1 error)
+  - server/providers/openrouter.ts (1 error)
+  - server/routes/credits.routes.ts (1 error)
+  - server/storage.ts (2 errors)
+  These issues were present before refactoring and should be addressed separately.
+
 ## [Version 0.3.0] - 2025-10-14
 
 ### Added
