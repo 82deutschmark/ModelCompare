@@ -1,8 +1,11 @@
 /*
- * Author: Cascade
- * Date: October 14, 2025 and 7:23pm UTC-04:00
- * PURPOSE: This routes file handles debate streaming endpoints, including turn-based debate logic with reasoning and content streaming. It integrates with providers for streaming model responses.
- * SRP/DRY check: Pass - Focused solely on debate logic. Debate patterns were repeated in the monolithic routes.ts; this extracts them. Reviewed existing debate code to ensure no duplication.
+ * Author: gpt-5-codex
+ * Date: 2025-10-16 18:34 UTC
+ * PURPOSE: Updates debate streaming routes to align with corrected Responses API options by
+ *          removing deprecated verbosity controls and relying on provider-level reasoning defaults
+ *          while preserving existing debate session orchestration.
+ * SRP/DRY check: Pass - File continues to focus on debate routing concerns without duplicating
+ *                provider logic.
  */
 import { Router, Request, Response } from "express";
 import { getProviderForModel } from "../providers/index.js";
@@ -95,8 +98,7 @@ router.post("/stream", async (req, res) => {
       turnNumber, // 1-10
       // New configuration parameters
       reasoningEffort = 'medium',
-      reasoningSummary = 'detailed',
-      textVerbosity = 'high',
+      reasoningSummary = 'auto',
       temperature = 0.7,
       maxTokens = 16384,
       // Session management
@@ -225,8 +227,7 @@ Respond as the ${role} debater:
       // Reasoning configuration for OpenAI provider
       reasoningConfig: {
         effort: reasoningEffort,
-        summary: reasoningSummary,
-        verbosity: textVerbosity
+        summary: reasoningSummary
       },
       onReasoningChunk: (chunk: string) => {
         res.write(`event: stream.chunk\ndata: ${JSON.stringify({
