@@ -77,6 +77,9 @@
 ### Technical Details
 - **Proper SSE Implementation:** Replaced manual fetch-based streaming with EventSource for reliable real-time updates
 - **Database Session Persistence:** Debates are now saved to database with turn history and response ID tracking for conversation chaining
+
+### Fixed
+- **Debate Session Bootstrap Failure:** Extended the legacy `ensureTablesExist` fallback in `server/db.ts` to create the `debate_sessions` table so fresh PostgreSQL deployments no longer return 500 errors when creating debate sessions.
 - **Advanced Reasoning Controls:** Full implementation of OpenAI Responses API reasoning configuration (effort, summary, verbosity)
 - **Real-Time UI Updates:** Live progress bars, cost estimation, and streaming content display during debates
 - **Conversation Chaining:** Proper handling of model conversation history with database-stored response IDs
