@@ -279,8 +279,8 @@ promptAudits: {
 
 ## Commit & Pull Request Guidelines
 - Match the existing git history: concise, imperative, scope-first summaries (for example `Fix battle chat template`).
-- User will handle all pushes and pull requests.
 - Update `docs/` and `shared/` contracts alongside code whenever architecture or API surfaces shift.
+- Update the `changelog.md` with semantic versioning.
 
 ## Environment & Configuration Tips
 - Load secrets from `.env` (read immediately in `server/index.ts`); do not commit credentials.

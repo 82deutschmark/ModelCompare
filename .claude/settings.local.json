@@ -21,7 +21,10 @@
       "WebFetch(domain:openrouter.ai)",
       "Read(//d/GitHub/arc-explainer/server/services/**)",
       "Read(//d/GitHub/arc-explainer/client/**)",
-      "Read(//d/GitHub/arc-explainer/**)"
+      "Read(//d/GitHub/arc-explainer/shared/**)",
+      "Read(//d/GitHub/openai-sdk-streaming/**)",
+      "Read(//d/GitHub/openai-chatkit-advanced-samples/**)",
+      "Read(//d/GitHub/openai_responses/**)"
     ],
     "deny": [],
     "ask": []
