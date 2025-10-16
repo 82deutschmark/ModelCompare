@@ -1,10 +1,9 @@
 # Changelog
 <!--
-File: CHANGELOG.md
-Purpose: Human-readable history of notable changes.
-How the project uses it: Source for release notes and audit of major updates.
-Author: Cascade (AI assistant)
-Date: 2025-08-17
+ * Author: gpt-5-codex
+ * Date: 2025-10-16 16:10 UTC
+ * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
+ * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
 ## [Version 0.4.1] - 2025-10-15
@@ -85,6 +84,9 @@ Date: 2025-08-17
 ### Notes
 - **DRY Violations Identified:** Current debate.tsx implementation contains significant code duplication and SRP violations that should be addressed in future refactoring
 - **Session Management:** Complete database integration for debate persistence and conversation chaining across sessions
+
+### Fixed
+- **Google OAuth Callback Configuration:** Documented fix ensuring production (`https://compare.gptpluspro.com/`) and staging (`https://modelcompare-staging.up.railway.app/`) deployments use environment-specific Google OAuth redirect URIs instead of the localhost default.
 
 ## [Version 0.3.0] - 2025-10-14
 

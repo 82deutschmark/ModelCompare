@@ -21,6 +21,50 @@ import { getStorage } from './storage.js';
 import type { User } from '../shared/schema.js';
 import { getDatabaseManager } from './db.js';
 
+function normalizeUrlBase(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  const hasProtocol = /^https?:\/\//i.test(trimmed);
+  const normalized = hasProtocol ? trimmed : `https://${trimmed}`;
+  return normalized.replace(/\/+$/, '');
+}
+
+function resolveGoogleOAuthCallbackUrl(): string {
+  const explicitCallback = process.env.GOOGLE_OAUTH_CALLBACK_URL?.trim();
+  if (explicitCallback) {
+    return explicitCallback;
+  }
+
+  const domainFromEnv = process.env.DOMAIN?.trim();
+  if (domainFromEnv) {
+    return `${normalizeUrlBase(domainFromEnv)}/api/auth/google/callback`;
+  }
+
+  const railwayEnvName = process.env.RAILWAY_ENVIRONMENT_NAME?.toLowerCase();
+  const railwayEnvId = process.env.RAILWAY_ENVIRONMENT?.toLowerCase();
+  if (railwayEnvName?.includes('staging') || railwayEnvId?.includes('staging')) {
+    return 'https://modelcompare-staging.up.railway.app/api/auth/google/callback';
+  }
+
+  if (railwayEnvName?.includes('prod') || railwayEnvName?.includes('production') ||
+    railwayEnvId?.includes('prod') || railwayEnvId?.includes('production')) {
+    return 'https://compare.gptpluspro.com/api/auth/google/callback';
+  }
+
+  const publicUrl = process.env.PUBLIC_URL || process.env.VITE_PUBLIC_URL;
+  if (publicUrl) {
+    return `${normalizeUrlBase(publicUrl)}/api/auth/google/callback`;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://compare.gptpluspro.com/api/auth/google/callback';
+  }
+
+  return 'http://localhost:5000/api/auth/google/callback';
+}
+
 const PgSession = connectPgSimple(session);
 
 /**
@@ -66,10 +110,7 @@ export function configurePassport() {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: process.env.GOOGLE_OAUTH_CALLBACK_URL || 
-      (process.env.NODE_ENV === 'production' 
-        ? `https://${process.env.DOMAIN || 'localhost'}/api/auth/google/callback`
-        : 'http://localhost:5000/api/auth/google/callback')
+    callbackURL: resolveGoogleOAuthCallbackUrl()
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
