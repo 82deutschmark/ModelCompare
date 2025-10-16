@@ -6,6 +6,12 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.2] - 2025-10-16
+
+### Documentation
+- Added a maintainer guide for running the OpenAI health check locally with private credentials and sharing sanitized results. (See `docs/2025-10-16-openai-credential-testing-guide.md`).
+- Captured the credential-handling plan so contributors know why tests remain manual when API keys cannot be shared in chat.
+
 ## [Version 0.4.1] - 2025-10-15
 
 ### Fixed
