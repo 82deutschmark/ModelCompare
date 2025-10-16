@@ -1,9 +1,10 @@
-/**
- * Base Provider Interface
- * 
- * Defines the common interface for all AI providers
- * Author: Replit Agent
- * Date: August 9, 2025
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-10-16 18:45 UTC
+ * PURPOSE: Define shared provider contracts, message roles, and streaming callbacks for all AI integrations.
+ *          Updated to add developer-role steering and Responses API specific options such as instructions
+ *          and conversation chaining metadata so downstream providers can support them consistently.
+ * SRP/DRY check: Pass - centralizes provider interfaces without duplicating logic contained in subclasses.
  */
 
 export interface ModelConfig {
@@ -65,8 +66,8 @@ export interface ModelResponse {
  * Enables proper role separation for advanced prompt engineering
  */
 export interface ModelMessage {
-  /** Message role - system for instructions, user for queries, context for additional info */
-  role: 'system' | 'user' | 'assistant' | 'context';
+  /** Message role - includes developer for high-priority steering and context remapped to system */
+  role: 'system' | 'user' | 'assistant' | 'context' | 'developer';
   /** The actual message content */
   content: string;
   /** Optional metadata for message tracking and processing */
@@ -84,6 +85,16 @@ export interface CallOptions {
   maxTokens?: number;
   /** Legacy system prompt (prefer structured messages) */
   systemPrompt?: string;
+  /** Responses API instructions parameter for high-priority steering */
+  instructions?: string;
+  /** Previous response identifier to enable conversation chaining */
+  previousResponseId?: string;
+  /** Optional reasoning configuration for compatible models */
+  reasoningConfig?: {
+    effort?: 'minimal' | 'low' | 'medium' | 'high';
+    summary?: 'auto' | 'detailed' | 'concise';
+    verbosity?: 'low' | 'medium' | 'high';
+  };
 }
 
 export interface StreamingCallbacks {
@@ -103,7 +114,6 @@ export interface StreamingCallOptions {
   reasoningConfig?: {
     effort?: 'minimal' | 'low' | 'medium' | 'high';
     summary?: 'auto' | 'detailed' | 'concise';
-    verbosity?: 'low' | 'medium' | 'high';
   };
   onReasoningChunk: (chunk: string) => void;
   onContentChunk: (chunk: string) => void;

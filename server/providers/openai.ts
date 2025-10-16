@@ -1,21 +1,21 @@
 /*
  * Author: gpt-5-codex
- * Date: 2025-10-16 00:00 UTC
- * PURPOSE: Provides the OpenAI provider implementation using the Responses API, including
- *          structured payload construction, retry/timeout logic, and reasoning-aware streaming.
- *          Updated to build schema-compliant inputs and guard reasoning metadata based on
- *          model capabilities so requests reach OpenAI successfully after the refactor.
- * SRP/DRY check: Pass - focuses solely on OpenAI API integration and reuses shared provider
- *                abstractions without duplicating cross-provider logic.
+ * Date: 2025-10-16 18:48 UTC
+ * PURPOSE: Implements OpenAI Responses API integration with structured messages, streaming,
+ *          reasoning-aware cost calculation, and conversation chaining. Updated to align with
+ *          October 2025 event schemas by sending role-preserving message arrays, handling
+ *          instructions, and consuming the documented streaming events.
+ * SRP/DRY check: Pass - encapsulates OpenAI-specific request/response handling while reusing
+ *                shared provider abstractions for configuration and cost utilities.
  */
 
 import 'dotenv/config';
 import OpenAI from 'openai';
 import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions, StreamingCallOptions } from './base.js';
 
-type ResponseInput = {
-  role: 'system' | 'user' | 'assistant';
-  content: Array<{ type: 'text'; text: string }>;
+type ResponsesMessage = {
+  role: 'system' | 'user' | 'assistant' | 'developer';
+  content: string;
 };
 
 const openai = new OpenAI({
@@ -217,41 +217,48 @@ export class OpenAIProvider extends BaseProvider {
     },
   ];
 
-  private buildResponsesInput(messages: ModelMessage[], options?: CallOptions): { input: ResponseInput[]; promptText: string } {
-    const input: ResponseInput[] = [];
+  private buildResponsesInput(messages: ModelMessage[], systemPrompt?: string): { input: ResponsesMessage[]; promptText: string } {
+    const input: ResponsesMessage[] = [];
     const promptParts: string[] = [];
 
-    const appendMessage = (role: ResponseInput['role'], text: string, label: string) => {
+    const appendMessage = (role: ResponsesMessage['role'], text: string) => {
       const trimmed = text.trim();
-      if (!trimmed) return;
-      input.push({
-        role,
-        content: [{ type: 'text', text: trimmed }],
-      });
+      if (!trimmed) {
+        return;
+      }
+      input.push({ role, content: trimmed });
+      const label = `${role.charAt(0).toUpperCase()}${role.slice(1)}`;
       promptParts.push(`${label}: ${trimmed}`);
     };
 
-    if (options?.systemPrompt && options.systemPrompt.trim()) {
-      appendMessage('system', options.systemPrompt, 'System');
+    if (systemPrompt?.trim()) {
+      appendMessage('system', systemPrompt);
     }
 
+    const mapRole = (role: ModelMessage['role']): ResponsesMessage['role'] => {
+      if (role === 'context') {
+        return 'system';
+      }
+      if (role === 'developer') {
+        return 'developer';
+      }
+      if (role === 'assistant' || role === 'system' || role === 'user') {
+        return role;
+      }
+      return 'user';
+    };
+
     for (const message of messages) {
-      if (!message.content || !message.content.trim()) {
+      const text = message.content?.trim();
+      if (!text) {
         continue;
       }
-
-      if (message.role === 'context') {
-        appendMessage('user', `Context:\n${message.content.trim()}`, 'Context');
-        continue;
-      }
-
-      const role = message.role === 'assistant' ? 'assistant' : message.role;
-      const label = `${message.role.charAt(0).toUpperCase()}${message.role.slice(1)}`;
-      appendMessage(role, message.content, label);
+      const role = mapRole(message.role);
+      appendMessage(role, text);
     }
 
     if (input.length === 0) {
-      appendMessage('user', 'No prompt provided.', 'User');
+      appendMessage('user', 'No prompt provided.');
     }
 
     return { input, promptText: promptParts.join('\n\n') };
@@ -260,7 +267,7 @@ export class OpenAIProvider extends BaseProvider {
   async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
     const modelConfig = this.models.find(m => m.id === model);
-    const { input, promptText } = this.buildResponsesInput(messages, options);
+    const { input, promptText } = this.buildResponsesInput(messages, options?.systemPrompt);
 
     // Configure max_output_tokens
     const isGpt5Series = [
@@ -269,7 +276,7 @@ export class OpenAIProvider extends BaseProvider {
       'gpt-5-nano-2025-08-07'
     ].includes(model);
     const envMax = process.env.OPENAI_MAX_OUTPUT_TOKENS ? parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS, 10) : undefined;
-    const desiredMax = envMax ?? (isGpt5Series ? 128000 : 16384);
+    const desiredMax = options?.maxTokens ?? envMax ?? (isGpt5Series ? 128000 : 16384);
     const maxOutputTokens = Math.max(16300, desiredMax);
 
     // Timeout and retries
@@ -285,14 +292,27 @@ export class OpenAIProvider extends BaseProvider {
           model,
           input,
           max_output_tokens: maxOutputTokens,
+          store: true,
         };
 
         if (options?.temperature !== undefined) {
           requestPayload.temperature = options.temperature;
         }
 
+        if (options?.instructions?.trim()) {
+          requestPayload.instructions = options.instructions.trim();
+        }
+
+        if (options?.previousResponseId) {
+          requestPayload.previous_response_id = options.previousResponseId;
+        }
+
         if (modelConfig?.capabilities.reasoning) {
-          requestPayload.reasoning = { summary: 'auto' };
+          const reasoningOptions = options?.reasoningConfig ?? {};
+          requestPayload.reasoning = {
+            effort: reasoningOptions.effort ?? 'medium',
+            summary: reasoningOptions.summary ?? 'auto'
+          };
         }
 
         const response: any = await openai.responses.create(requestPayload, { signal: controller.signal as any });
@@ -300,37 +320,29 @@ export class OpenAIProvider extends BaseProvider {
         clearTimeout(timer);
 
         // Parse content
-        const outputText: string = response.output_text || '';
-        let content = outputText;
-        if (!content && Array.isArray(response.output)) {
-          // Fallback scan for first text content
-          const textBlock = response.output.find((b: any) => b.type === 'output_text' || b.type === 'message' || b.type === 'text');
-          if (textBlock?.content) {
-            content = typeof textBlock.content === 'string' ? textBlock.content : String(textBlock.content);
-          }
-        }
-        if (!content) content = 'No response generated';
+        const content: string = response.output_text ?? 'No response generated';
 
-        // Parse reasoning
-        const reasoningSummary: string | undefined = response.output_reasoning?.summary
-          || (Array.isArray(response.output_reasoning?.items) && response.output_reasoning.items.length
-                ? undefined
-                : undefined);
+        // Parse reasoning summary if available
+        const reasoningSummary: string | undefined = response.output_reasoning?.summary ?? undefined;
+
+        const inputTokens = response.usage?.input_tokens ?? 0;
+        const outputTokens = response.usage?.output_tokens ?? 0;
+        const reasoningTokens = response.usage?.output_tokens_details?.reasoning_tokens;
 
         return {
           content,
           reasoning: reasoningSummary,
           responseTime: Date.now() - startTime,
           systemPrompt: promptText,
-          tokenUsage: (response.usage ? {
-            input: response.usage.input_tokens ?? 0,
-            output: response.usage.output_tokens ?? 0,
-            reasoning: response.usage.output_tokens_details?.reasoning_tokens ?? undefined,
-          } : undefined),
+          tokenUsage: response.usage ? {
+            input: inputTokens,
+            output: outputTokens,
+            reasoning: reasoningTokens ?? undefined,
+          } : undefined,
           cost: (response.usage && modelConfig ? this.calculateCost(modelConfig, {
-            input: response.usage.input_tokens ?? 0,
-            output: response.usage.output_tokens ?? 0,
-            reasoning: response.usage.output_tokens_details?.reasoning_tokens ?? undefined,
+            input: inputTokens,
+            output: outputTokens,
+            reasoning: reasoningTokens ?? undefined,
           }) : undefined),
           modelConfig: modelConfig ? {
             capabilities: modelConfig.capabilities,
@@ -382,7 +394,7 @@ export class OpenAIProvider extends BaseProvider {
     }
 
     const normalizedMessages: ModelMessage[] = messages.map(message => ({
-      role: (['system', 'user', 'assistant', 'context'] as const).includes(message.role as any)
+      role: (['system', 'user', 'assistant', 'context', 'developer'] as const).includes(message.role as any)
         ? (message.role as ModelMessage['role'])
         : 'user',
       content: message.content,
@@ -392,8 +404,10 @@ export class OpenAIProvider extends BaseProvider {
 
     // Configure max_output_tokens
     const isGpt5Series = modelId.startsWith('gpt-5');
+    const envMax = process.env.OPENAI_MAX_OUTPUT_TOKENS ? parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS, 10) : undefined;
     const defaultMax = isGpt5Series ? 128000 : 16384;
-    const configuredMax = maxTokens || defaultMax;
+    const desiredMax = maxTokens ?? envMax ?? defaultMax;
+    const configuredMax = Math.max(16300, desiredMax);
 
     try {
       // Build Responses API request with proper reasoning configuration
@@ -401,7 +415,8 @@ export class OpenAIProvider extends BaseProvider {
         model: modelId,
         input,
         max_output_tokens: configuredMax,
-        stream: true // Enable streaming
+        stream: true, // Enable streaming
+        store: true,
       };
 
       // Add conversation chaining if applicable
@@ -414,82 +429,84 @@ export class OpenAIProvider extends BaseProvider {
         requestPayload.temperature = temperature;
       }
 
-      // Configure reasoning based on reasoningConfig or defaults
-      if (modelConfig.capabilities.reasoning) {
-        if (reasoningConfig) {
-          requestPayload.reasoning = {
-            effort: reasoningConfig.effort || 'medium',
-            summary: reasoningConfig.summary || 'detailed'
-          };
-
-          requestPayload.text = {
-            verbosity: reasoningConfig.verbosity || 'high'
-          };
-        } else {
-          // Default reasoning configuration
-          requestPayload.reasoning = {
-            summary: 'detailed',
-            effort: 'medium'
-          };
-          requestPayload.text = {
-            verbosity: 'high'
-          };
-        }
+      if (reasoningConfig && modelConfig.capabilities.reasoning) {
+        requestPayload.reasoning = {
+          effort: reasoningConfig.effort ?? 'medium',
+          summary: reasoningConfig.summary ?? 'auto'
+        };
+      } else if (modelConfig.capabilities.reasoning) {
+        requestPayload.reasoning = { summary: 'auto', effort: 'medium' };
       }
-
-      // Explicitly enable storage for conversation chaining
-      requestPayload.store = true;
 
       // Create streaming response
       const response = await openai.responses.create(requestPayload);
 
-      // For streaming, we need to handle the response differently
-      // The OpenAI SDK returns a streaming response that we need to process
-      if (response && (response as any)[Symbol.asyncIterator]) {
-        const stream = response as any;
-
-        let accumulatedReasoning = '';
-        let accumulatedContent = '';
-        let finalResponseId = '';
-        let finalTokenUsage: any = null;
-
-        // Process stream chunks
-        for await (const chunk of stream) {
-          // Reasoning chunks - use proper event types from RESPONSES.md
-          if (chunk.type === 'response.reasoning_summary_text.delta') {
-            const reasoningText = chunk.delta?.content || '';
-            accumulatedReasoning += reasoningText;
-            onReasoningChunk(reasoningText);
-          }
-
-          // Content chunks - use proper event types from RESPONSES.md
-          if (chunk.type === 'response.content_part.added') {
-            const contentText = chunk.part?.text || '';
-            accumulatedContent += contentText;
-            onContentChunk(contentText);
-          }
-
-          // Completion event - use proper event types from RESPONSES.md
-          if (chunk.type === 'response.completed') {
-            finalResponseId = chunk.response?.id || '';
-            finalTokenUsage = chunk.response?.usage || null;
-          }
-        }
-
-        const cost = modelConfig && finalTokenUsage
-          ? this.calculateCost(modelConfig, {
-              input: finalTokenUsage.input_tokens || 0,
-              output: finalTokenUsage.output_tokens || 0,
-              reasoning: finalTokenUsage.output_tokens_details?.reasoning_tokens || 0
-            })
-          : { total: 0, input: 0, output: 0, reasoning: 0 };
-
-        // Call completion callback with accumulated content
-        onComplete(finalResponseId, finalTokenUsage, cost, accumulatedContent, accumulatedReasoning);
-      } else {
-        // Fallback for non-streaming response
+      if (!response || !(response as any)[Symbol.asyncIterator]) {
         onError(new Error('Streaming not supported by OpenAI SDK version'));
+        return;
       }
+
+      const stream = response as any;
+
+      let accumulatedReasoning = '';
+      let accumulatedContent = '';
+      let finalResponseId = '';
+      let finalTokenUsage: any = null;
+
+      // Process stream chunks using documented Responses API events
+      for await (const event of stream) {
+        switch (event.type) {
+          case 'response.output_text.delta': {
+            const delta = typeof event.delta === 'string' ? event.delta : '';
+            if (delta) {
+              accumulatedContent += delta;
+              onContentChunk(delta);
+            }
+            break;
+          }
+          case 'response.output_text.done': {
+            if (!accumulatedContent && typeof event.output_text === 'string') {
+              accumulatedContent = event.output_text;
+            }
+            break;
+          }
+          case 'response.done': {
+            finalResponseId = event.response?.id ?? '';
+            finalTokenUsage = event.response?.usage ?? null;
+
+            const reasoningSummary = event.response?.output_reasoning?.summary;
+            if (reasoningSummary) {
+              accumulatedReasoning = reasoningSummary;
+              onReasoningChunk(reasoningSummary);
+            }
+
+            if (!accumulatedContent && typeof event.response?.output_text === 'string') {
+              accumulatedContent = event.response.output_text;
+            }
+            break;
+          }
+          case 'response.failed': {
+            const message = event.error?.message ?? 'OpenAI streaming request failed';
+            throw new Error(message);
+          }
+          default:
+            break;
+        }
+      }
+
+      const usageInput = finalTokenUsage?.input_tokens ?? 0;
+      const usageOutput = finalTokenUsage?.output_tokens ?? 0;
+      const reasoningTokens = finalTokenUsage?.output_tokens_details?.reasoning_tokens ?? undefined;
+
+      const cost = modelConfig
+        ? this.calculateCost(modelConfig, {
+            input: usageInput,
+            output: usageOutput,
+            reasoning: reasoningTokens,
+          })
+        : { total: 0, input: 0, output: 0, reasoning: reasoningTokens ?? 0 };
+
+      onComplete(finalResponseId, finalTokenUsage, cost, accumulatedContent, accumulatedReasoning);
 
     } catch (error: any) {
       console.error('OpenAI streaming error:', error);
