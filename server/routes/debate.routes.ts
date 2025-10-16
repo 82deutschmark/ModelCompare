@@ -98,7 +98,8 @@ router.post("/stream", async (req, res) => {
       turnNumber, // 1-10
       // New configuration parameters
       reasoningEffort = 'medium',
-      reasoningSummary = 'auto',
+      reasoningSummary = 'detailed',
+      reasoningVerbosity = 'high',
       temperature = 0.7,
       maxTokens = 16384,
       // Session management
@@ -227,7 +228,8 @@ Respond as the ${role} debater:
       // Reasoning configuration for OpenAI provider
       reasoningConfig: {
         effort: reasoningEffort,
-        summary: reasoningSummary
+        summary: reasoningSummary,
+        verbosity: reasoningVerbosity
       },
       onReasoningChunk: (chunk: string) => {
         res.write(`event: stream.chunk\ndata: ${JSON.stringify({

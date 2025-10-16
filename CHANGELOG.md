@@ -6,6 +6,13 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.3] - 2025-10-16
+
+### Fixed
+- **OpenAI Responses API Compliance:** Defaulted GPT-5 reasoning requests to detailed summaries with high verbosity, kept o-series models within supported parameters, and aligned debate streaming defaults with the richer configuration surface.
+- **Streaming Lifecycle Overhaul:** Adopted the SDK's `responses.stream` helper, handled reasoning summary deltas, and finalized streams via `finalResponse()` so callbacks receive complete content, reasoning, and token usage.
+- **Output Extraction Reliability:** Normalized non-streaming and streaming completions to read from `output_text`, `output_parsed`, or `output[]`, preventing empty transcripts when models emit structured results.
+
 ## [Version 0.4.2] - 2025-10-16
 
 ### Documentation
