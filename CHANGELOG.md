@@ -1,10 +1,9 @@
 # Changelog
 <!--
-File: CHANGELOG.md
-Purpose: Human-readable history of notable changes.
-How the project uses it: Source for release notes and audit of major updates.
-Author: Cascade (AI assistant)
-Date: 2025-08-17
+ * Author: gpt-5-codex
+ * Date: 2025-10-16 and 16:10 UTC
+ * PURPOSE: Maintain a chronological record of notable product updates, fixes, and refactors for release communication.
+ * SRP/DRY check: Pass - single responsibility for change documentation with no duplicated release notes elsewhere.
 -->
 
 ## [Version 0.4.1] - 2025-10-15
@@ -78,6 +77,9 @@ Date: 2025-08-17
 ### Technical Details
 - **Proper SSE Implementation:** Replaced manual fetch-based streaming with EventSource for reliable real-time updates
 - **Database Session Persistence:** Debates are now saved to database with turn history and response ID tracking for conversation chaining
+
+### Fixed
+- **Debate Session Bootstrap Failure:** Extended the legacy `ensureTablesExist` fallback in `server/db.ts` to create the `debate_sessions` table so fresh PostgreSQL deployments no longer return 500 errors when creating debate sessions.
 - **Advanced Reasoning Controls:** Full implementation of OpenAI Responses API reasoning configuration (effort, summary, verbosity)
 - **Real-Time UI Updates:** Live progress bars, cost estimation, and streaming content display during debates
 - **Conversation Chaining:** Proper handling of model conversation history with database-stored response IDs
