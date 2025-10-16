@@ -256,6 +256,196 @@ export class OpenAIProvider extends BaseProvider {
     return normalized;
   }
 
+  private isGpt5Family(modelId?: string): boolean {
+    return typeof modelId === 'string' && modelId.startsWith('gpt-5');
+  }
+
+  private isOReasoningModel(modelId?: string): boolean {
+    return typeof modelId === 'string' && /^o[34]/.test(modelId);
+  }
+
+  private supportsReasoningEffort(modelId?: string): boolean {
+    return this.isGpt5Family(modelId);
+  }
+
+  private supportsVerbosityControl(modelId?: string): boolean {
+    return this.isGpt5Family(modelId);
+  }
+
+  private getDefaultReasoningSummary(modelId?: string): 'auto' | 'detailed' {
+    if (this.isGpt5Family(modelId)) {
+      return 'detailed';
+    }
+    if (this.isOReasoningModel(modelId)) {
+      return 'auto';
+    }
+    return 'auto';
+  }
+
+  private buildReasoningPayload(modelId: string, overrides?: CallOptions['reasoningConfig']): {
+    reasoning?: Record<string, any>;
+    text?: Record<string, any>;
+  } {
+    const reasoning: Record<string, any> = {};
+    const summary = overrides?.summary ?? this.getDefaultReasoningSummary(modelId);
+
+    if (summary) {
+      reasoning.summary = summary;
+    }
+
+    if (this.supportsReasoningEffort(modelId)) {
+      reasoning.effort = overrides?.effort ?? 'medium';
+    } else if (overrides?.effort) {
+      // Ignore unsupported effort override silently to prevent API errors
+    }
+
+    const payload: { reasoning?: Record<string, any>; text?: Record<string, any> } = {};
+
+    if (Object.keys(reasoning).length > 0) {
+      payload.reasoning = reasoning;
+    }
+
+    const shouldSendVerbosity = this.supportsVerbosityControl(modelId);
+    const defaultVerbosity = shouldSendVerbosity ? 'high' : undefined;
+    const verbosity = overrides?.verbosity ?? defaultVerbosity;
+
+    if (shouldSendVerbosity && verbosity) {
+      payload.text = { verbosity };
+    } else if (overrides?.verbosity && !shouldSendVerbosity) {
+      // Unsupported verbosity override is ignored to maintain compatibility
+    }
+
+    return payload;
+  }
+
+  private extractReasoningSummary(response: any): string {
+    const summary = response?.output_reasoning?.summary;
+    if (typeof summary === 'string') {
+      return summary;
+    }
+
+    if (Array.isArray(summary)) {
+      return summary
+        .map(item => {
+          if (typeof item === 'string') {
+            return item;
+          }
+          if (item && typeof item === 'object') {
+            if (typeof item.text === 'string') {
+              return item.text;
+            }
+            if (typeof item.content === 'string') {
+              return item.content;
+            }
+            return JSON.stringify(item);
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n\n');
+    }
+
+    if (summary && typeof summary === 'object') {
+      if (typeof summary.text === 'string') {
+        return summary.text;
+      }
+      if (typeof summary.content === 'string') {
+        return summary.content;
+      }
+      return JSON.stringify(summary, null, 2);
+    }
+
+    if (Array.isArray(response?.output)) {
+      const reasoningBlocks = response.output.filter((block: any) => {
+        const type = typeof block?.type === 'string' ? block.type.toLowerCase() : '';
+        return type === 'reasoning' || type === 'thought' || type === 'reflection';
+      });
+
+      if (reasoningBlocks.length > 0) {
+        return reasoningBlocks
+          .map((block: any) => {
+            if (typeof block?.summary === 'string') {
+              return block.summary;
+            }
+            if (typeof block?.content === 'string') {
+              return block.content;
+            }
+            if (Array.isArray(block?.content)) {
+              return block.content
+                .map((part: any) =>
+                  typeof part === 'string'
+                    ? part
+                    : typeof part?.text === 'string'
+                    ? part.text
+                    : typeof part?.content === 'string'
+                    ? part.content
+                    : ''
+                )
+                .filter(Boolean)
+                .join('');
+            }
+            if (typeof block?.text === 'string') {
+              return block.text;
+            }
+            return JSON.stringify(block);
+          })
+          .filter(Boolean)
+          .join('\n\n');
+      }
+    }
+
+    return '';
+  }
+
+  private extractContentText(response: any): string {
+    if (typeof response?.output_text === 'string' && response.output_text.trim().length > 0) {
+      return response.output_text;
+    }
+
+    if (response?.output_parsed !== undefined) {
+      if (typeof response.output_parsed === 'string') {
+        return response.output_parsed;
+      }
+      try {
+        return JSON.stringify(response.output_parsed, null, 2);
+      } catch {
+        return String(response.output_parsed);
+      }
+    }
+
+    if (Array.isArray(response?.output)) {
+      const textBlock = response.output.find((block: any) => {
+        const type = typeof block?.type === 'string' ? block.type.toLowerCase() : '';
+        return type === 'text' || type === 'message';
+      });
+
+      if (textBlock) {
+        if (typeof textBlock.text === 'string') {
+          return textBlock.text;
+        }
+        if (typeof textBlock.content === 'string') {
+          return textBlock.content;
+        }
+        if (Array.isArray(textBlock.content)) {
+          return textBlock.content
+            .map((part: any) =>
+              typeof part === 'string'
+                ? part
+                : typeof part?.text === 'string'
+                ? part.text
+                : typeof part?.content === 'string'
+                ? part.content
+                : ''
+            )
+            .filter(Boolean)
+            .join('');
+        }
+      }
+    }
+
+    return '';
+  }
+
   async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
     const modelConfig = this.models.find(m => m.id === model);
@@ -281,7 +471,7 @@ export class OpenAIProvider extends BaseProvider {
       const timer = setTimeout(() => controller.abort(new Error('Request timeout')), timeoutMs);
       try {
         const requestPayload: Record<string, any> = {
-          model,
+          model: modelConfig?.model ?? model,
           input,
           max_output_tokens: options?.maxTokens ?? maxOutputTokens,
           store: true,
@@ -300,21 +490,23 @@ export class OpenAIProvider extends BaseProvider {
         }
 
         if (modelConfig?.capabilities.reasoning) {
-          requestPayload.reasoning = {
-            effort: options?.reasoningConfig?.effort || 'medium',
-            summary: options?.reasoningConfig?.summary || 'auto',
-          };
+          const { reasoning, text } = this.buildReasoningPayload(modelConfig.model, options?.reasoningConfig);
+          if (reasoning) {
+            requestPayload.reasoning = reasoning;
+          }
+          if (text) {
+            requestPayload.text = { ...(requestPayload.text ?? {}), ...text };
+          }
         }
 
         const response: any = await openai.responses.create(requestPayload, { signal: controller.signal as any });
 
         clearTimeout(timer);
 
-        // Parse content
-        const content: string = response.output_text || 'No response generated';
-
-        // Parse reasoning
-        const reasoningSummary: string | undefined = response.output_reasoning?.summary || undefined;
+        const parsedContent = this.extractContentText(response);
+        const parsedReasoning = this.extractReasoningSummary(response);
+        const content = parsedContent || 'No response generated';
+        const reasoningSummary = parsedReasoning || undefined;
 
         return {
           content,
@@ -391,26 +583,23 @@ export class OpenAIProvider extends BaseProvider {
     const input = this.mapMessagesToResponsesInput(normalizedMessages);
 
     // Configure max_output_tokens
-    const isGpt5Series = modelId.startsWith('gpt-5');
+    const isGpt5Series = this.isGpt5Family(modelConfig.model);
     const defaultMax = isGpt5Series ? 128000 : 16384;
-    const configuredMax = maxTokens || defaultMax;
+    const configuredMax = maxTokens ?? defaultMax;
 
     try {
-      // Build Responses API request with proper reasoning configuration
       const requestPayload: any = {
-        model: modelId,
+        model: modelConfig.model,
         input,
         max_output_tokens: configuredMax,
-        stream: true, // Enable streaming
+        stream: true,
         store: true,
       };
 
-      // Add conversation chaining if applicable
       if (previousResponseId) {
         requestPayload.previous_response_id = previousResponseId;
       }
 
-      // Add temperature if provided
       if (temperature !== undefined) {
         requestPayload.temperature = temperature;
       }
@@ -419,82 +608,113 @@ export class OpenAIProvider extends BaseProvider {
         requestPayload.instructions = instructions.trim();
       }
 
-      // Configure reasoning based on reasoningConfig or defaults
       if (modelConfig.capabilities.reasoning) {
-        requestPayload.reasoning = {
-          effort: reasoningConfig?.effort || 'medium',
-          summary: reasoningConfig?.summary || 'auto'
-        };
-      }
-
-      // Create streaming response
-      const response = await openai.responses.create(requestPayload);
-
-      // For streaming, we need to handle the response differently
-      // The OpenAI SDK returns a streaming response that we need to process
-      if (response && (response as any)[Symbol.asyncIterator]) {
-        const stream = response as any;
-
-        let accumulatedReasoning = '';
-        let accumulatedContent = '';
-        let finalResponseId = '';
-        let finalTokenUsage: any = null;
-
-        // Process stream chunks
-        for await (const event of stream) {
-          switch (event.type) {
-            case 'response.output_text.delta': {
-              const delta = typeof event.delta === 'string' ? event.delta : '';
-              if (delta) {
-                accumulatedContent += delta;
-                onContentChunk(delta);
-              }
-              break;
-            }
-            case 'response.done': {
-              finalResponseId = event.response?.id || '';
-              finalTokenUsage = event.response?.usage || null;
-
-              const reasoningSummary = event.response?.output_reasoning?.summary;
-              if (reasoningSummary) {
-                accumulatedReasoning = reasoningSummary;
-                onReasoningChunk(reasoningSummary);
-              }
-              break;
-            }
-            case 'response.failed': {
-              const error = new Error(event.error?.message || 'OpenAI streaming failed');
-              onError(error);
-              return;
-            }
-            case 'response.cancelled': {
-              const error = new Error('OpenAI streaming cancelled');
-              onError(error);
-              return;
-            }
-            default:
-              break;
-          }
+        const { reasoning, text } = this.buildReasoningPayload(modelConfig.model, reasoningConfig);
+        if (reasoning) {
+          requestPayload.reasoning = reasoning;
         }
-
-        const cost = modelConfig && finalTokenUsage
-          ? this.calculateCost(modelConfig, {
-              input: finalTokenUsage.input_tokens || 0,
-              output: finalTokenUsage.output_tokens || 0,
-              reasoning: finalTokenUsage.output_tokens_details?.reasoning_tokens || 0
-            })
-          : { total: 0, input: 0, output: 0, reasoning: 0 };
-
-        // Call completion callback with accumulated content
-        onComplete(finalResponseId, finalTokenUsage, cost, accumulatedContent, accumulatedReasoning);
-      } else {
-        // Fallback for non-streaming response
-        onError(new Error('Streaming not supported by OpenAI SDK version'));
+        if (text) {
+          requestPayload.text = { ...(requestPayload.text ?? {}), ...text };
+        }
       }
 
+      const stream = await openai.responses.stream(requestPayload);
+
+      let aggregatedReasoning = '';
+      let aggregatedContent = '';
+
+      for await (const event of stream) {
+        const eventAny = event as any;
+        switch (eventAny.type) {
+          case 'response.reasoning_summary_text.delta': {
+            const delta = typeof eventAny.delta === 'string' ? eventAny.delta : '';
+            if (delta) {
+              aggregatedReasoning += delta;
+              onReasoningChunk(delta);
+            }
+            break;
+          }
+          case 'response.reasoning_summary_part.added': {
+            const text = typeof eventAny.part?.text === 'string'
+              ? eventAny.part.text
+              : typeof eventAny.part?.content === 'string'
+              ? eventAny.part.content
+              : '';
+            if (text) {
+              aggregatedReasoning += text;
+              onReasoningChunk(text);
+            }
+            break;
+          }
+          case 'response.content_part.added': {
+            const text = typeof eventAny.part?.text === 'string'
+              ? eventAny.part.text
+              : typeof eventAny.part?.content === 'string'
+              ? eventAny.part.content
+              : '';
+            if (text) {
+              aggregatedContent += text;
+              onContentChunk(text);
+            }
+            break;
+          }
+          case 'response.output_text.delta': {
+            const delta = typeof eventAny.delta === 'string' ? eventAny.delta : '';
+            if (delta) {
+              aggregatedContent += delta;
+              onContentChunk(delta);
+            }
+            break;
+          }
+          case 'response.failed':
+          case 'error': {
+            const errorMessage = eventAny?.error?.message || 'OpenAI streaming failed';
+            onError(new Error(errorMessage));
+            return;
+          }
+          case 'response.canceled': {
+            onError(new Error('OpenAI streaming cancelled'));
+            return;
+          }
+          default:
+            if (eventAny.type === 'response.cancelled') {
+              onError(new Error('OpenAI streaming cancelled'));
+              return;
+            }
+            break;
+        }
+      }
+
+      const finalResponse = await (stream as any).finalResponse();
+      const finalResponseId = finalResponse?.id || '';
+      const finalUsage = finalResponse?.usage || null;
+
+      const parsedContent = this.extractContentText(finalResponse);
+      const parsedReasoning = this.extractReasoningSummary(finalResponse);
+
+      if (!aggregatedContent && parsedContent) {
+        onContentChunk(parsedContent);
+      }
+
+      if (!aggregatedReasoning && parsedReasoning) {
+        onReasoningChunk(parsedReasoning);
+      }
+
+      const finalContent = aggregatedContent || parsedContent || '';
+      const finalReasoning = aggregatedReasoning || parsedReasoning || '';
+
+      const cost = modelConfig && finalUsage
+        ? this.calculateCost(modelConfig, {
+            input: finalUsage.input_tokens || 0,
+            output: finalUsage.output_tokens || 0,
+            reasoning: finalUsage.output_tokens_details?.reasoning_tokens || 0
+          })
+        : { total: 0, input: 0, output: 0, reasoning: 0 };
+
+      onComplete(finalResponseId, finalUsage, cost, finalContent, finalReasoning);
     } catch (error: any) {
       console.error('OpenAI streaming error:', error);
-      onError(error);
+      onError(error instanceof Error ? error : new Error(String(error)));
     }
   }
 }

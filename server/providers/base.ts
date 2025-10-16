@@ -95,6 +95,7 @@ export interface CallOptions {
   reasoningConfig?: {
     effort?: 'low' | 'medium' | 'high';
     summary?: 'auto' | 'detailed';
+    verbosity?: 'low' | 'medium' | 'high';
   };
 }
 
@@ -115,6 +116,7 @@ export interface StreamingCallOptions {
   reasoningConfig?: {
     effort?: 'low' | 'medium' | 'high';
     summary?: 'auto' | 'detailed';
+    verbosity?: 'low' | 'medium' | 'high';
   };
   /** Optional Responses API instructions steering */
   instructions?: string;
