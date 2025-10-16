@@ -1,9 +1,12 @@
-/**
- * Base Provider Interface
- * 
- * Defines the common interface for all AI providers
- * Author: Replit Agent
- * Date: August 9, 2025
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-10-16 18:34 UTC
+ * PURPOSE: Declares shared provider contracts, including model metadata, message roles, and
+ *          invocation option shapes leveraged by all providers. Updated to expose the developer
+ *          role, instructions steering, conversation chaining, and reasoning configuration options
+ *          required for the Responses API fixes.
+ * SRP/DRY check: Pass - File centralizes provider type definitions without duplicating logic from
+ *                concrete provider implementations.
  */
 
 export interface ModelConfig {
@@ -66,7 +69,7 @@ export interface ModelResponse {
  */
 export interface ModelMessage {
   /** Message role - system for instructions, user for queries, context for additional info */
-  role: 'system' | 'user' | 'assistant' | 'context';
+  role: 'system' | 'user' | 'assistant' | 'context' | 'developer';
   /** The actual message content */
   content: string;
   /** Optional metadata for message tracking and processing */
@@ -84,6 +87,15 @@ export interface CallOptions {
   maxTokens?: number;
   /** Legacy system prompt (prefer structured messages) */
   systemPrompt?: string;
+  /** Responses API instructions field for high-priority steering */
+  instructions?: string;
+  /** Continue a stored conversation by referencing the previous response id */
+  previousResponseId?: string;
+  /** Fine-grained reasoning configuration for capable models */
+  reasoningConfig?: {
+    effort?: 'low' | 'medium' | 'high';
+    summary?: 'auto' | 'detailed';
+  };
 }
 
 export interface StreamingCallbacks {
@@ -101,10 +113,11 @@ export interface StreamingCallOptions {
   maxTokens?: number;
   // Reasoning configuration for advanced models
   reasoningConfig?: {
-    effort?: 'minimal' | 'low' | 'medium' | 'high';
-    summary?: 'auto' | 'detailed' | 'concise';
-    verbosity?: 'low' | 'medium' | 'high';
+    effort?: 'low' | 'medium' | 'high';
+    summary?: 'auto' | 'detailed';
   };
+  /** Optional Responses API instructions steering */
+  instructions?: string;
   onReasoningChunk: (chunk: string) => void;
   onContentChunk: (chunk: string) => void;
   onComplete: (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => void;
