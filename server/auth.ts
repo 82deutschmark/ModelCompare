@@ -1,15 +1,14 @@
 /**
- * 
- * Author: Cascade using GPT
- * Date: 2025-09-27T14:15:46-04:00
- * PURPOSE: Google OAuth authentication system using Passport.js. This module handles:
- * - Google OAuth 2.0 strategy configuration
- * - User session management with PostgreSQL storage
- * - User authentication middleware for protected routes
- * - Session serialization and deserialization
- * - Integration with the storage layer for user persistence
- * SRP and DRY check: Pass - This file is responsible only for authentication logic
- * and reuses existing storage patterns. Checked existing codebase for duplicates.
+ *
+ * Author: gpt-5-codex
+ * Date: 2025-02-14T00:00:00Z
+ * PURPOSE: Google OAuth authentication system using Passport.js. This module manages:
+ * - Google OAuth 2.0 strategy configuration with environment-aware callback URL resolution
+ * - User session management with PostgreSQL storage via connect-pg-simple
+ * - Session serialization/deserialization aligned with storage helpers
+ * - Express middleware wiring for Passport authentication flows
+ * SRP/DRY check: Pass - Focused on authentication/session responsibilities and
+ * reuses shared storage/database utilities without duplication.
  */
 
 import passport from 'passport';
@@ -37,19 +36,31 @@ function resolveGoogleOAuthCallbackUrl(): string {
     return explicitCallback;
   }
 
-  const domainFromEnv = process.env.DOMAIN?.trim();
-  if (domainFromEnv) {
-    return `${normalizeUrlBase(domainFromEnv)}/api/auth/google/callback`;
-  }
-
   const railwayEnvName = process.env.RAILWAY_ENVIRONMENT_NAME?.toLowerCase();
   const railwayEnvId = process.env.RAILWAY_ENVIRONMENT?.toLowerCase();
-  if (railwayEnvName?.includes('staging') || railwayEnvId?.includes('staging')) {
+  const isRailwayStaging = Boolean(railwayEnvName?.includes('staging') || railwayEnvId?.includes('staging'));
+  const isRailwayProduction = Boolean(
+    railwayEnvName?.includes('prod') ||
+    railwayEnvName?.includes('production') ||
+    railwayEnvId?.includes('prod') ||
+    railwayEnvId?.includes('production')
+  );
+  const isNodeProduction = process.env.NODE_ENV === 'production';
+  const isProductionLike = isNodeProduction || isRailwayProduction;
+
+  const domainFromEnv = process.env.DOMAIN?.trim();
+  if (domainFromEnv) {
+    const hasProtocol = /^https?:\/\//i.test(domainFromEnv);
+    const scheme = isProductionLike || isRailwayStaging ? 'https' : 'http';
+    const base = hasProtocol ? domainFromEnv : `${scheme}://${domainFromEnv}`;
+    return `${normalizeUrlBase(base)}/api/auth/google/callback`;
+  }
+
+  if (isRailwayStaging) {
     return 'https://modelcompare-staging.up.railway.app/api/auth/google/callback';
   }
 
-  if (railwayEnvName?.includes('prod') || railwayEnvName?.includes('production') ||
-    railwayEnvId?.includes('prod') || railwayEnvId?.includes('production')) {
+  if (isRailwayProduction) {
     return 'https://compare.gptpluspro.com/api/auth/google/callback';
   }
 
@@ -58,7 +69,7 @@ function resolveGoogleOAuthCallbackUrl(): string {
     return `${normalizeUrlBase(publicUrl)}/api/auth/google/callback`;
   }
 
-  if (process.env.NODE_ENV === 'production') {
+  if (isNodeProduction) {
     return 'https://compare.gptpluspro.com/api/auth/google/callback';
   }
 
