@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Configuration Management System
  * 
  * Centralized configuration with environment-aware defaults and validation.
@@ -119,13 +119,13 @@ export function loadConfig(): AppConfig {
       cspDirectives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        scriptSrc: ["'self'", ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'"] : [])],
+        scriptSrc: ["'self'", "https://js.stripe.com", ...(isDevelopment ? ["'unsafe-eval'", "'unsafe-inline'"] : [])],
         imgSrc: ["'self'", "data:", "blob:"],
-        connectSrc: ["'self'", ...(isDevelopment ? ["ws:", "wss:"] : [])],
+        connectSrc: ["'self'", "https://api.stripe.com", ...(isDevelopment ? ["ws:", "wss:"] : [])],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'none'"]
+        frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"]
       },
       rateLimiting: {
         enabled: process.env.ENABLE_RATE_LIMITING === 'true', // Disabled by default for hobby project
