@@ -6,6 +6,25 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.5] - 2025-10-17
+
+### Fixed
+- **🚨 CRITICAL: Comprehensive Browser Extension Compatibility:** Fixed application crashes caused by browser extension interference (LastPass, Grammarly, etc.) across ALL streaming and chat interfaces
+  - **Root Cause:** Browser extensions inject content scripts using MutationObserver to watch DOM changes. During rapid streaming updates, these observers fail when trying to observe nodes being removed/updated, causing crashes with: `"Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'"`
+  - **Comprehensive Solution:** Applied defensive programming pattern across all streaming/chat interfaces:
+    - **Debate Mode** (`StreamingDisplay.tsx`, `debate.tsx`) - Streaming display + auto-scroll protection
+    - **Battle Chat Mode** (`battle-chat.tsx`) - Message container + auto-scroll protection
+    - **Vixra Mode** (`SectionResultsStream.tsx`) - Section generation + auto-scroll protection
+    - **Luigi Mode** (`LuigiConversationLog.tsx`) - Conversation log + auto-scroll protection
+  - **Defensive Pattern Applied:**
+    1. Null checks before all `scrollIntoView` calls
+    2. Try-catch blocks with debug logging (no error propagation)
+    3. Browser extension data attributes on all dynamic content containers:
+       - Grammarly: `data-gramm="false"`, `data-gramm_editor="false"`, `data-enable-grammarly="false"`
+       - LastPass: `data-lpignore="true"`, `data-form-type="other"`
+  - **Impact:** All streaming and chat interfaces now gracefully handle browser extension interference without crashes. Pattern is consistent and reusable for future streaming components.
+  - **Commits:** 202ca41 (initial), 2c67972 (LastPass support), b67b83c (comprehensive coverage)
+
 ## [Version 0.4.4] - 2025-10-17
 
 ### Fixed
