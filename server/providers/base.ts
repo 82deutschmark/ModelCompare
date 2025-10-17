@@ -162,9 +162,9 @@ export abstract class BaseProvider {
   
   /** 
    * Streaming call with reasoning support
-   * Must be implemented by providers that support reasoning models
+   * Providers that support streaming can override this optional method.
    */
-  abstract callModelStreaming?(options: StreamingCallOptions): Promise<void>;
+  callModelStreaming?(options: StreamingCallOptions): Promise<void>;
   
   getModel(modelId: string): ModelConfig | undefined {
     return this.models.find(m => m.id === modelId);

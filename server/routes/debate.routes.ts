@@ -270,7 +270,7 @@ Respond as the ${role} debater:
 
 async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPayload): Promise<void> {
   try {
-    harness.status("validating_session", {
+    harness.status("validating_session", undefined, {
       debateSessionId: payload.debateSessionId,
       turnNumber: payload.turnNumber
     });
@@ -293,7 +293,7 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
 
     const inputMessages = buildInputMessages(payload);
 
-    harness.status("resolving_provider", { modelId: payload.modelId });
+    harness.status("resolving_provider", undefined, { modelId: payload.modelId });
     let provider;
     try {
       provider = getProviderForModel(payload.modelId);
@@ -308,8 +308,8 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
       return;
     }
 
-    harness.status("provider_ready", { provider: provider.name });
-    harness.status("stream_start", { provider: provider.name });
+    harness.status("provider_ready", undefined, { provider: provider.name });
+    harness.status("stream_start", undefined, { provider: provider.name });
 
     await provider.callModelStreaming({
       modelId: payload.modelId,
@@ -323,7 +323,7 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
         verbosity: payload.reasoningVerbosity
       },
       onStatus: (phase, data) => {
-        harness.status(phase, {
+        harness.status(phase, undefined, {
           provider: provider.name,
           ...(data ?? {})
         });
@@ -338,7 +338,7 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
         harness.pushJsonChunk(chunk);
       },
       onComplete: async (responseId: string, tokenUsage: any, cost: any, extras) => {
-        harness.status("persisting", { responseId });
+        harness.status("persisting", undefined, { responseId });
         const finalContent = extras?.content ?? harness.getContent();
         const finalReasoning = extras?.reasoning ?? harness.getReasoning();
         const structuredOutput = extras?.structuredOutput ?? harness.getJsonChunks();

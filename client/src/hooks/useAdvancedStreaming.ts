@@ -21,6 +21,7 @@ export interface StreamingOptions {
   model2Id?: string;
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   reasoningSummary?: 'auto' | 'detailed' | 'concise';
+  reasoningVerbosity?: 'low' | 'medium' | 'high';
   textVerbosity?: 'low' | 'medium' | 'high';
   temperature?: number;
   maxTokens?: number;
@@ -66,7 +67,7 @@ interface StreamingState {
   session: StreamingSessionInfo | null;
 }
 
-interface StreamingSessionInfo {
+export interface StreamingSessionInfo {
   sessionId: string;
   taskId: string;
   modelKey: string;
@@ -137,6 +138,7 @@ export function useAdvancedStreaming() {
   const jsonChunksRef = useRef<JsonStreamChunk[]>([]);
   const progressRef = useRef<number>(0);
   const estimatedCostRef = useRef<number>(0);
+  const streamEndedRef = useRef<boolean>(false);
 
   const flushPendingRef = useRef<boolean>(false);
   const flushCancelRef = useRef<(() => void) | null>(null);
@@ -183,14 +185,15 @@ export function useAdvancedStreaming() {
     setStateWithProducer(prev => {
       let changed = false;
       const next: StreamingState = { ...prev };
+      const mutableNext = next as Record<keyof StreamingState, StreamingState[keyof StreamingState]>;
 
-      for (const key of Object.keys(partial) as (keyof StreamingState)[]) {
+      for (const key of Object.keys(partial) as Array<keyof StreamingState>) {
         const value = partial[key];
         if (value === undefined) {
           continue;
         }
-        if (next[key] !== value) {
-          next[key] = value;
+        if (mutableNext[key] !== value) {
+          mutableNext[key] = value as StreamingState[keyof StreamingState];
           changed = true;
         }
       }
@@ -198,6 +201,30 @@ export function useAdvancedStreaming() {
       return changed ? next : null;
     });
   }, [setStateWithProducer]);
+
+  const closeEventSource = useCallback((clearSession = false) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    if (clearSession) {
+      sessionInfoRef.current = null;
+    }
+  }, []);
+
+  const appendJsonPayload = useCallback((payload: unknown, timestamp?: number) => {
+    if (payload === undefined) {
+      return;
+    }
+    const resolvedTimestamp =
+      typeof timestamp === 'number' && Number.isFinite(timestamp) ? timestamp : Date.now();
+    const chunk: JsonStreamChunk = {
+      type: 'json',
+      timestamp: resolvedTimestamp,
+      payload
+    };
+    jsonChunksRef.current = [...jsonChunksRef.current, chunk];
+  }, []);
 
   const resetState = useCallback((next: StreamingState) => {
     flushCancelRef.current?.();
@@ -293,10 +320,9 @@ export function useAdvancedStreaming() {
   }, [commitBuffers]);
 
   const startStream = useCallback(async (options: StreamingOptions) => {
-    if (readerRef.current) {
-      readerRef.current.cancel().catch(() => undefined);
-      readerRef.current = null;
-    }
+    streamEndedRef.current = false;
+    closeEventSource(true);
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -310,211 +336,337 @@ export function useAdvancedStreaming() {
     contentBufferRef.current = '';
     reasoningChunksRef.current = [];
     contentChunksRef.current = [];
+    jsonChunksRef.current = [];
     progressRef.current = 0;
     estimatedCostRef.current = 0;
 
-    const initialState = {
+    const initialState: StreamingState = {
       ...createInitialState(),
-      isStreaming: true
+      isStreaming: true,
+      statusPhase: 'handshake',
+      statusMessage: 'Initializing debate stream',
+      session: null
     };
     resetState(initialState);
 
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
-      const response = await fetch('/api/debate/stream', {
+      const requestPayload: Record<string, unknown> = { ...options };
+      if (!('reasoningVerbosity' in requestPayload) && 'textVerbosity' in requestPayload) {
+        requestPayload.reasoningVerbosity = requestPayload.textVerbosity;
+        delete requestPayload.textVerbosity;
+      }
+      if (!requestPayload.sessionId) {
+        delete requestPayload.sessionId;
+      }
+
+      const initResponse = await fetch('/api/debate/stream/init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(options),
-        signal: abortControllerRef.current.signal
+        body: JSON.stringify(requestPayload),
+        signal: controller.signal
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to initialize stream: ${response.statusText}`);
+      let initPayload: any = null;
+      try {
+        initPayload = await initResponse.json();
+      } catch {
+        initPayload = null;
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Readable stream not available');
+      if (!initResponse.ok) {
+        const message =
+          (initPayload && typeof initPayload.error === 'string') ? initPayload.error :
+          `Failed to initialize stream (${initResponse.status})`;
+        throw new Error(message);
       }
 
-      readerRef.current = reader;
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let isActive = true;
+      if (!initPayload || typeof initPayload !== 'object') {
+        throw new Error('Streaming session response was malformed');
+      }
 
-      const handleParsedEvent = (parsed: ParsedSseEvent) => {
-        const { event, data } = parsed;
+      const { sessionId, taskId, modelKey, debateSessionId, expiresAt } = initPayload as Record<string, unknown>;
+      if (typeof sessionId !== 'string' || typeof taskId !== 'string' || typeof modelKey !== 'string') {
+        throw new Error('Streaming session response missing identifiers');
+      }
 
-        if (event === 'stream.chunk' && isRecord(data)) {
+      abortControllerRef.current = null;
+
+      const sessionInfo: StreamingSessionInfo = {
+        sessionId,
+        taskId,
+        modelKey,
+        debateSessionId: typeof debateSessionId === 'string' ? debateSessionId : undefined,
+        expiresAt: typeof expiresAt === 'string' ? expiresAt : undefined
+      };
+      sessionInfoRef.current = sessionInfo;
+      patchState({
+        session: sessionInfo,
+        statusPhase: 'connecting',
+        statusMessage: 'Opening event stream'
+      });
+
+      const encodedTaskId = encodeURIComponent(taskId);
+      const encodedModelKey = encodeURIComponent(modelKey);
+      const encodedSessionId = encodeURIComponent(sessionId);
+      const streamUrl = `/api/debate/stream/${encodedTaskId}/${encodedModelKey}/${encodedSessionId}`;
+
+      if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+        throw new Error('EventSource streaming is not supported in this environment');
+      }
+
+      const eventSource = new EventSource(streamUrl);
+      eventSourceRef.current = eventSource;
+
+      const handleChunk = (event: MessageEvent) => {
+        const data = parseEventData(event.data);
+        if (!isRecord(data)) {
+          return;
+        }
+
+        const timestampRaw = typeof data.timestamp === 'number' ? data.timestamp : Date.now();
+        const timestamp = Number.isFinite(timestampRaw) ? timestampRaw : Date.now();
+        const chunkType = data.type;
+
+        if (chunkType === 'reasoning') {
           const delta = typeof data.delta === 'string' ? data.delta : '';
           if (!delta) {
             return;
           }
-
-          const chunkType = data.type;
-          const timestamp = typeof data.timestamp === 'number' ? data.timestamp : Date.now();
-          if (chunkType === 'reasoning') {
-            reasoningBufferRef.current += delta;
-            const previousChunk = reasoningChunksRef.current[reasoningChunksRef.current.length - 1] ?? null;
-            const chunk: ReasoningStreamChunk = {
-              type: 'reasoning',
-              timestamp,
-              delta,
-              cumulativeText: reasoningBufferRef.current,
-              charCount: delta.length,
-              intensity: calculateIntensity(delta, timestamp, previousChunk?.timestamp ?? null)
-            };
-            reasoningChunksRef.current = [...reasoningChunksRef.current, chunk];
-            progressRef.current = Math.min(progressRef.current + 4, 85);
-          } else if (chunkType === 'text') {
-            contentBufferRef.current += delta;
-            const previousChunk = contentChunksRef.current[contentChunksRef.current.length - 1] ?? null;
-            const chunk: ContentStreamChunk = {
-              type: 'content',
-              timestamp,
-              delta,
-              cumulativeText: contentBufferRef.current,
-              charCount: delta.length,
-              intensity: calculateIntensity(delta, timestamp, previousChunk?.timestamp ?? null)
-            };
-            contentChunksRef.current = [...contentChunksRef.current, chunk];
-            progressRef.current = Math.min(progressRef.current + 6, 98);
+          reasoningBufferRef.current += delta;
+          const previousChunk = reasoningChunksRef.current[reasoningChunksRef.current.length - 1] ?? null;
+          const chunk: ReasoningStreamChunk = {
+            type: 'reasoning',
+            timestamp,
+            delta,
+            cumulativeText: reasoningBufferRef.current,
+            charCount: delta.length,
+            intensity: calculateIntensity(delta, timestamp, previousChunk?.timestamp ?? null)
+          };
+          reasoningChunksRef.current = [...reasoningChunksRef.current, chunk];
+          progressRef.current = Math.min(progressRef.current + 4, 85);
+          if (stateRef.current.statusPhase !== 'streaming') {
+            patchState({ statusPhase: 'streaming', statusMessage: null });
           }
           scheduleFlush();
           return;
         }
 
-        if (event === 'stream.progress' && isRecord(data)) {
-          if (typeof data.percentage === 'number' && Number.isFinite(data.percentage)) {
-            progressRef.current = Math.min(Math.max(data.percentage, progressRef.current), 100);
+        if (chunkType === 'text') {
+          const delta = typeof data.delta === 'string' ? data.delta : '';
+          if (!delta) {
+            return;
           }
-          if (typeof data.estimatedCost === 'number' && Number.isFinite(data.estimatedCost)) {
-            estimatedCostRef.current = data.estimatedCost;
+          contentBufferRef.current += delta;
+          const previousChunk = contentChunksRef.current[contentChunksRef.current.length - 1] ?? null;
+          const chunk: ContentStreamChunk = {
+            type: 'content',
+            timestamp,
+            delta,
+            cumulativeText: contentBufferRef.current,
+            charCount: delta.length,
+            intensity: calculateIntensity(delta, timestamp, previousChunk?.timestamp ?? null)
+          };
+          contentChunksRef.current = [...contentChunksRef.current, chunk];
+          progressRef.current = Math.min(progressRef.current + 6, 98);
+          if (stateRef.current.statusPhase !== 'streaming') {
+            patchState({ statusPhase: 'streaming', statusMessage: null });
           }
           scheduleFlush();
           return;
         }
 
-        if (event === 'stream.complete' && isRecord(data)) {
-          progressRef.current = 100;
-          if (isRecord(data.cost) && typeof data.cost.total === 'number') {
-            estimatedCostRef.current = data.cost.total;
+        if (chunkType === 'json') {
+          const payload = Object.prototype.hasOwnProperty.call(data, 'delta') ? (data as any).delta : data;
+          appendJsonPayload(payload, timestamp);
+          if (stateRef.current.statusPhase !== 'streaming') {
+            patchState({ statusPhase: 'streaming', statusMessage: null });
           }
-          flushImmediately();
-          patchState({
-            isStreaming: false,
-            responseId: typeof data.responseId === 'string' ? data.responseId : null,
-            tokenUsage: data.tokenUsage ?? null,
-            cost: data.cost ?? null,
-            reasoning: reasoningBufferRef.current,
-            content: contentBufferRef.current,
-            reasoningChunks: reasoningChunksRef.current,
-            contentChunks: contentChunksRef.current,
-            error: null
-          });
-          isActive = false;
-          return;
-        }
-
-        if ((event === 'stream.error' || event === 'error') && isRecord(data)) {
-          const errorMessage = typeof data.error === 'string' ? data.error : 'Stream error occurred';
-          progressRef.current = 0;
-          flushImmediately();
-          patchState({
-            isStreaming: false,
-            error: errorMessage,
-            progress: 0
-          });
-          isActive = false;
-          return;
-        }
-
-        if (event === 'stream.init') {
-          progressRef.current = Math.max(progressRef.current, 1);
           scheduleFlush();
-          return;
-        }
-
-        if (event === 'stream.keepalive') {
-          return;
         }
       };
 
-      while (isActive) {
-        const { value, done } = await reader.read();
-        if (done) {
-          break;
+      const handleStatus = (event: MessageEvent) => {
+        const data = parseEventData(event.data);
+        if (!isRecord(data)) {
+          return;
         }
+        const phase = typeof data.phase === 'string'
+          ? data.phase
+          : typeof data.status === 'string'
+          ? data.status
+          : stateRef.current.statusPhase;
+        const message = typeof data.message === 'string' ? data.message : null;
+        const partial: Partial<StreamingState> = {};
+        if (phase) {
+          partial.statusPhase = phase;
+        }
+        partial.statusMessage = message;
+        patchState(partial);
+        if (typeof data.percentage === 'number' && Number.isFinite(data.percentage)) {
+          progressRef.current = Math.min(Math.max(data.percentage, progressRef.current), 100);
+        }
+        if (typeof data.estimatedCost === 'number' && Number.isFinite(data.estimatedCost)) {
+          estimatedCostRef.current = data.estimatedCost;
+        }
+        scheduleFlush();
+      };
 
-        buffer += decoder.decode(value, { stream: true });
+      const handleInit = (event: MessageEvent) => {
+        const data = parseEventData(event.data);
+        if (isRecord(data) && typeof data.connectedAt === 'string') {
+          patchState({
+            statusPhase: 'connected',
+            statusMessage: 'Stream connected'
+          });
+        } else {
+          patchState({
+            statusPhase: 'connected',
+            statusMessage: null
+          });
+        }
+        progressRef.current = Math.max(progressRef.current, 1);
+        scheduleFlush();
+      };
 
-        let boundary = buffer.indexOf('\n\n');
-        while (boundary !== -1) {
-          const rawEvent = buffer.slice(0, boundary);
-          buffer = buffer.slice(boundary + 2);
-          const parsed = parseSseEvent(rawEvent);
-          if (parsed) {
-            handleParsedEvent(parsed);
+      const handleProgress = (event: MessageEvent) => {
+        const data = parseEventData(event.data);
+        if (!isRecord(data)) {
+          return;
+        }
+        if (typeof data.percentage === 'number' && Number.isFinite(data.percentage)) {
+          progressRef.current = Math.min(Math.max(data.percentage, progressRef.current), 100);
+        }
+        if (typeof data.estimatedCost === 'number' && Number.isFinite(data.estimatedCost)) {
+          estimatedCostRef.current = data.estimatedCost;
+        }
+        scheduleFlush();
+      };
+
+      const handleComplete = (event: MessageEvent) => {
+        const data = parseEventData(event.data);
+        if (!isRecord(data)) {
+          return;
+        }
+        streamEndedRef.current = true;
+        closeEventSource();
+
+        if (typeof data.reasoning === 'string') {
+          reasoningBufferRef.current = data.reasoning;
+        }
+        if (typeof data.content === 'string') {
+          contentBufferRef.current = data.content;
+        }
+        if (Array.isArray((data as any).json)) {
+          const baseTimestamp = Date.now();
+          for (const [index, entry] of ((data as any).json as unknown[]).entries()) {
+            appendJsonPayload(entry, baseTimestamp + index);
           }
-          boundary = buffer.indexOf('\n\n');
+        } else if (Object.prototype.hasOwnProperty.call(data, 'json')) {
+          appendJsonPayload((data as any).json, Date.now());
         }
-      }
 
-      if (buffer.trim().length > 0) {
-        const parsed = parseSseEvent(buffer);
-        if (parsed) {
-          handleParsedEvent(parsed);
+        progressRef.current = 100;
+        if (isRecord(data.cost) && typeof data.cost.total === 'number') {
+          estimatedCostRef.current = data.cost.total;
         }
-      }
 
-      flushImmediately();
+        flushImmediately();
+        patchState({
+          isStreaming: false,
+          responseId: typeof data.responseId === 'string' ? data.responseId : null,
+          tokenUsage: data.tokenUsage ?? null,
+          cost: data.cost ?? null,
+          reasoning: reasoningBufferRef.current,
+          content: contentBufferRef.current,
+          reasoningChunks: reasoningChunksRef.current,
+          contentChunks: contentChunksRef.current,
+          jsonChunks: jsonChunksRef.current,
+          error: null,
+          statusPhase: 'completed',
+          statusMessage: typeof data.message === 'string' ? data.message : 'Stream completed'
+        });
+      };
 
-      if (readerRef.current) {
-        try {
-          await readerRef.current.cancel();
-        } catch {
-          // ignore cancel errors
+      const handleStreamErrorEvent = (event: MessageEvent) => {
+        const data = parseEventData(event.data);
+        streamEndedRef.current = true;
+        closeEventSource(true);
+
+        let errorMessage = 'Stream error occurred';
+        if (isRecord(data) && typeof data.error === 'string') {
+          errorMessage = data.error;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
         }
-        readerRef.current = null;
-      }
 
-      if (isActive) {
-        patchState({ isStreaming: false });
-      }
+        progressRef.current = 0;
+        flushImmediately();
+        patchState({
+          isStreaming: false,
+          error: errorMessage,
+          progress: 0,
+          statusPhase: 'error',
+          statusMessage: errorMessage,
+          session: null
+        });
+      };
+
+      const handleError = (event: Event) => {
+        if (streamEndedRef.current) {
+          closeEventSource(true);
+          return;
+        }
+        streamEndedRef.current = true;
+        closeEventSource(true);
+        progressRef.current = 0;
+        flushImmediately();
+        patchState({
+          isStreaming: false,
+          error: 'Streaming connection lost',
+          progress: 0,
+          statusPhase: 'error',
+          statusMessage: 'Streaming connection lost',
+          session: null
+        });
+      };
+
+      eventSource.addEventListener('stream.chunk', handleChunk as EventListener);
+      eventSource.addEventListener('stream.status', handleStatus as EventListener);
+      eventSource.addEventListener('stream.init', handleInit as EventListener);
+      eventSource.addEventListener('stream.progress', handleProgress as EventListener);
+      eventSource.addEventListener('stream.complete', handleComplete as EventListener);
+      eventSource.addEventListener('stream.error', handleStreamErrorEvent as EventListener);
+      eventSource.onerror = handleError;
     } catch (error: any) {
       if (error?.name === 'AbortError') {
         return;
       }
 
-      if (readerRef.current) {
-        readerRef.current.cancel().catch(() => undefined);
-        readerRef.current = null;
-      }
-
+      abortControllerRef.current = null;
       progressRef.current = 0;
       flushImmediately();
       patchState({
         isStreaming: false,
         error: error instanceof Error ? error.message : 'Failed to start stream',
-        progress: 0
+        progress: 0,
+        statusPhase: 'error',
+        statusMessage: error instanceof Error ? error.message : 'Failed to start stream',
+        session: null
       });
-    } finally {
-      if (abortControllerRef.current) {
-        abortControllerRef.current = null;
-      }
+      closeEventSource(true);
     }
-  }, [patchState, resetState, scheduleFlush, flushImmediately]);
+  }, [appendJsonPayload, closeEventSource, flushImmediately, patchState, resetState, scheduleFlush, stateRef]);
 
   const cancelStream = useCallback(() => {
     flushCancelRef.current?.();
     flushCancelRef.current = null;
     flushPendingRef.current = false;
 
-    if (readerRef.current) {
-      readerRef.current.cancel().catch(() => undefined);
-      readerRef.current = null;
-    }
+    streamEndedRef.current = true;
+    closeEventSource(true);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -522,12 +674,16 @@ export function useAdvancedStreaming() {
     }
 
     progressRef.current = 0;
+    estimatedCostRef.current = 0;
     flushImmediately();
     patchState({
       isStreaming: false,
-      progress: 0
+      progress: 0,
+      statusPhase: 'cancelled',
+      statusMessage: 'Stream cancelled',
+      session: null
     });
-  }, [flushImmediately, patchState]);
+  }, [closeEventSource, flushImmediately, patchState]);
 
   const pauseStream = useCallback(() => {
     console.log('Pause functionality not yet implemented');

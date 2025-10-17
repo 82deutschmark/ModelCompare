@@ -6,6 +6,21 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.9] - 2025-10-17
+
+### Added
+- **Streaming Infrastructure Modules:** Introduced `server/streaming/session-registry.ts`, `sse-manager.ts`, and `stream-harness.ts` to manage POST→GET handshakes, enrich SSE payloads with task/model metadata, and buffer reasoning/text/json deltas for final persistence.
+- **Streaming Plan Artifact:** Documented the end-to-end retrofit in `docs/2025-10-17-plan-streaming-modal-alignment.md`, detailing responsibilities, SSR/DRY checks, and TODO coverage.
+
+### Changed
+- **Debate Streaming Contract:** Refactored `server/routes/debate.routes.ts` to validate payloads during `/stream/init`, verify task/model/session triads on the SSE GET route, and run OpenAI streams through the shared harness while persisting token usage, structured output, and reasoning summaries.
+- **OpenAI Streaming Normalization:** Updated `server/providers/openai.ts` to route every `response.*` event through `handleResponsesStreamEvent`, accumulate structured outputs, emit status updates, and supply enriched completion metadata back to the harness.
+- **Client Handshake & SSE Consumption:** Rebuilt `client/src/hooks/useAdvancedStreaming.ts` to POST the analysis payload, open an `EventSource`, aggregate reasoning/text/json buffers, expose session metadata, and surface status phases plus rich error handling to `useDebateStreaming`.
+- **Storage Turn History:** Extended `server/storage.ts` debate updates to capture cost breakdowns, token usage, structured output blobs, and turn summaries while keeping in-memory totals consistent with persisted numeric strings.
+
+### Fixed
+- **Changelog Alignment:** Bumped the documented release to capture the streaming retrofit and ensure downstream audit trails remain accurate.
+
 ## [Version 0.4.8] - 2025-10-17
 
 ### Fixed

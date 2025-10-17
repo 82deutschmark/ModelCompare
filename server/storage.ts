@@ -738,7 +738,7 @@ export class MemStorage implements IStorage {
       turnHistory: [],
       model1ResponseIds: [],
       model2ResponseIds: [],
-      totalCost: 0,
+      totalCost: '0',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -790,12 +790,14 @@ export class MemStorage implements IStorage {
       ? [...(existing.model2ResponseIds as string[]), turnData.responseId]
       : (existing.model2ResponseIds as string[]);
 
+    const nextTotalCost = Number(existing.totalCost ?? 0) + turnData.cost;
+
     const updated: DebateSession = {
       ...existing,
       turnHistory,
       model1ResponseIds,
       model2ResponseIds,
-      totalCost: (existing.totalCost || 0) + turnData.cost,
+      totalCost: `${nextTotalCost}`,
       updatedAt: new Date()
     };
     this.debateSessions.set(id, updated);

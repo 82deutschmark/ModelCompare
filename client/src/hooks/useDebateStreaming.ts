@@ -9,7 +9,9 @@ import {
   useAdvancedStreaming,
   type StreamingOptions,
   type ReasoningStreamChunk,
-  type ContentStreamChunk
+  type ContentStreamChunk,
+  type JsonStreamChunk,
+  type StreamingSessionInfo
 } from '@/hooks/useAdvancedStreaming';
 
 export interface DebateStreamingState {
@@ -18,6 +20,7 @@ export interface DebateStreamingState {
   content: string;
   reasoningChunks: ReasoningStreamChunk[];
   contentChunks: ContentStreamChunk[];
+  jsonChunks: JsonStreamChunk[];
   isStreaming: boolean;
   error: string | null;
   responseId: string | null;
@@ -25,6 +28,9 @@ export interface DebateStreamingState {
   cost: any;
   progress: number;
   estimatedCost: number;
+  statusPhase: string | null;
+  statusMessage: string | null;
+  session: StreamingSessionInfo | null;
 
   // Streaming control functions
   startStream: (options: StreamingOptions) => Promise<void>;
@@ -42,6 +48,7 @@ export function useDebateStreaming(): DebateStreamingState {
     content,
     reasoningChunks,
     contentChunks,
+    jsonChunks,
     isStreaming,
     error,
     responseId,
@@ -49,6 +56,9 @@ export function useDebateStreaming(): DebateStreamingState {
     cost,
     progress,
     estimatedCost,
+    statusPhase,
+    statusMessage,
+    session,
     startStream,
     cancelStream,
     pauseStream,
@@ -67,6 +77,7 @@ export function useDebateStreaming(): DebateStreamingState {
     content,
     reasoningChunks,
     contentChunks,
+    jsonChunks,
     isStreaming,
     error,
     responseId,
@@ -74,6 +85,9 @@ export function useDebateStreaming(): DebateStreamingState {
     cost,
     progress,
     estimatedCost,
+    statusPhase,
+    statusMessage,
+    session,
 
     // Streaming control functions
     startStream,
