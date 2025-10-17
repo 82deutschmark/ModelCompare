@@ -6,33 +6,26 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
-## [Version 0.4.7] - 2025-10-17
+## [Version 0.4.8] - 2025-10-17
 
 ### Fixed
-- **Debate Jury Flow Corrections:** Repaired review toggles so jurors must explicitly clear pending flags, blocked continuations while the floor is closed, and surfaced clearer gating cues in controls.
-- **Export Metadata Integrity:** Propagated resolved topic text and jury annotations into markdown exports and clipboard copies for accurate transcripts.
+- **Debate Session State Recovery:** Consolidated `useDebateSession` after conflicted merges, restored streaming bootstrap in `client/src/pages/debate.tsx`, and ensured turn history, resume context, and exports stay aligned with live streams.
+- **Jury Annotation Review Enforcement:** Reinstated review gating so jury tasks remain pending until explicitly cleared, preventing debate continuations with unresolved annotations.
 
-## [Version 0.4.6] - 2025-10-17
-
-### Fixed
-- **Debate Streaming Stability:** Refactored `client/src/hooks/useAdvancedStreaming.ts` to buffer SSE reasoning/content in refs, throttle UI updates via animation frames, and harden error cleanup so React no longer drops streamed chunks during long debates.
-- **SSE Heartbeats:** Added guarded writes and 15-second `stream.keepalive` heartbeats in `server/routes/debate.routes.ts` to keep reverse proxies from closing idle debate streams while preserving session persistence.
-
-## [Version 0.4.5] - 2025-10-17
-<!--
- * Author: GPT-5 Codex
- * Date: 2025-10-17 and the 19:05 UTC
- * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
- * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
--->
+### Documentation
+- Logged the build recovery steps in `docs/2025-10-17-plan-build-recovery.md` and outlined changelog alignment follow-up in `docs/2025-10-17-plan-changelog-alignment.md` for auditability.
 
 ## [Version 0.4.7] - 2025-10-17
 
 ### Added
-- **Claude Haiku 4.5 Availability:** Registered Anthropic's Claude Haiku 4.5 in `shared/model-catalog.ts` for both direct Anthropic and OpenRouter provider groups, including accurate pricing, context window, and reasoning capability metadata.
+- **Claude Haiku 4.5 Availability:** Registered Anthropic's Claude Haiku 4.5 across the model catalog with pricing, context window, and reasoning capability metadata.
 
 ### Changed
-- **Anthropic Token Limits:** Updated `server/providers/anthropic.ts` to enforce model-specific token ceilings, ensuring Haiku 4.5 requests honor the 16k generation cap while preserving user-specified overrides within documented limits.
+- **Anthropic Token Limits:** Updated `server/providers/anthropic.ts` to enforce model-specific token ceilings while respecting user overrides within documented bounds.
+
+### Fixed
+- **Debate Jury Flow Corrections:** Repaired review toggles so jurors must explicitly clear pending flags, blocked continuations while the floor is closed, and surfaced clearer gating cues in controls.
+- **Export Metadata Integrity:** Propagated resolved topic text and jury annotations into markdown exports and clipboard copies for accurate transcripts.
 
 ## [Version 0.4.6] - 2025-10-17
 
