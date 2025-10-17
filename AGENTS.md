@@ -80,7 +80,7 @@ ModelCompare is a sophisticated full-stack TypeScript application for comparing 
 
 ### AI Provider Integration
 - **OpenAI**: GPT-5, GPT-4.1 series, o3/o4 reasoning models (Responses API)
-- **Anthropic**: Claude Sonnet 4.5
+- **Anthropic**: Claude Sonnet 4.5, Haiku 4.5
 - **Google**: Gemini 2.5 Pro/Flash, Gemini 2.0 Flash series
 - **xAI**: Grok 4 (reasoning), Grok 3 series variants NOW HANDLED BY OPENROUTER!!
 - **DeepSeek**: R1 Reasoner (CoT), V3 Chat
@@ -164,7 +164,7 @@ npm run db:push  # Push database schema changes
 - Version tracking and comparison
 
 ### 5. Vixra Mode (`/vixra`)
-- Satirical academic paper generation
+- Light-hearted academic paper generation
 - Template-driven section progression
 - Auto-mode with intelligent dependency resolution
 
@@ -189,9 +189,9 @@ npm run db:push  # Push database schema changes
 - `tailwind.config.ts` - UI styling and design system
 
 ## Environment Variables
-
+ALL environment variables are present in the .env file and in Railway for staging and production.
 ```bash
-# Database (optional - falls back to in-memory)
+# Database REQUIRED!  
 DATABASE_URL=postgresql://user:pass@host:port/db
 
 # AI Provider API Keys (at least one required)
@@ -265,7 +265,7 @@ promptAudits: {
 - `shared/` centralizes schemas, types, and the variable engine shared across runtimes. Documentation sits in `docs/`, generated output in `dist/`, and database migrations in `migrations/`.
 
 ## Build, Test, and Development Commands
-- User will handle all.
+- Docker is available.  Generally the user prefers to test the work on the staging branch.  Pushing anything to the current branch will push it to the staging branch as well.
 
 ## Coding Style & Naming Conventions
 - Strict TypeScript is enforced (`tsconfig.json`), so declare explicit return types on exported functions and reuse shared interfaces.
@@ -280,7 +280,7 @@ promptAudits: {
 ## Commit & Pull Request Guidelines
 - Match the existing git history: concise, imperative, scope-first summaries (for example `Fix battle chat template`).
 - Update `docs/` and `shared/` contracts alongside code whenever architecture or API surfaces shift.
-- Update the `changelog.md` with semantic versioning.
+- Update the `changelog.md` at the top of the file with semantic versioning.
 
 ## Environment & Configuration Tips
 - Load secrets from `.env` (read immediately in `server/index.ts`); do not commit credentials.
