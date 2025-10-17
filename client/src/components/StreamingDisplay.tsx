@@ -129,11 +129,13 @@ export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
                 )}
               </div>
 
-              <div 
+              <div
             className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-4 min-h-[100px] max-h-[300px] overflow-y-auto"
             data-gramm="false"
             data-gramm_editor="false"
             data-enable-grammarly="false"
+            data-lpignore="true"
+            data-form-type="other"
           >
                 <div
                   className="text-sm text-purple-900 dark:text-purple-100 leading-relaxed"
@@ -159,11 +161,13 @@ export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
             )}
           </div>
 
-          <div 
+          <div
             className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 min-h-[150px] max-h-[400px] overflow-y-auto"
             data-gramm="false"
             data-gramm_editor="false"
             data-enable-grammarly="false"
+            data-lpignore="true"
+            data-form-type="other"
           >
             {error ? (
               <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">

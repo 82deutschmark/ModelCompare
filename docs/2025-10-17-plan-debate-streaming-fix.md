@@ -19,13 +19,15 @@ Restore stable streaming on the debate page without regressing shared streaming 
 ### Root Cause
 The MutationObserver error originated from **browser extensions** (like Grammarly, LastPass, etc.) trying to observe DOM nodes during rapid streaming updates. The error message `web-client-content-script` confirmed this was external, not from our codebase.
 
+**Update**: User confirmed they use **LastPass** (not Grammarly), which has similar DOM observation behavior that interferes with rapid streaming updates.
+
 ### Investigation Results
 1. ✅ **Client Flow**: Confirmed `debate.tsx` → `useAdvancedStreaming` → POST `/api/debate/stream` → `StreamingDisplay` works correctly
 2. ✅ **Server Routes**: `/api/debate/stream` exists with proper SSE handlers, payload validation, and provider orchestration
 3. ✅ **Provider Support**: All providers properly support SSE streaming
 4. ✅ **Observer Source**: No MutationObserver in our codebase - confirmed external browser extension interference
 
-### Implemented Fix (Commit: 202ca41)
+### Implemented Fix (Commits: 202ca41, current)
 **Files Modified:**
 - `client/src/components/StreamingDisplay.tsx`
 - `client/src/pages/debate.tsx`
@@ -33,10 +35,9 @@ The MutationObserver error originated from **browser extensions** (like Grammarl
 **Changes:**
 1. Added null checks before all `scrollIntoView` calls
 2. Wrapped scroll operations in try-catch blocks to prevent crashes
-3. Added data attributes to disable Grammarly on streaming containers:
-   - `data-gramm="false"`
-   - `data-gramm_editor="false"`
-   - `data-enable-grammarly="false"`
+3. Added data attributes to disable browser extension interference:
+   - **Grammarly**: `data-gramm="false"`, `data-gramm_editor="false"`, `data-enable-grammarly="false"`
+   - **LastPass**: `data-lpignore="true"`, `data-form-type="other"`
 4. Debug logging instead of error propagation
 
 ### Result
