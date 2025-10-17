@@ -26,9 +26,27 @@ export interface StreamingOptions {
   maxTokens?: number;
 }
 
+export interface StreamChunkBase {
+  timestamp: number;
+  delta: string;
+  cumulativeText: string;
+  charCount: number;
+  intensity: number;
+}
+
+export interface ReasoningStreamChunk extends StreamChunkBase {
+  type: 'reasoning';
+}
+
+export interface ContentStreamChunk extends StreamChunkBase {
+  type: 'content';
+}
+
 interface StreamingState {
   reasoning: string;
   content: string;
+  reasoningChunks: ReasoningStreamChunk[];
+  contentChunks: ContentStreamChunk[];
   isStreaming: boolean;
   error: string | null;
   responseId: string | null;
@@ -46,6 +64,8 @@ interface ParsedSseEvent {
 const createInitialState = (): StreamingState => ({
   reasoning: '',
   content: '',
+  reasoningChunks: [],
+  contentChunks: [],
   isStreaming: false,
   error: null,
   responseId: null,
@@ -103,6 +123,15 @@ const parseSseEvent = (raw: string): ParsedSseEvent | null => {
 const isRecord = (value: unknown): value is Record<string, any> =>
   value !== null && typeof value === 'object';
 
+const calculateIntensity = (delta: string, timestamp: number, previousTimestamp: number | null): number => {
+  const sanitizedDelta = delta.replace(/\s+/g, ' ').trim();
+  const charCount = sanitizedDelta.length || delta.length;
+  const now = timestamp || Date.now();
+  const timeDeltaMs = previousTimestamp ? Math.max(now - previousTimestamp, 1) : 1;
+  const perSecond = charCount / (timeDeltaMs / 1000);
+  return Number.isFinite(perSecond) ? parseFloat(perSecond.toFixed(3)) : 0;
+};
+
 export function useAdvancedStreaming() {
   const [state, setState] = useState<StreamingState>(() => createInitialState());
   const stateRef = useRef<StreamingState>(state);
@@ -112,6 +141,8 @@ export function useAdvancedStreaming() {
 
   const reasoningBufferRef = useRef<string>('');
   const contentBufferRef = useRef<string>('');
+  const reasoningChunksRef = useRef<ReasoningStreamChunk[]>([]);
+  const contentChunksRef = useRef<ContentStreamChunk[]>([]);
   const progressRef = useRef<number>(0);
   const estimatedCostRef = useRef<number>(0);
 
@@ -162,8 +193,11 @@ export function useAdvancedStreaming() {
 
       for (const key of Object.keys(partial) as (keyof StreamingState)[]) {
         const value = partial[key];
-        if (value !== undefined && next[key] !== value) {
-          next[key] = value as StreamingState[typeof key];
+        if (value === undefined) {
+          continue;
+        }
+        if (next[key] !== value) {
+          next[key] = value;
           changed = true;
         }
       }
@@ -179,6 +213,8 @@ export function useAdvancedStreaming() {
 
     reasoningBufferRef.current = next.reasoning;
     contentBufferRef.current = next.content;
+    reasoningChunksRef.current = next.reasoningChunks;
+    contentChunksRef.current = next.contentChunks;
     progressRef.current = next.progress;
     estimatedCostRef.current = next.estimatedCost;
 
@@ -192,6 +228,8 @@ export function useAdvancedStreaming() {
 
     const nextReasoning = reasoningBufferRef.current;
     const nextContent = contentBufferRef.current;
+    const nextReasoningChunks = reasoningChunksRef.current;
+    const nextContentChunks = contentChunksRef.current;
     const nextProgress = progressRef.current;
     const nextEstimatedCost = estimatedCostRef.current;
 
@@ -199,6 +237,8 @@ export function useAdvancedStreaming() {
       if (
         prev.reasoning === nextReasoning &&
         prev.content === nextContent &&
+        prev.reasoningChunks === nextReasoningChunks &&
+        prev.contentChunks === nextContentChunks &&
         prev.progress === nextProgress &&
         prev.estimatedCost === nextEstimatedCost
       ) {
@@ -209,6 +249,8 @@ export function useAdvancedStreaming() {
         ...prev,
         reasoning: nextReasoning,
         content: nextContent,
+        reasoningChunks: nextReasoningChunks,
+        contentChunks: nextContentChunks,
         progress: nextProgress,
         estimatedCost: nextEstimatedCost
       };
@@ -268,6 +310,8 @@ export function useAdvancedStreaming() {
 
     reasoningBufferRef.current = '';
     contentBufferRef.current = '';
+    reasoningChunksRef.current = [];
+    contentChunksRef.current = [];
     progressRef.current = 0;
     estimatedCostRef.current = 0;
 
@@ -311,11 +355,32 @@ export function useAdvancedStreaming() {
           }
 
           const chunkType = data.type;
+          const timestamp = typeof data.timestamp === 'number' ? data.timestamp : Date.now();
           if (chunkType === 'reasoning') {
             reasoningBufferRef.current += delta;
+            const previousChunk = reasoningChunksRef.current[reasoningChunksRef.current.length - 1] ?? null;
+            const chunk: ReasoningStreamChunk = {
+              type: 'reasoning',
+              timestamp,
+              delta,
+              cumulativeText: reasoningBufferRef.current,
+              charCount: delta.length,
+              intensity: calculateIntensity(delta, timestamp, previousChunk?.timestamp ?? null)
+            };
+            reasoningChunksRef.current = [...reasoningChunksRef.current, chunk];
             progressRef.current = Math.min(progressRef.current + 4, 85);
           } else if (chunkType === 'text') {
             contentBufferRef.current += delta;
+            const previousChunk = contentChunksRef.current[contentChunksRef.current.length - 1] ?? null;
+            const chunk: ContentStreamChunk = {
+              type: 'content',
+              timestamp,
+              delta,
+              cumulativeText: contentBufferRef.current,
+              charCount: delta.length,
+              intensity: calculateIntensity(delta, timestamp, previousChunk?.timestamp ?? null)
+            };
+            contentChunksRef.current = [...contentChunksRef.current, chunk];
             progressRef.current = Math.min(progressRef.current + 6, 98);
           }
           scheduleFlush();
@@ -344,6 +409,10 @@ export function useAdvancedStreaming() {
             responseId: typeof data.responseId === 'string' ? data.responseId : null,
             tokenUsage: data.tokenUsage ?? null,
             cost: data.cost ?? null,
+            reasoning: reasoningBufferRef.current,
+            content: contentBufferRef.current,
+            reasoningChunks: reasoningChunksRef.current,
+            contentChunks: contentChunksRef.current,
             error: null
           });
           isActive = false;

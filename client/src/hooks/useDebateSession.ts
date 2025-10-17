@@ -1,13 +1,12 @@
-/**
- * Custom hook for managing debate session state
- *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Manages debate session state including messages, rounds, response tracking, and session management
- * SRP/DRY check: Pass - Single responsibility for debate session state management
+/*
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 18:56 UTC
+ * PURPOSE: Persist debate messages alongside structured reasoning/content chunk timelines for replay tooling.
+ * SRP/DRY check: Pass - Hook centralizes debate session state while delegating analytics to downstream components.
  */
 
 import { useState } from 'react';
+import type { ReasoningStreamChunk, ContentStreamChunk } from '@/hooks/useAdvancedStreaming';
 
 export interface DebateMessage {
   id: string;
@@ -19,6 +18,8 @@ export interface DebateMessage {
   reasoning?: string;
   systemPrompt?: string;
   responseTime: number;
+  reasoningChunks?: ReasoningStreamChunk[];
+  contentChunks?: ContentStreamChunk[];
   tokenUsage?: {
     input: number;
     output: number;
@@ -84,7 +85,12 @@ export function useDebateSession(): DebateSessionState {
 
   // Helper function to add a single message
   const addMessage = (message: DebateMessage) => {
-    setMessages(prev => [...prev, message]);
+    const clonedMessage: DebateMessage = {
+      ...message,
+      reasoningChunks: message.reasoningChunks?.map(chunk => ({ ...chunk })),
+      contentChunks: message.contentChunks?.map(chunk => ({ ...chunk }))
+    };
+    setMessages(prev => [...prev, clonedMessage]);
   };
 
   // Reset function for session state
