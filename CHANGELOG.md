@@ -19,6 +19,28 @@
 - **SSE Heartbeats:** Added guarded writes and 15-second `stream.keepalive` heartbeats in `server/routes/debate.routes.ts` to keep reverse proxies from closing idle debate streams while preserving session persistence.
 
 ## [Version 0.4.5] - 2025-10-17
+<!--
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 and the 19:05 UTC
+ * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
+ * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
+-->
+
+## [Version 0.4.7] - 2025-10-17
+
+### Added
+- **Claude Haiku 4.5 Availability:** Registered Anthropic's Claude Haiku 4.5 in `shared/model-catalog.ts` for both direct Anthropic and OpenRouter provider groups, including accurate pricing, context window, and reasoning capability metadata.
+
+### Changed
+- **Anthropic Token Limits:** Updated `server/providers/anthropic.ts` to enforce model-specific token ceilings, ensuring Haiku 4.5 requests honor the 16k generation cap while preserving user-specified overrides within documented limits.
+
+## [Version 0.4.6] - 2025-10-17
+
+### Fixed
+- **Debate Streaming Stability:** Refactored `client/src/hooks/useAdvancedStreaming.ts` to buffer SSE reasoning/content in refs, throttle UI updates via animation frames, and harden error cleanup so React no longer drops streamed chunks during long debates.
+- **SSE Heartbeats:** Added guarded writes and 15-second `stream.keepalive` heartbeats in `server/routes/debate.routes.ts` to keep reverse proxies from closing idle debate streams while preserving session persistence.
+
+## [Version 0.4.5] - 2025-10-17
 
 ### Fixed
 - **🚨 CRITICAL: Comprehensive Browser Extension Compatibility:** Fixed application crashes caused by browser extension interference (LastPass, Grammarly, etc.) across ALL streaming and chat interfaces

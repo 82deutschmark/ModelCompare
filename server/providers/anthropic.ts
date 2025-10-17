@@ -1,12 +1,10 @@
 /**
  * Anthropic Provider
- * 
- * Handles Claude models with extended thinking capabilities
- * Author: Cascade using Claude Sonnet 4
- * Date: 2025-10-04
- * PURPOSE: Provides integration with Anthropic's Claude models including Sonnet 4.5, 4, 3.7, 3.5, and Haiku variants.
- *          Manages reasoning extraction, message formatting, and token usage tracking.
- * SRP/DRY check: Pass - Single responsibility for Anthropic API integration
+ *
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 and the 19:05 UTC
+ * PURPOSE: Maintain the Anthropic provider integration, now extended to surface Claude Haiku 4.5 with accurate token ceilings while preserving reasoning instrumentation and pricing metadata for all Claude variants.
+ * SRP/DRY check: Pass - Dedicated to Anthropic API orchestration without duplicating shared model metadata.
  */
 
 import 'dotenv/config';
@@ -106,6 +104,27 @@ export class AnthropicProvider extends BaseProvider {
       },
     },
     {
+      id: "claude-haiku-4-5-20251015",
+      name: "Claude Haiku 4.5",
+      provider: "Anthropic",
+      model: "claude-haiku-4-5-20251015",
+      knowledgeCutoff: "Unknown",
+      capabilities: {
+        reasoning: true,
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 1.00,
+        outputPerMillion: 5.00,
+      },
+      limits: {
+        maxTokens: 16000,
+        contextWindow: 200000,
+      },
+    },
+    {
       id: "claude-3-haiku-20240307",
       name: "Claude 3 Haiku",
       provider: "Anthropic",
@@ -201,9 +220,15 @@ ${lastUserMessage.content}`;
       }
     }
     
+    const maxTokensLimit = modelConfig?.limits.maxTokens ?? 2000;
+    const requestedMaxTokens = options?.maxTokens;
+    const effectiveMaxTokens = requestedMaxTokens
+      ? Math.min(requestedMaxTokens, maxTokensLimit)
+      : maxTokensLimit;
+
     const message = await anthropic.messages.create({
       model,
-      max_tokens: options?.maxTokens || 2000,
+      max_tokens: effectiveMaxTokens,
       temperature: options?.temperature,
       messages: anthropicMessages,
     });

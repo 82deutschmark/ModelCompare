@@ -1,11 +1,9 @@
 /**
- * Author: Claude Code using Sonnet 4
- * Date: 2025-09-28
- * PURPOSE: Enhanced model catalog with real OpenRouter data from arc-explainer project.
- *          Replaces hallucinated models with accurate OpenRouter API model definitions.
- *          Incorporates critical metadata fields for proper model handling and UI display.
- * SRP/DRY check: Pass - Single responsibility for model metadata, eliminates duplicate/fake model definitions
- * shadcn/ui: Pass - Configuration only, no UI components
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 and the 19:05 UTC
+ * PURPOSE: Maintain the authoritative model metadata catalog, now updated with Claude Haiku 4.5 entries across direct Anthropic and OpenRouter integrations while preserving existing display and pricing structures.
+ * SRP/DRY check: Pass - Centralized source of truth for model metadata, verified no overlapping Haiku 4.5 definitions elsewhere.
+ * shadcn/ui: Pass - Configuration only, UI components consume data via composition.
  */
 
 export type ModelDisplay = {
@@ -276,6 +274,22 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     modelType: 'claude',
     maxOutputTokens: 4000,
     releaseDate: '2024-10',
+    supportsTemperature: true,
+    isReasoning: true,
+  },
+  'claude-haiku-4-5-20251015': {
+    key: 'claude-haiku-4-5-20251015',
+    name: 'Claude Haiku 4.5',
+    color: 'bg-indigo-300',
+    premium: false,
+    cost: { input: '$1.00', output: '$5.00' },
+    provider: 'Anthropic',
+    responseTime: { speed: 'fast', estimate: '<30 sec' },
+    apiModelName: 'claude-haiku-4-5-20251015',
+    modelType: 'claude',
+    contextWindow: 200000,
+    maxOutputTokens: 16000,
+    releaseDate: '2025-10',
     supportsTemperature: true,
     isReasoning: true,
   },
@@ -698,6 +712,23 @@ export const MODEL_CATALOG: Record<string, ModelDisplay> = {
     isReasoning: false,
     requiresPromptFormat: true,
     supportsStructuredOutput: false,
+  },
+  // Anthropic Models (via OpenRouter)
+  'anthropic/claude-haiku-4.5': {
+    key: 'anthropic/claude-haiku-4.5',
+    name: 'Claude Haiku 4.5 (OpenRouter)',
+    color: 'bg-indigo-300',
+    premium: false,
+    cost: { input: '$1.00', output: '$5.00' },
+    provider: 'OpenRouter',
+    responseTime: { speed: 'fast', estimate: '<30 sec' },
+    apiModelName: 'anthropic/claude-haiku-4.5',
+    modelType: 'openrouter',
+    contextWindow: 200000,
+    maxOutputTokens: 16000,
+    releaseDate: '2025-10',
+    supportsTemperature: true,
+    isReasoning: true,
   },
   'nvidia/nemotron-nano-9b-v2': {
     key: 'nvidia/nemotron-nano-9b-v2',
