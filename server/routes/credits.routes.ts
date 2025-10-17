@@ -27,6 +27,10 @@ router.post("/create-payment-intent", isAuthenticated, async (req, res) => {
     const user = req.user;
     const { packageId } = req.body;
 
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     if (!packageId) {
       return res.status(400).json({ error: 'Package ID is required' });
     }

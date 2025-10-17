@@ -5,10 +5,9 @@
  *          SSE dispatcher, shared streaming logic, and heartbeat keepalives so modern React clients can
  *          consume Responses API streams without premature proxy disconnects while persisting debate turns.
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
- *                across init, SSE, and legacy entry points.
- */
+ *                across init and SSE entry points.
+*/
 import { Router } from "express";
-import { randomUUID } from "crypto";
 import { getProviderForModel } from "../providers/index.js";
 import { storage } from "../storage.js";
 import { StreamSessionRegistry } from "../streaming/session-registry.js";
@@ -519,46 +518,6 @@ router.get("/stream/:taskId/:modelKey/:sessionId", async (req, res) => {
   });
 
   await streamDebateTurn(harness, sessionEntry.payload);
-});
-
-// POST /api/debate/stream - Streaming debate with reasoning (legacy single-call flow)
-router.post("/stream", async (req, res) => {
-  if (!isStreamingEnabled()) {
-    res.status(503).json({ error: "Streaming is disabled by configuration" });
-    return;
-  }
-
-  let harness: StreamHarness | null = null;
-
-  try {
-    const payload = await prepareStreamPayload(req.body);
-    const sessionId = `debate-legacy-${randomUUID()}`;
-    const taskId = buildTaskId(payload);
-    const modelKey = payload.modelId;
-
-    const manager = new SseStreamManager(res, { taskId, modelKey, sessionId });
-    harness = new StreamHarness(manager);
-    harness.init({
-      debateSessionId: payload.debateSessionId,
-      turnNumber: payload.turnNumber,
-      modelId: payload.modelId,
-      role: payload.role
-    });
-
-    await streamDebateTurn(harness, payload);
-  } catch (error) {
-    if (harness) {
-      harness.error(error instanceof Error ? error : new Error("Failed to start debate stream"));
-      return;
-    }
-
-    const statusCode = error instanceof HttpError ? error.statusCode : 500;
-    const message = error instanceof Error ? error.message : "Failed to start debate stream";
-    if (!(error instanceof HttpError)) {
-      console.error("Debate stream error:", error);
-    }
-    res.status(statusCode).json({ error: message });
-  }
 });
 
 export { router as debateRoutes };
