@@ -1,3 +1,7 @@
+// * Author: gpt-5-codex
+// * Date: 2025-10-17 19:26 UTC
+// * PURPOSE: Reconfigure debate stage layout, session phases, and jury workflow for structured Robert's Rules debates.
+// * SRP/DRY check: Pass - Page orchestrates debate mode composition without duplicating child responsibilities.
 /**
  * Debate Mode - Structured, Robert's Rules AI Model Debate Interface
  *
@@ -10,11 +14,6 @@
  * - Real-time cost calculation and reasoning log display
  * - Clean debate-focused UI distinct from Battle and Compare modes
  * - Modular prompt loading from docs/debate-prompts.md (no hardcoded topics/instructions)
- *
- * Author: Cascade using cloaked Grok model (code-supernova-1-million)
- * Date: October 15, 2025
- * PURPOSE: Refactored debate component using custom hooks and modular components for better maintainability
- * SRP/DRY check: Pass - Single responsibility for debate orchestration, no duplication with other mode components
  */
 
 import { useRef, useEffect, useMemo } from "react";
@@ -34,7 +33,7 @@ import type { AIModel, ModelResponse } from '@/types/ai-models';
 
 // Import new hooks and components
 import { useDebateSetup } from "@/hooks/useDebateSetup";
-import { useDebateSession } from "@/hooks/useDebateSession";
+import { useDebateSession, ROBERTS_RULES_PHASES, type DebatePhase } from "@/hooks/useDebateSession";
 import { useDebateStreaming } from "@/hooks/useDebateStreaming";
 import { useDebatePrompts } from "@/hooks/useDebatePrompts";
 import { useDebateExport } from "@/hooks/useDebateExport";
@@ -42,6 +41,9 @@ import { DebateService } from "@/services/debateService";
 import { DebateSetupPanel } from "@/components/debate/DebateSetupPanel";
 import { DebateControls } from "@/components/debate/DebateControls";
 import { DebateMessageList } from "@/components/debate/DebateMessageList";
+import { DebateStageLayout } from "@/components/debate/DebateStageLayout";
+import { DebateStageTimeline } from "@/components/debate/DebateStageTimeline";
+import { JuryScoreCard } from "@/components/debate/JuryScoreCard";
 
 export default function Debate() {
   const { toast } = useToast();
@@ -89,6 +91,23 @@ export default function Debate() {
     debateSetup.adversarialLevel,
     debateSetup.model1Id,
     debateSetup.model2Id,
+  ]);
+
+  const resolvedTopicText = useMemo(() => {
+    if (debateService) {
+      const topic = debateService.getTopicText();
+      if (topic) {
+        return topic;
+      }
+    }
+    return debateSetup.useCustomTopic
+      ? debateSetup.customTopic
+      : debateSetup.selectedTopic;
+  }, [
+    debateService,
+    debateSetup.customTopic,
+    debateSetup.selectedTopic,
+    debateSetup.useCustomTopic,
   ]);
 
   // Advanced streaming hook
@@ -324,6 +343,24 @@ export default function Debate() {
   }, []);
 
   const continueDebate = async () => {
+    if (debateSession.hasUnresolvedJuryTasks()) {
+      toast({
+        title: "Jury Review Required",
+        description: "Complete jury scoring and notes before continuing to the next turn.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!debateSession.isFloorOpen()) {
+      toast({
+        title: "Floor Closed",
+        description: "Reopen the debate floor before continuing to the next turn.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!debateSetup.model1Id || !debateSetup.model2Id || !debateService) return;
 
     const lastMessage = debateSession.messages[debateSession.messages.length - 1];
@@ -398,6 +435,10 @@ export default function Debate() {
       selectedTopic: debateSetup.selectedTopic,
       customTopic: debateSetup.customTopic,
       useCustomTopic: debateSetup.useCustomTopic,
+      topicText: resolvedTopicText,
+      juryAnnotations: debateSession.juryAnnotations,
+      phases: Array.from(ROBERTS_RULES_PHASES),
+      currentPhase,
     });
   };
 
@@ -408,10 +449,112 @@ export default function Debate() {
       selectedTopic: debateSetup.selectedTopic,
       customTopic: debateSetup.customTopic,
       useCustomTopic: debateSetup.useCustomTopic,
+      topicText: resolvedTopicText,
+      juryAnnotations: debateSession.juryAnnotations,
+      phases: Array.from(ROBERTS_RULES_PHASES),
+      currentPhase,
     });
   };
 
   const totalCost = debateSession.calculateTotalCost();
+
+  const currentPhase = debateSession.getCurrentPhase();
+  const floorOpen = debateSession.isFloorOpen();
+  const juryPending = debateSession.hasUnresolvedJuryTasks();
+  const continueDisabledReason = juryPending
+    ? 'Complete jury scoring before continuing to the next turn.'
+    : !floorOpen
+      ? 'The debate floor is closed. Reopen the floor to allow the next speaker.'
+      : undefined;
+
+  const stageSpeakers = useMemo(() => {
+    const model1 = debateService?.getModel(debateSetup.model1Id ?? '')?.name || 'Affirmative';
+    const model2 = debateService?.getModel(debateSetup.model2Id ?? '')?.name || 'Negative';
+    return [
+      {
+        modelId: debateSetup.model1Id ?? 'affirmative-placeholder',
+        modelName: model1,
+        role: 'Affirmative',
+      },
+      {
+        modelId: debateSetup.model2Id ?? 'negative-placeholder',
+        modelName: model2,
+        role: 'Negative',
+      },
+    ];
+  }, [debateService, debateSetup.model1Id, debateSetup.model2Id]);
+
+  const activeSpeakers = useMemo(
+    () =>
+      stageSpeakers.filter(
+        speaker => speaker.modelId === debateSetup.model1Id || speaker.modelId === debateSetup.model2Id
+      ),
+    [stageSpeakers, debateSetup.model1Id, debateSetup.model2Id]
+  );
+
+  const phaseMetadata: Record<DebatePhase, { label: string; description: string }> = {
+    OPENING_STATEMENTS: {
+      label: 'Opening Statements',
+      description: 'Establishes each model\'s primary case and burden.',
+    },
+    REBUTTALS: {
+      label: 'Rebuttals',
+      description: 'Floor opens for alternating rebuttals and counterpoints.',
+    },
+    CLOSING_ARGUMENTS: {
+      label: 'Closing Arguments',
+      description: 'Final summaries before the jury renders its verdict.',
+    },
+  };
+
+  const stagePhases = useMemo(
+    () =>
+      ROBERTS_RULES_PHASES.map(phase => ({
+        id: phase,
+        label: phaseMetadata[phase].label,
+        description: phaseMetadata[phase].description,
+        speakers: stageSpeakers,
+      })),
+    [stageSpeakers]
+  );
+
+  useEffect(() => {
+    if (activeSpeakers.length > 0) {
+      debateSession.initializeJury(
+        activeSpeakers.map(speaker => ({ modelId: speaker.modelId, modelName: speaker.modelName }))
+      );
+    }
+  }, [activeSpeakers, debateSession.initializeJury]);
+
+  const nextSpeakerId = useMemo(() => {
+    if (!debateService || activeSpeakers.length === 0) return null;
+    return debateService.getNextDebater(debateSession.currentRound);
+  }, [debateService, debateSession.currentRound, activeSpeakers.length]);
+
+  const currentSpeaker = useMemo(() => {
+    if (!nextSpeakerId) {
+      return stageSpeakers[0] ?? null;
+    }
+    return activeSpeakers.find(speaker => speaker.modelId === nextSpeakerId) ?? null;
+  }, [activeSpeakers, nextSpeakerId, stageSpeakers]);
+
+  const currentSpeakerModel = useMemo(() => {
+    if (!nextSpeakerId || !debateService) {
+      return undefined;
+    }
+    return debateService.getModel(nextSpeakerId);
+  }, [debateService, nextSpeakerId]);
+
+  const rebuttalQueue = useMemo(() => {
+    const queueSource = activeSpeakers.length > 0 ? activeSpeakers : stageSpeakers;
+    if (!floorOpen) {
+      return [];
+    }
+    if (!currentSpeaker) {
+      return queueSource;
+    }
+    return queueSource.filter(speaker => speaker.modelId !== currentSpeaker.modelId);
+  }, [activeSpeakers, currentSpeaker, floorOpen, stageSpeakers]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -496,90 +639,109 @@ export default function Debate() {
           </Card>
         )}
 
-        {/* Main Content Area - Better Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
-          {/* Left Column - Controls and Progress */}
-          <div className="xl:col-span-1 space-y-3">
-            {/* Debate Progress and Controls */}
-            {debateSession.messages.length > 0 && (
-              <Card className="p-3">
-                <DebateControls
-                  currentRound={debateSession.currentRound}
-                  totalCost={totalCost}
-                  messagesCount={debateSession.messages.length}
-                  showSetup={debateSetup.showSetup}
-                  setShowSetup={debateSetup.setShowSetup}
-                  onExportMarkdown={handleExportMarkdown}
+        <DebateStageLayout
+          stageTimeline={
+            <DebateStageTimeline
+              phases={stagePhases}
+              currentPhase={currentPhase}
+              phaseTimestamps={debateSession.phaseTimestamps}
+              floorOpen={floorOpen}
+              currentSpeaker={currentSpeaker}
+              rebuttalQueue={rebuttalQueue}
+            />
+          }
+          liveFloor={
+            <>
+              {debateSession.messages.length > 0 && (
+                <Card className="p-4">
+                  <DebateControls
+                    currentRound={debateSession.currentRound}
+                    totalCost={totalCost}
+                    messagesCount={debateSession.messages.length}
+                    showSetup={debateSetup.showSetup}
+                    setShowSetup={debateSetup.setShowSetup}
+                    onExportMarkdown={handleExportMarkdown}
                   onCopyToClipboard={handleCopyToClipboard}
                   onResetDebate={handleResetDebate}
                   isPending={continueDebateMutation.isPending}
-                  nextModelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
-                />
-              </Card>
-            )}
+                  nextModelName={currentSpeaker?.modelName}
+                  currentPhase={currentPhase}
+                  onAdvancePhase={debateSession.advancePhase}
+                  isFloorOpen={floorOpen}
+                  onToggleFloor={debateSession.toggleFloor}
+                  hasJuryPending={juryPending}
+                  />
+                </Card>
+              )}
 
-            {/* Streaming Controls - More Compact */}
-            {debateStreaming.isStreaming && (
-              <Card className="p-3">
-                <StreamingControls
+              {debateStreaming.isStreaming && (
+                <Card className="p-4">
+                  <StreamingControls
+                    isStreaming={debateStreaming.isStreaming}
+                    progress={debateStreaming.progress}
+                    error={debateStreaming.error}
+                    estimatedCost={debateStreaming.estimatedCost}
+                    onCancel={debateStreaming.cancelStream}
+                    onPause={debateStreaming.pauseStream}
+                    onResume={debateStreaming.resumeStream}
+                  />
+                </Card>
+              )}
+
+              {debateStreaming.isStreaming && (
+                <StreamingDisplay
+                  reasoning={debateStreaming.reasoning}
+                  content={debateStreaming.content}
                   isStreaming={debateStreaming.isStreaming}
-                  progress={debateStreaming.progress}
                   error={debateStreaming.error}
+                  modelName={currentSpeaker?.modelName}
+                  modelProvider={currentSpeakerModel?.provider}
+                  progress={debateStreaming.progress}
                   estimatedCost={debateStreaming.estimatedCost}
-                  onCancel={debateStreaming.cancelStream}
-                  onPause={debateStreaming.pauseStream}
-                  onResume={debateStreaming.resumeStream}
                 />
-              </Card>
-            )}
-          </div>
+              )}
 
-          {/* Center Column - Messages */}
-          <div className="xl:col-span-3 space-y-3">
-            {/* Show streaming content in real-time */}
-            {debateStreaming.isStreaming && (
-              <StreamingDisplay
-                reasoning={debateStreaming.reasoning}
-                content={debateStreaming.content}
-                isStreaming={debateStreaming.isStreaming}
-                error={debateStreaming.error}
-                modelName={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.name}
-                modelProvider={debateService?.getModel(debateService.getNextDebater(debateSession.currentRound))?.provider}
-                progress={debateStreaming.progress}
-                estimatedCost={debateStreaming.estimatedCost}
-              />
-            )}
+              {debateSession.messages.length > 0 && (
+                <DebateMessageList
+                  messages={debateSession.messages}
+                  models={models}
+                  model1Id={debateSetup.model1Id}
+                  model2Id={debateSetup.model2Id}
+                  currentRound={debateSession.currentRound}
+                  isStreaming={debateStreaming.isStreaming}
+                  onContinueDebate={continueDebate}
+                  disableContinue={juryPending || !floorOpen}
+                  disableReason={continueDisabledReason}
+                />
+              )}
 
-            {/* Messages */}
-            {debateSession.messages.length > 0 && (
-              <DebateMessageList
-                messages={debateSession.messages}
-                models={models}
-                model1Id={debateSetup.model1Id}
-                model2Id={debateSetup.model2Id}
-                currentRound={debateSession.currentRound}
-                isStreaming={debateStreaming.isStreaming}
-                onContinueDebate={continueDebate}
-              />
-            )}
-
-            {/* Empty State */}
-            {debateSession.messages.length === 0 && !debateSetup.showSetup && (
-              <Card className="p-8">
-                <CardContent className="text-center py-8">
-                  <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">Ready for Debate</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Configure your debate setup and start a 10-round AI model debate.
-                  </p>
-                  <Button onClick={() => debateSetup.setShowSetup(true)} variant="outline" size="sm">
-                    Show Setup Panel
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
+              {debateSession.messages.length === 0 && !debateSetup.showSetup && (
+                <Card className="p-8">
+                  <CardContent className="text-center py-8">
+                    <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">Ready for Debate</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      Configure your debate setup and start a 10-round AI model debate.
+                    </p>
+                    <Button onClick={() => debateSetup.setShowSetup(true)} variant="outline" size="sm">
+                      Show Setup Panel
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          }
+          juryBench={
+            <JuryScoreCard
+              annotations={debateSession.juryAnnotations}
+              onIncrement={debateSession.incrementJuryPoints}
+              onDecrement={debateSession.decrementJuryPoints}
+              onToggleTag={debateSession.toggleJuryTag}
+              onUpdateNotes={debateSession.setJuryNotes}
+              onMarkReviewed={debateSession.markJuryReviewed}
+            />
+          }
+        />
       </div>
     </div>
   );

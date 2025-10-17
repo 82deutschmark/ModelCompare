@@ -1,11 +1,16 @@
+// * Author: gpt-5-codex
+// * Date: 2025-10-17 18:40 UTC
+// * PURPOSE: Augment export utilities to embed jury annotations and phase metadata in debate exports.
+// * SRP/DRY check: Pass - Maintains focused export helpers without duplicating state management.
 /**
  * Export Utilities - Generate downloadable files from model responses
- * 
+ *
  * This module provides utilities for exporting model comparison results
  * to various formats including Markdown and plain text files.
  */
 
 import type { AIModel, ModelResponse } from "@/types/ai-models";
+import type { DebatePhase, JuryAnnotationsMap } from "@/hooks/useDebateSession";
 
 export interface ExportData {
   prompt: string;
@@ -14,13 +19,18 @@ export interface ExportData {
     model: AIModel;
     response: ModelResponse;
   }>;
+  jury?: {
+    annotations: JuryAnnotationsMap;
+    phases: DebatePhase[];
+    currentPhase: DebatePhase;
+  };
 }
 
 /**
  * Generate a markdown export of model comparison results
  */
 export function generateMarkdownExport(data: ExportData): string {
-  const { prompt, timestamp, models } = data;
+  const { prompt, timestamp, models, jury } = data;
   
   // Detect if this is a chat conversation (multiple responses from same models)
   const modelIds = models.map(item => item.model.id);
@@ -128,7 +138,34 @@ export function generateMarkdownExport(data: ExportData): string {
   }
 
   markdown += `*Generated with ModelCompare*\n`;
-  
+
+  if (jury) {
+    const phaseLabels: Record<DebatePhase, string> = {
+      OPENING_STATEMENTS: 'Opening Statements',
+      REBUTTALS: 'Rebuttals',
+      CLOSING_ARGUMENTS: 'Closing Arguments',
+    };
+    const annotations = Object.values(jury.annotations);
+    markdown += `\n## Jury Bench\n\n`;
+    markdown += `**Current Phase:** ${phaseLabels[jury.currentPhase]}\n\n`;
+    if (jury.phases.length > 0) {
+      markdown += `**Phase Timeline:** ${jury.phases.map(phase => phaseLabels[phase]).join(' → ')}\n\n`;
+    }
+    if (annotations.length > 0) {
+      markdown += `| Model | Points | Tags | Verdict Notes | Review Status |\n`;
+      markdown += `| --- | --- | --- | --- | --- |\n`;
+      annotations.forEach(entry => {
+        const tags = entry.tags.length > 0 ? entry.tags.join(', ') : '—';
+        const notes = entry.notes ? entry.notes.replace(/\n/g, '<br/>') : '—';
+        const status = entry.needsReview ? 'Pending' : 'Complete';
+        markdown += `| ${entry.modelName} | ${entry.points} | ${tags} | ${notes} | ${status} |\n`;
+      });
+      markdown += `\n`;
+    } else {
+      markdown += `No jury annotations recorded.\n\n`;
+    }
+  }
+
   return markdown;
 }
 
@@ -136,7 +173,7 @@ export function generateMarkdownExport(data: ExportData): string {
  * Generate a plain text export of model comparison results
  */
 export function generateTextExport(data: ExportData): string {
-  const { prompt, timestamp, models } = data;
+  const { prompt, timestamp, models, jury } = data;
   
   // Detect if this is a chat conversation
   const modelIds = models.map(item => item.model.id);
@@ -246,7 +283,33 @@ export function generateTextExport(data: ExportData): string {
   }
 
   text += `Generated with ModelCompare\n`;
-  
+
+  if (jury) {
+    const phaseLabels: Record<DebatePhase, string> = {
+      OPENING_STATEMENTS: 'Opening Statements',
+      REBUTTALS: 'Rebuttals',
+      CLOSING_ARGUMENTS: 'Closing Arguments',
+    };
+    const annotations = Object.values(jury.annotations);
+    text += `\nJURY BENCH\n===========\n\n`;
+    text += `Current Phase: ${phaseLabels[jury.currentPhase]}\n`;
+    if (jury.phases.length > 0) {
+      text += `Phase Timeline: ${jury.phases.map(phase => phaseLabels[phase]).join(' -> ')}\n`;
+    }
+    if (annotations.length > 0) {
+      annotations.forEach(entry => {
+        text += `\nModel: ${entry.modelName}\n`;
+        text += `Points: ${entry.points}\n`;
+        text += `Tags: ${entry.tags.length > 0 ? entry.tags.join(', ') : 'None'}\n`;
+        text += `Verdict Notes: ${entry.notes || 'None'}\n`;
+        text += `Review Status: ${entry.needsReview ? 'Pending' : 'Complete'}\n`;
+      });
+    } else {
+      text += `No jury annotations recorded.\n`;
+    }
+    text += `\n`;
+  }
+
   return text;
 }
 

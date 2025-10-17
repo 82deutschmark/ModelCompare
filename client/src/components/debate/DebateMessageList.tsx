@@ -1,10 +1,9 @@
+// * Author: gpt-5-codex
+// * Date: 2025-10-17 18:40 UTC
+// * PURPOSE: Enhance debate message list to integrate jury gating on next turn and align with new stage layout.
+// * SRP/DRY check: Pass - Still focused on presenting debate messages and continue affordance.
 /**
  * Debate message list component for displaying debate exchanges
- *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Renders debate messages with proper formatting and continue buttons
- * SRP/DRY check: Pass - Single responsibility for message list rendering, no duplication with other message components
  */
 
 import { Play, Loader2 } from 'lucide-react';
@@ -57,6 +56,8 @@ interface DebateMessageListProps {
   currentRound: number;
   isStreaming: boolean;
   onContinueDebate: () => void;
+  disableContinue?: boolean;
+  disableReason?: string;
 }
 
 export function DebateMessageList({
@@ -67,6 +68,8 @@ export function DebateMessageList({
   currentRound,
   isStreaming,
   onContinueDebate,
+  disableContinue = false,
+  disableReason,
 }: DebateMessageListProps) {
   // Convert DebateMessage to MessageCardData format
   const convertToMessageCardData = (message: DebateMessage): MessageCardData => {
@@ -129,7 +132,7 @@ export function DebateMessageList({
                 onClick={onContinueDebate}
                 size="sm"
                 className="bg-green-600 hover:bg-green-700 w-full"
-                disabled={isStreaming}
+                disabled={isStreaming || disableContinue}
               >
                 {isStreaming ? (
                   <>
@@ -143,6 +146,11 @@ export function DebateMessageList({
                   </>
                 )}
               </Button>
+              {disableContinue && disableReason && (
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 text-center">
+                  {disableReason}
+                </p>
+              )}
             </div>
           )}
         </div>

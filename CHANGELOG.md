@@ -6,6 +6,12 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.7] - 2025-10-17
+
+### Fixed
+- **Debate Jury Flow Corrections:** Repaired review toggles so jurors must explicitly clear pending flags, blocked continuations while the floor is closed, and surfaced clearer gating cues in controls.
+- **Export Metadata Integrity:** Propagated resolved topic text and jury annotations into markdown exports and clipboard copies for accurate transcripts.
+
 ## [Version 0.4.6] - 2025-10-17
 
 ### Fixed
