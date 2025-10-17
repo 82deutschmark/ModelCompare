@@ -20,6 +20,7 @@ A sophisticated web application for comparing responses from multiple AI models 
 - **State Management**: Zustand store with TanStack Query for server state
 - **Variable System**: Unified template engine with server-side resolution
 - **Routing**: Wouter for lightweight client-side routing
+- **Streaming**: Server-Sent Events (SSE) for real-time AI responses with browser extension compatibility (v0.4.5)
 
 ### State Management Architecture
 
@@ -75,24 +76,28 @@ All AI model configurations, capabilities, pricing, and specifications are maint
 - **Streaming**: Real-time response generation support
 
 ### Provider-Specific Features
-- **OpenAI**: Responses API for o-series reasoning models, GPT-5 flagship performance
+- **OpenAI**: **ALL models use Responses API (`/v1/responses`) exclusively** - Completions API deprecated October 2025. Full reasoning support with `reasoning.summary = "auto"` for GPT-5, o3/o4 series
 - **Anthropic**: Structured reasoning with `<reasoning>` tags for Claude 3.7/4
 - **Google**: Thinking budget configuration for Gemini 2.5 models
 - **xAI**: Advanced reasoning capabilities in Grok 4
 - **DeepSeek**: Complete reasoning transparency via `reasoning_content` field
 
-#### OpenAI Responses API Migration (2025-08-20)
+#### 🚨 OpenAI Responses API Migration (October 2025)
 
-- **Endpoint**: All OpenAI calls use the Responses API (`/v1/responses`) exclusively; Chat Completions are no longer used.
-- **Reasoning**: Requests include `reasoning.summary = "auto"`; UI displays reasoning summaries when provided.
-- **Output token caps**:
-  - GPT‑5 series (flagship, mini, nano): `max_output_tokens = 128000`.
-  - All other OpenAI models default to `max_output_tokens = 16384`.
-  - A global minimum floor of **16,300** visible output tokens is enforced at the provider level, even if env overrides are set lower.
-- **Timeouts**: Default request timeout is **10 minutes** (600,000 ms), configurable via env.
-- **Retries**: Exponential backoff on HTTP 429/5xx and timeouts (up to 3 attempts).
-- **Parsing**: Primary content from `response.output_text`; reasoning from `response.output_reasoning.summary` with safe fallbacks.
-- **Diagnostics**: Response IDs (`response.id`) captured for potential chaining; optional raw JSON logging via env toggle.
+> **CRITICAL**: As of October 2025, ModelCompare exclusively uses OpenAI's **Responses API (`/v1/responses`)**. The legacy **Chat Completions API will be deprecated soon** by OpenAI. This migration ensures forward compatibility and unlocks advanced reasoning capabilities.
+
+**Migration Details:**
+- **Endpoint**: All OpenAI calls use the Responses API (`/v1/responses`) exclusively; Chat Completions API is **NO LONGER USED**
+- **Reasoning Support**: Requests include `reasoning.summary = "auto"` for GPT-5 and o-series models; UI displays full reasoning summaries
+- **Output Token Caps**:
+  - GPT‑5 series (flagship, mini, nano): `max_output_tokens = 128000`
+  - All other OpenAI models default to `max_output_tokens = 16384`
+  - Global minimum floor of **16,300** visible output tokens enforced at provider level (env overrides cannot go lower)
+- **Timeouts**: Default request timeout is **10 minutes** (600,000 ms), configurable via `OPENAI_TIMEOUT_MS`
+- **Retries**: Exponential backoff on HTTP 429/5xx and timeouts (up to 3 attempts for reliability)
+- **Content Parsing**: Primary content from `response.output_text`; reasoning from `response.output_reasoning.summary` with safe fallbacks
+- **Conversation Chaining**: Response IDs (`response.id`) captured for multi-turn debates and conversations
+- **Diagnostics**: Optional raw JSON logging via `DEBUG_SAVE_RAW` environment variable for debugging
 
 ### API Integration Architecture
 
@@ -164,10 +169,17 @@ The `IStorage` interface in `server/storage.ts` provides:
 - Challenger prompts automatically receive previous responses and original prompts
 
 **Debate Mode** (`/debate`)
-- Structured 10-round AI debates between models
-- Topic selection with intensity levels
-- Same-model debate support for self-analysis
-- Automated debate progression with manual controls
+- Structured 10-round AI debates between models with **real-time streaming** (v0.4.4+)
+- Topic selection with adversarial intensity levels (1-10)
+- Same-model debate support for self-analysis scenarios
+- Automated debate progression with manual turn-by-turn controls
+- **Advanced Streaming Features**:
+  - Server-Sent Events (SSE) for real-time reasoning and content display
+  - `/api/debate/stream` endpoint with init + stream contract
+  - Conversation chaining using OpenAI Responses API `response.id` tracking
+  - Database session persistence with turn history
+  - Model-specific configuration (reasoning effort, temperature, max tokens)
+  - Live progress indicators and cost estimation during generation
 
 **Creative Combat Mode** (`/creative`)
 - Sequential creative editing workflow
@@ -198,6 +210,23 @@ The `IStorage` interface in `server/storage.ts` provides:
 - Toggle visibility with Eye icon controls
 - Template variable substitution preview
 - Debugging and prompt optimization support
+
+### Browser Extension Compatibility (v0.4.5)
+
+**Problem Solved:** Browser extensions (LastPass, Grammarly, etc.) were causing application crashes during streaming operations due to MutationObserver interference.
+
+**Comprehensive Solution Applied:**
+- **All Streaming Modes Protected**: Debate, Battle Chat, Vixra, and Luigi modes now include defensive programming against browser extension interference
+- **Defensive Pattern**:
+  - Null checks before all `scrollIntoView` operations
+  - Try-catch blocks with debug logging (no error propagation)
+  - Browser extension opt-out data attributes on all dynamic content containers
+- **Extensions Supported**:
+  - Grammarly: `data-gramm="false"`, `data-gramm_editor="false"`, `data-enable-grammarly="false"`
+  - LastPass: `data-lpignore="true"`, `data-form-type="other"`
+- **Impact**: All streaming and chat interfaces now gracefully handle rapid DOM updates without crashes, even with multiple browser extensions active
+
+**Technical Details:** Browser extensions inject content scripts using `MutationObserver` to watch DOM changes. During rapid streaming updates, these observers can fail when trying to observe nodes being removed/updated, causing crashes. Our defensive pattern prevents these failures from affecting the user experience.
 
 ## Frontend Architecture
 
@@ -262,9 +291,19 @@ React Hook Form with Zod validation provides:
 RESTful endpoints with clear responsibilities:
 
 ```
+# Core Comparison
 GET  /api/models           # Fetch available AI models
 POST /api/compare          # Submit prompt for comparison
 GET  /api/comparisons/:id  # Retrieve specific comparison
+
+# Debate Mode (with streaming)
+POST /api/debate/session      # Create new debate session
+GET  /api/debate/sessions     # List existing debate sessions
+POST /api/debate/stream       # Initialize debate streaming (SSE)
+GET  /api/debate/stream       # Stream debate responses (SSE)
+
+# Model Responses
+POST /api/models/respond      # Get single model response
 ```
 
 ### Request/Response Flow
