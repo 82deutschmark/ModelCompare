@@ -21,3 +21,8 @@ Align the client debate streaming hook with the consolidated `/api/debate/stream
 ## Verification Notes
 - Manual testing: initiate a debate turn via `/debate` UI, confirming reasoning and text append progressively and no "Failed to initialize stream" toast appears.
 - Regression awareness: monitor estimated cost/progress updates and cancellation behavior to ensure parity with prior implementation.
+
+## 2025-10-17 22:31 UTC Update
+- [x] Investigated `ROBERTS_RULES_PHASES` runtime reference errors triggered in `client/src/pages/debate.tsx`.
+- [x] Confirmed constant export already exists in `useDebateSession` and should be imported where used.
+- [ ] Validate debate UI after adjusting imports to ensure structured phase metadata renders and streaming resumes.
