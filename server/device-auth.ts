@@ -11,13 +11,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { getStorage } from './storage.js';
 import { contextLog, contextError } from './request-context.js';
-import type { User } from '../shared/schema.js';
+import type { User as DeviceUser } from '../shared/schema.js';
 
 // Extend Express Request to include deviceUser
 declare global {
   namespace Express {
     interface Request {
-      deviceUser?: User;
+      deviceUser?: DeviceUser;
     }
   }
 }

@@ -10,6 +10,8 @@
 
 This plan implements real-time streaming and reasoning display for Debate Mode, leveraging OpenAI's Responses API with stateful conversation chaining. The critical feature is that **each model maintains its own conversation chain** with OpenAI's servers, with alternating turns where each model responds to the opponent's latest argument.
 
+> **2025-10-17 Update (GPT-5 Codex):** The legacy `POST /api/debate/stream` endpoint and `useDebateStream` hook described below have been retired. The production flow now uses the `/api/debate/stream/init` + SSE handshake consumed by `useDebateStreaming`.
+
 **Key Deliverables:**
 1. Backend SSE streaming infrastructure (`/api/debate/stream`)
 2. OpenAI provider rewrite with Responses API streaming
@@ -359,7 +361,7 @@ export function getProviderForModel(modelId: string): BaseProvider {
 
 ### 3.1 Create Streaming Hook
 
-**File:** `client/src/hooks/useDebateStream.ts` (NEW FILE)
+**File:** ~~`client/src/hooks/useDebateStream.ts`~~ (retired; use `client/src/hooks/useDebateStreaming.ts`)
 
 ```typescript
 import { useState, useCallback, useRef } from 'react';
@@ -384,7 +386,7 @@ interface StreamState {
   cost: any | null;
 }
 
-export function useDebateStream() {
+export function useDebateStream() { // Legacy implementation (removed 2025-10-17)
   const [state, setState] = useState<StreamState>({
     reasoning: '',
     content: '',
@@ -500,6 +502,8 @@ export function useDebateStream() {
 **File:** `client/src/pages/Debate.tsx`
 
 **Changes needed:**
+
+> **Note (2025-10-17):** Replace any `useDebateStream` references below with `useDebateStreaming` and adapt to the two-stage streaming handshake.
 
 1. **Add state for response ID tracking** (line ~106):
 

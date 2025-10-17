@@ -59,6 +59,7 @@ export interface LuigiRunUpdate {
   stages?: LuigiStagesPayload;
   totalCostCents?: number | null;
   completedAt?: Date | null;
+  updatedAt?: Date | null;
 }
 
 export interface IStorage {

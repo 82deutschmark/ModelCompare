@@ -21,6 +21,9 @@
 ### Fixed
 - **Changelog Alignment:** Bumped the documented release to capture the streaming retrofit and ensure downstream audit trails remain accurate.
 
+### Removed
+- **Legacy Debate Streaming Contract:** Deleted `client/src/hooks/useDebateStream.ts` and the fallback `POST /api/debate/stream` route to eliminate ambiguity now that all clients use the init + SSE handshake via `useDebateStreaming`.
+
 ## [Version 0.4.8] - 2025-10-17
 
 ### Fixed

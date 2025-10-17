@@ -64,11 +64,11 @@ export function LuigiArtifactPanel({ artifacts, className }: LuigiArtifactPanelP
                         </div>
                         <span className="text-xs uppercase text-muted-foreground">{artifact.type}</span>
                       </div>
-                      {artifact.data && (
+                      {artifact.data != null ? (
                         <pre className="max-h-64 overflow-auto rounded bg-muted p-3 text-xs text-muted-foreground">
-{JSON.stringify(artifact.data, null, 2)}
+                          {JSON.stringify(artifact.data, null, 2)}
                         </pre>
-                      )}
+                      ) : null}
                       {artifact.storagePath && (
                         <p className="text-xs text-muted-foreground">Stored at: {artifact.storagePath}</p>
                       )}
