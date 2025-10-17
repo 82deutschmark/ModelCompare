@@ -432,6 +432,7 @@ export function useDebateSession(): DebateSessionState {
         [modelId]: {
           ...current,
           tags: hasTag ? current.tags.filter(t => t !== tag) : [...current.tags, tag],
+          needsReview: true,
         },
       };
     });
@@ -443,11 +444,15 @@ export function useDebateSession(): DebateSessionState {
       if (!current) {
         return prev;
       }
+      if (current.notes === notes) {
+        return prev;
+      }
       return {
         ...prev,
         [modelId]: {
           ...current,
           notes,
+          needsReview: true,
         },
       };
     });
