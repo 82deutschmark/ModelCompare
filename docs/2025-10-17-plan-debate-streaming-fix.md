@@ -14,9 +14,30 @@ Restore stable streaming on the debate page without regressing shared streaming 
 - Server route availability may not fully match the expected init + stream contract that the client now calls.
 - Mutation observer failure hints that the DOM target (likely an iframe housing streaming display) is missing when observer attaches, possibly due to race conditions triggered by the crash.
 
-## Todo
-1. Confirm the client flow by tracing `useDebateStreaming` → `useAdvancedStreaming` → `StreamingDisplay` to capture when observers attach and what DOM nodes they require.
-2. Inspect debate-related server routes to ensure init + SSE handlers exist and validate payload shape vs. client expectations.
-3. Review provider orchestration (especially OpenAI streaming implementation) to ensure it supports the SSE path invoked by debate mode.
-4. Reproduce the MutationObserver crash path to pinpoint the missing node and decide whether to harden the observer setup or adjust mount order.
-5. Draft a surgical fix plan (client, server, or both) that preserves SRP by updating the responsible module only and reuses shared utilities where possible.
+## Resolution - ✅ COMPLETED
+
+### Root Cause
+The MutationObserver error originated from **browser extensions** (like Grammarly, LastPass, etc.) trying to observe DOM nodes during rapid streaming updates. The error message `web-client-content-script` confirmed this was external, not from our codebase.
+
+### Investigation Results
+1. ✅ **Client Flow**: Confirmed `debate.tsx` → `useAdvancedStreaming` → POST `/api/debate/stream` → `StreamingDisplay` works correctly
+2. ✅ **Server Routes**: `/api/debate/stream` exists with proper SSE handlers, payload validation, and provider orchestration
+3. ✅ **Provider Support**: All providers properly support SSE streaming
+4. ✅ **Observer Source**: No MutationObserver in our codebase - confirmed external browser extension interference
+
+### Implemented Fix (Commit: 202ca41)
+**Files Modified:**
+- `client/src/components/StreamingDisplay.tsx`
+- `client/src/pages/debate.tsx`
+
+**Changes:**
+1. Added null checks before all `scrollIntoView` calls
+2. Wrapped scroll operations in try-catch blocks to prevent crashes
+3. Added data attributes to disable Grammarly on streaming containers:
+   - `data-gramm="false"`
+   - `data-gramm_editor="false"`
+   - `data-enable-grammarly="false"`
+4. Debug logging instead of error propagation
+
+### Result
+Streaming display now gracefully handles browser extension interference without crashing. The fix is minimal, defensive, and preserves SRP.
