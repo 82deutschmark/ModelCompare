@@ -76,18 +76,18 @@ All AI model configurations, capabilities, pricing, and specifications are maint
 - **Streaming**: Real-time response generation support
 
 ### Provider-Specific Features
-- **OpenAI**: **ALL models use Responses API (`/v1/responses`) exclusively** - Completions API deprecated October 2025. Full reasoning support with `reasoning.summary = "auto"` for GPT-5, o3/o4 series
+- **OpenAI**: **OpenAI models use Responses API (`/v1/responses`) exclusively** - Proactive migration completed October 2025 (ahead of mid-2026 Completions API deprecation). Full reasoning support with `reasoning.summary = "auto"` for GPT-5, o3/o4 series
 - **Anthropic**: Structured reasoning with `<reasoning>` tags for Claude 3.7/4
 - **Google**: Thinking budget configuration for Gemini 2.5 models
 - **xAI**: Advanced reasoning capabilities in Grok 4
 - **DeepSeek**: Complete reasoning transparency via `reasoning_content` field
 
-#### 🚨 OpenAI Responses API Migration (October 2025)
+#### 🔄 OpenAI Responses API Proactive Migration (October 2025)
 
-> **CRITICAL**: As of October 2025, ModelCompare exclusively uses OpenAI's **Responses API (`/v1/responses`)**. The legacy **Chat Completions API will be deprecated soon** by OpenAI. This migration ensures forward compatibility and unlocks advanced reasoning capabilities.
+> **PROACTIVE MIGRATION**: As of October 2025, ModelCompare exclusively uses OpenAI's modern **Responses API (`/v1/responses`)**. While OpenAI's legacy Chat Completions API **remains supported until mid-2026**, we've migrated early to ensure forward compatibility and unlock advanced reasoning capabilities.
 
 **Migration Details:**
-- **Endpoint**: All OpenAI calls use the Responses API (`/v1/responses`) exclusively; Chat Completions API is **NO LONGER USED**
+- **Endpoint**: All OpenAI calls use the Responses API (`/v1/responses`) exclusively; Chat Completions API is **NOT USED** in this codebase
 - **Reasoning Support**: Requests include `reasoning.summary = "auto"` for GPT-5 and o-series models; UI displays full reasoning summaries
 - **Output Token Caps**:
   - GPT‑5 series (flagship, mini, nano): `max_output_tokens = 128000`
