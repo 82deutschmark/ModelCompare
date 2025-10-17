@@ -1,3 +1,12 @@
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-10-17 15:26 UTC
+ * PURPOSE: Refactors debate streaming hook to consume the server-sent events stream
+ *          directly from the /api/debate/stream POST endpoint while preserving
+ *          progress tracking, cancellation, and abort controller coordination.
+ * SRP/DRY check: Pass - Hook remains responsible for orchestrating debate
+ *                streaming state without duplicating server logic.
+ */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 export interface StreamingOptions {
@@ -45,25 +54,28 @@ export function useAdvancedStreaming() {
     estimatedCost: 0
   });
 
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      if (readerRef.current) {
+        readerRef.current.cancel().catch(() => undefined);
+        readerRef.current = null;
       }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
 
   const startStream = useCallback(async (options: StreamingOptions) => {
     // Cancel any existing stream
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+    if (readerRef.current) {
+      readerRef.current.cancel().catch(() => undefined);
+      readerRef.current = null;
     }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -83,113 +95,150 @@ export function useAdvancedStreaming() {
     });
 
     try {
-      // Create AbortController for the initial request
+      // Create AbortController for the streaming request
       abortControllerRef.current = new AbortController();
 
-      // First, make a POST request to initiate the streaming session
-      const initResponse = await fetch('/api/debate/stream/init', {
+      // Directly initiate the streaming session
+      const response = await fetch('/api/debate/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(options),
         signal: abortControllerRef.current.signal
       });
 
-      if (!initResponse.ok) {
-        throw new Error(`Failed to initialize stream: ${initResponse.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Failed to initialize stream: ${response.statusText}`);
       }
 
-      const { sessionId } = await initResponse.json();
+      const reader = response.body?.getReader();
 
-      // Now create EventSource for the actual streaming
-      const eventSource = new EventSource(`/api/debate/stream/${sessionId}`);
+      if (!reader) {
+        throw new Error('Readable stream not available');
+      }
 
-      eventSourceRef.current = eventSource;
+      readerRef.current = reader;
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let isActive = true;
 
-      eventSource.onopen = () => {
-        console.log('SSE connection opened');
-      };
-
-      eventSource.addEventListener('stream.init', (event) => {
-        const data = JSON.parse(event.data);
-        console.log('Stream initialized:', data);
-      });
-
-      eventSource.addEventListener('stream.chunk', (event) => {
-        const chunk = JSON.parse(event.data);
-
-        if (chunk.type === 'reasoning') {
-          setState(prev => ({
-            ...prev,
-            reasoning: prev.reasoning + chunk.delta,
-            // Estimate progress based on reasoning completion
-            progress: Math.min(prev.progress + 5, 80)
-          }));
-        } else if (chunk.type === 'text') {
-          setState(prev => ({
-            ...prev,
-            content: prev.content + chunk.delta,
-            progress: Math.min(prev.progress + 10, 95)
-          }));
+      const closeReader = async () => {
+        if (readerRef.current) {
+          try {
+            await readerRef.current.cancel();
+          } catch {
+            // ignore cancellation errors
+          }
+          readerRef.current = null;
         }
-      });
-
-      eventSource.addEventListener('stream.progress', (event) => {
-        const progressData = JSON.parse(event.data);
-        setState(prev => ({
-          ...prev,
-          progress: progressData.percentage,
-          estimatedCost: progressData.estimatedCost || prev.estimatedCost
-        }));
-      });
-
-      eventSource.addEventListener('stream.complete', (event) => {
-        const result = JSON.parse(event.data);
-
-        setState(prev => ({
-          ...prev,
-          isStreaming: false,
-          responseId: result.responseId,
-          tokenUsage: result.tokenUsage,
-          cost: result.cost,
-          progress: 100
-        }));
-
-        eventSource.close();
-        eventSourceRef.current = null;
-      });
-
-      eventSource.addEventListener('stream.error', (event) => {
-        const errorData = JSON.parse(event.data);
-
-        setState(prev => ({
-          ...prev,
-          isStreaming: false,
-          error: errorData.error || 'Stream error occurred',
-          progress: 0
-        }));
-
-        eventSource.close();
-        eventSourceRef.current = null;
-      });
-
-      eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
-
-        setState(prev => ({
-          ...prev,
-          isStreaming: false,
-          error: 'Connection lost - please try again',
-          progress: 0
-        }));
-
-        eventSource.close();
-        eventSourceRef.current = null;
       };
 
+      const processEvent = (rawEvent: string) => {
+        const lines = rawEvent.split('\n');
+        let eventType = 'message';
+        const dataLines: string[] = [];
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+
+        if (dataLines.length === 0) {
+          return;
+        }
+
+        const dataStr = dataLines.join('\n');
+        let parsedData: any;
+
+        try {
+          parsedData = JSON.parse(dataStr);
+        } catch (parseError) {
+          console.error('Failed to parse SSE data:', parseError);
+          return;
+        }
+
+        if (eventType === 'stream.chunk') {
+          if (parsedData.type === 'reasoning') {
+            setState(prev => ({
+              ...prev,
+              reasoning: prev.reasoning + (parsedData.delta ?? ''),
+              progress: Math.min(prev.progress + 5, 80)
+            }));
+          } else if (parsedData.type === 'text') {
+            setState(prev => ({
+              ...prev,
+              content: prev.content + (parsedData.delta ?? ''),
+              progress: Math.min(prev.progress + 10, 95)
+            }));
+          }
+        } else if (eventType === 'stream.progress') {
+          setState(prev => ({
+            ...prev,
+            progress: parsedData.percentage ?? prev.progress,
+            estimatedCost: parsedData.estimatedCost ?? prev.estimatedCost
+          }));
+        } else if (eventType === 'stream.complete') {
+          setState(prev => ({
+            ...prev,
+            isStreaming: false,
+            responseId: parsedData.responseId ?? null,
+            tokenUsage: parsedData.tokenUsage ?? null,
+            cost: parsedData.cost ?? null,
+            progress: 100
+          }));
+          isActive = false;
+        } else if (eventType === 'stream.error' || eventType === 'error') {
+          setState(prev => ({
+            ...prev,
+            isStreaming: false,
+            error: parsedData.error || 'Stream error occurred',
+            progress: 0
+          }));
+          isActive = false;
+        }
+      };
+
+      while (isActive) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+
+        let boundary = buffer.indexOf('\n\n');
+        while (boundary !== -1) {
+          const rawEvent = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          processEvent(rawEvent);
+          boundary = buffer.indexOf('\n\n');
+        }
+      }
+
+      // Flush any remaining buffered text
+      if (buffer.trim().length > 0) {
+        processEvent(buffer);
+        buffer = '';
+      }
+
+      await closeReader();
+      if (isActive) {
+        setState(prev => ({
+          ...prev,
+          isStreaming: false
+        }));
+      }
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log('Stream cancelled');
         return;
+      }
+
+      if (readerRef.current) {
+        readerRef.current.cancel().catch(() => undefined);
+        readerRef.current = null;
       }
 
       setState(prev => ({
@@ -202,9 +251,9 @@ export function useAdvancedStreaming() {
   }, []);
 
   const cancelStream = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (readerRef.current) {
+      readerRef.current.cancel().catch(() => undefined);
+      readerRef.current = null;
     }
 
     if (abortControllerRef.current) {
