@@ -1,4 +1,12 @@
+// * Author: gpt-5-codex
+// * Date: 2025-10-17 18:40 UTC
+// * PURPOSE: Augment export utilities to embed jury annotations and phase metadata in debate exports.
+// * SRP/DRY check: Pass - Maintains focused export helpers without duplicating state management.
 /**
+ * Export Utilities - Generate downloadable files from model responses
+ *
+ * This module provides utilities for exporting model comparison results
+ * to various formats including Markdown and plain text files.
  *
  * Author: gpt-5-codex
  * Date: October 17, 2025 at 19:10 UTC
@@ -8,6 +16,7 @@
  */
 
 import type { AIModel, ModelResponse } from "@/types/ai-models";
+import type { DebatePhase, JuryAnnotationsMap } from "@/hooks/useDebateSession";
 
 export interface ExportJuryAnnotation {
   verdict?: string;

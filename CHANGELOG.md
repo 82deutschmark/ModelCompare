@@ -1,6 +1,26 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
+ * Date: 2025-10-17 18:14 UTC
+ * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
+ * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
+-->
+
+## [Version 0.4.7] - 2025-10-17
+
+### Fixed
+- **Debate Jury Flow Corrections:** Repaired review toggles so jurors must explicitly clear pending flags, blocked continuations while the floor is closed, and surfaced clearer gating cues in controls.
+- **Export Metadata Integrity:** Propagated resolved topic text and jury annotations into markdown exports and clipboard copies for accurate transcripts.
+
+## [Version 0.4.6] - 2025-10-17
+
+### Fixed
+- **Debate Streaming Stability:** Refactored `client/src/hooks/useAdvancedStreaming.ts` to buffer SSE reasoning/content in refs, throttle UI updates via animation frames, and harden error cleanup so React no longer drops streamed chunks during long debates.
+- **SSE Heartbeats:** Added guarded writes and 15-second `stream.keepalive` heartbeats in `server/routes/debate.routes.ts` to keep reverse proxies from closing idle debate streams while preserving session persistence.
+
+## [Version 0.4.5] - 2025-10-17
+<!--
+ * Author: GPT-5 Codex
  * Date: 2025-10-17 and the 19:05 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.

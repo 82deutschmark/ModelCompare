@@ -1,3 +1,7 @@
+// * Author: gpt-5-codex
+// * Date: 2025-10-17 19:26 UTC
+// * PURPOSE: Reconfigure debate stage layout, session phases, and jury workflow for structured Robert's Rules debates.
+// * SRP/DRY check: Pass - Page orchestrates debate mode composition without duplicating child responsibilities.
 /**
  *
  * Author: gpt-5-codex
@@ -354,6 +358,24 @@ export default function Debate() {
   ]);
 
   const continueDebate = async () => {
+    if (debateSession.hasUnresolvedJuryTasks()) {
+      toast({
+        title: "Jury Review Required",
+        description: "Complete jury scoring and notes before continuing to the next turn.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!debateSession.isFloorOpen()) {
+      toast({
+        title: "Floor Closed",
+        description: "Reopen the debate floor before continuing to the next turn.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!debateSetup.model1Id || !debateSetup.model2Id || !debateService) return;
     if (debateSession.messages.length === 0) return;
 
@@ -465,6 +487,104 @@ export default function Debate() {
   };
 
   const totalCost = debateSession.calculateTotalCost();
+
+  const currentPhase = debateSession.getCurrentPhase();
+  const floorOpen = debateSession.isFloorOpen();
+  const juryPending = debateSession.hasUnresolvedJuryTasks();
+  const continueDisabledReason = juryPending
+    ? 'Complete jury scoring before continuing to the next turn.'
+    : !floorOpen
+      ? 'The debate floor is closed. Reopen the floor to allow the next speaker.'
+      : undefined;
+
+  const stageSpeakers = useMemo(() => {
+    const model1 = debateService?.getModel(debateSetup.model1Id ?? '')?.name || 'Affirmative';
+    const model2 = debateService?.getModel(debateSetup.model2Id ?? '')?.name || 'Negative';
+    return [
+      {
+        modelId: debateSetup.model1Id ?? 'affirmative-placeholder',
+        modelName: model1,
+        role: 'Affirmative',
+      },
+      {
+        modelId: debateSetup.model2Id ?? 'negative-placeholder',
+        modelName: model2,
+        role: 'Negative',
+      },
+    ];
+  }, [debateService, debateSetup.model1Id, debateSetup.model2Id]);
+
+  const activeSpeakers = useMemo(
+    () =>
+      stageSpeakers.filter(
+        speaker => speaker.modelId === debateSetup.model1Id || speaker.modelId === debateSetup.model2Id
+      ),
+    [stageSpeakers, debateSetup.model1Id, debateSetup.model2Id]
+  );
+
+  const phaseMetadata: Record<DebatePhase, { label: string; description: string }> = {
+    OPENING_STATEMENTS: {
+      label: 'Opening Statements',
+      description: 'Establishes each model\'s primary case and burden.',
+    },
+    REBUTTALS: {
+      label: 'Rebuttals',
+      description: 'Floor opens for alternating rebuttals and counterpoints.',
+    },
+    CLOSING_ARGUMENTS: {
+      label: 'Closing Arguments',
+      description: 'Final summaries before the jury renders its verdict.',
+    },
+  };
+
+  const stagePhases = useMemo(
+    () =>
+      ROBERTS_RULES_PHASES.map(phase => ({
+        id: phase,
+        label: phaseMetadata[phase].label,
+        description: phaseMetadata[phase].description,
+        speakers: stageSpeakers,
+      })),
+    [stageSpeakers]
+  );
+
+  useEffect(() => {
+    if (activeSpeakers.length > 0) {
+      debateSession.initializeJury(
+        activeSpeakers.map(speaker => ({ modelId: speaker.modelId, modelName: speaker.modelName }))
+      );
+    }
+  }, [activeSpeakers, debateSession.initializeJury]);
+
+  const nextSpeakerId = useMemo(() => {
+    if (!debateService || activeSpeakers.length === 0) return null;
+    return debateService.getNextDebater(debateSession.currentRound);
+  }, [debateService, debateSession.currentRound, activeSpeakers.length]);
+
+  const currentSpeaker = useMemo(() => {
+    if (!nextSpeakerId) {
+      return stageSpeakers[0] ?? null;
+    }
+    return activeSpeakers.find(speaker => speaker.modelId === nextSpeakerId) ?? null;
+  }, [activeSpeakers, nextSpeakerId, stageSpeakers]);
+
+  const currentSpeakerModel = useMemo(() => {
+    if (!nextSpeakerId || !debateService) {
+      return undefined;
+    }
+    return debateService.getModel(nextSpeakerId);
+  }, [debateService, nextSpeakerId]);
+
+  const rebuttalQueue = useMemo(() => {
+    const queueSource = activeSpeakers.length > 0 ? activeSpeakers : stageSpeakers;
+    if (!floorOpen) {
+      return [];
+    }
+    if (!currentSpeaker) {
+      return queueSource;
+    }
+    return queueSource.filter(speaker => speaker.modelId !== currentSpeaker.modelId);
+  }, [activeSpeakers, currentSpeaker, floorOpen, stageSpeakers]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -580,12 +700,11 @@ export default function Debate() {
               <Card className="p-3">
                 <StreamingControls
                   isStreaming={debateStreaming.isStreaming}
-                  progress={debateStreaming.progress}
                   error={debateStreaming.error}
+                  modelName={currentSpeaker?.modelName}
+                  modelProvider={currentSpeakerModel?.provider}
+                  progress={debateStreaming.progress}
                   estimatedCost={debateStreaming.estimatedCost}
-                  onCancel={debateStreaming.cancelStream}
-                  onPause={debateStreaming.pauseStream}
-                  onResume={debateStreaming.resumeStream}
                 />
               </Card>
             )}

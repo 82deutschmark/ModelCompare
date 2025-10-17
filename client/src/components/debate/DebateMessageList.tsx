@@ -1,4 +1,9 @@
+// * Author: gpt-5-codex
+// * Date: 2025-10-17 18:40 UTC
+// * PURPOSE: Enhance debate message list to integrate jury gating on next turn and align with new stage layout.
+// * SRP/DRY check: Pass - Still focused on presenting debate messages and continue affordance.
 /**
+ * Debate message list component for displaying debate exchanges
  *
  * Author: gpt-5-codex
  * Date: October 17, 2025 at 19:00 UTC
@@ -27,6 +32,8 @@ interface DebateMessageListProps {
   currentRound: number;
   isStreaming: boolean;
   onContinueDebate: () => void;
+  disableContinue?: boolean;
+  disableReason?: string;
 }
 
 export function DebateMessageList({
@@ -37,6 +44,8 @@ export function DebateMessageList({
   currentRound,
   isStreaming,
   onContinueDebate,
+  disableContinue = false,
+  disableReason,
 }: DebateMessageListProps) {
   const convertToMessageCardData = (message: DebateMessage): MessageCardData => {
     const model = models.find(m => m.id === message.modelId);
@@ -99,7 +108,7 @@ export function DebateMessageList({
                 onClick={onContinueDebate}
                 size="sm"
                 className="bg-green-600 hover:bg-green-700 w-full"
-                disabled={isStreaming}
+                disabled={isStreaming || disableContinue}
               >
                 {isStreaming ? (
                   <>
