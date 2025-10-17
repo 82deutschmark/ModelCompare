@@ -1,12 +1,12 @@
 /*
  * Author: GPT-5 Codex
- * Date: 2025-10-17 18:14 UTC
+ * Date: 2025-10-18 00:55 UTC
  * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
  *          SSE dispatcher, shared streaming logic, and heartbeat keepalives so modern React clients can
  *          consume Responses API streams without premature proxy disconnects while persisting debate turns.
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
  *                across init and SSE entry points.
-*/
+ */
 import { Router } from "express";
 import { getProviderForModel } from "../providers/index.js";
 import { storage } from "../storage.js";
@@ -518,6 +518,14 @@ router.get("/stream/:taskId/:modelKey/:sessionId", async (req, res) => {
   });
 
   await streamDebateTurn(harness, sessionEntry.payload);
+});
+
+router.post("/stream", (_req, res) => {
+  res.status(410).json({
+    error: "Legacy debate stream endpoint removed",
+    message:
+      "Use POST /api/debate/stream/init followed by GET /api/debate/stream/:taskId/:modelKey/:sessionId"
+  });
 });
 
 export { router as debateRoutes };
