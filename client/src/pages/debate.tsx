@@ -242,8 +242,15 @@ export default function Debate() {
   });
 
   // Auto-scroll to bottom of chat
+  // Add defensive guard to prevent browser extension MutationObserver errors
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!chatEndRef.current) return;
+    try {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      // Silently ignore scroll errors (browser extensions can interfere)
+      console.debug('Chat scroll error:', error);
+    }
   }, [debateSession.messages]);
 
   // Handle streaming completion for opening statement

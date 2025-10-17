@@ -34,12 +34,25 @@ export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
   const contentEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new content arrives
+  // Add defensive guards to prevent browser extension MutationObserver errors
   useEffect(() => {
-    reasoningEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!reasoningEndRef.current) return;
+    try {
+      reasoningEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      // Silently ignore scroll errors (browser extensions can interfere)
+      console.debug('Scroll error:', error);
+    }
   }, [reasoning]);
 
   useEffect(() => {
-    contentEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!contentEndRef.current) return;
+    try {
+      contentEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      // Silently ignore scroll errors (browser extensions can interfere)
+      console.debug('Scroll error:', error);
+    }
   }, [content]);
 
   const formatText = (text: string) => {
@@ -116,7 +129,12 @@ export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
                 )}
               </div>
 
-              <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-4 min-h-[100px] max-h-[300px] overflow-y-auto">
+              <div 
+            className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-4 min-h-[100px] max-h-[300px] overflow-y-auto"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+          >
                 <div
                   className="text-sm text-purple-900 dark:text-purple-100 leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: formatText(reasoning) }}
@@ -141,7 +159,12 @@ export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
             )}
           </div>
 
-          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 min-h-[150px] max-h-[400px] overflow-y-auto">
+          <div 
+            className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 min-h-[150px] max-h-[400px] overflow-y-auto"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+          >
             {error ? (
               <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
                 <AlertCircle className="w-4 h-4" />
