@@ -1,14 +1,13 @@
-// * Author: gpt-5-codex
-// * Date: 2025-10-17 19:26 UTC
-// * PURPOSE: Reconfigure debate stage layout, session phases, and jury workflow for structured Robert's Rules debates.
-// * SRP/DRY check: Pass - Page orchestrates debate mode composition without duplicating child responsibilities.
+// * Author: GPT-5 Codex
+// * Date: 2025-10-17 19:47 UTC
+// * PURPOSE: Restore debate page streaming bootstrap and session wiring after merge conflicts, ensuring exports, history, and jury flow stay in sync.
+// * SRP/DRY check: Pass - Component orchestrates debate mode composition while delegating state and presentation to hooks/components.
 /**
  *
- * Author: gpt-5-codex
- * Date: October 17, 2025 at 19:25 UTC
- * PURPOSE: Debate mode orchestrator that hydrates persisted turn history, wires the new history drawer, and
- *          reconciles streaming updates with stored sessions for accurate resume/export flows.
- * SRP/DRY check: Pass - Coordinates debate UI, streaming, and session hydration without reimplementing hook logic.
+ * Author: GPT-5 Codex
+ * Date: October 17, 2025 at 19:47 UTC
+ * PURPOSE: Debate mode orchestrator that hydrates persisted turn history, reconciles streaming updates, and exposes exports/history controls with repaired session plumbing.
+ * SRP/DRY check: Pass - Coordinates debate UI, streaming, and session hydration without duplicating hook logic.
  */
 
 import { useRef, useEffect, useMemo } from "react";
@@ -17,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Settings } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { StreamingDisplay } from "@/components/StreamingDisplay";
 import { StreamingControls } from "@/components/StreamingControls";
 import { AppNavigation } from "@/components/AppNavigation";
@@ -223,11 +221,10 @@ export default function Debate() {
       debateSession.messages.length === 0
     ) {
       const model1 = debateService?.getModel(debateSetup.model1Id);
-      debateSession.addMessage({
-      debateSession.setMessages([{ 
-        id: `msg-1`,
+      const initialMessage = {
+        id: "msg-1",
         modelId: debateSetup.model1Id,
-        modelName: model1?.name || "Model 1",
+        modelName: model1?.name ?? "Model 1",
         content: debateStreaming.content,
         reasoning: debateStreaming.reasoning,
         reasoningChunks: debateStreaming.reasoningChunks.map(chunk => ({ ...chunk })),
@@ -240,16 +237,20 @@ export default function Debate() {
         tokenUsage: debateStreaming.tokenUsage,
         cost: debateStreaming.cost,
         modelConfig: {
-          capabilities: debateSetup.model1Config.enableReasoning
-            ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true }
-            : { reasoning: false, multimodal: false, functionCalling: false, streaming: true },
-          pricing: { inputPerMillion: 0, outputPerMillion: 0 },
+          capabilities: {
+            reasoning: Boolean(debateSetup.model1Config.enableReasoning),
+            multimodal: false,
+            functionCalling: false,
+            streaming: true,
+          },
+          pricing: {
+            inputPerMillion: 0,
+            outputPerMillion: 0,
+          },
         },
-      });
-            : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
-          pricing: { inputPerMillion: 0, outputPerMillion: 0 }
-        }
-      }]);
+      };
+
+      debateSession.addMessage(initialMessage);
       debateSession.setModelALastResponseId(debateStreaming.responseId);
       debateSession.setCurrentRound(1);
       debateSetup.setShowSetup(false);
@@ -263,6 +264,10 @@ export default function Debate() {
     debateStreaming.tokenUsage,
     debateStreaming.cost,
     debateSession.messages.length,
+    debateSession.addMessage,
+    debateSession.setModelALastResponseId,
+    debateSession.setCurrentRound,
+    debateSetup.setShowSetup,
     debateService,
     debateSetup.model1Id,
     debateSetup.model1Config.enableReasoning,

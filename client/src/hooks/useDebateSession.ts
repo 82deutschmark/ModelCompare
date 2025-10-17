@@ -1,12 +1,10 @@
-// * Author: gpt-5-codex
-// * Date: 2025-10-17 19:26 UTC
-// * PURPOSE: Extend debate session state with Robert's Rules phase tracking, floor controls, and jury annotations for exports.
-// * SRP/DRY check: Pass - Centralized debate session state while exposing focused helpers.
-/**
- * Custom hook for managing debate session state
- */
+// * Author: GPT-5 Codex
+// * Date: 2025-10-17 19:47 UTC
+// * PURPOSE: Consolidated debate session state manager cleaning merge duplicates, preserving turn history, jury workflow, and resume helpers for streaming debate mode.
+// * SRP/DRY check: Pass - Single hook orchestrates debate session state while delegating UI/rendering elsewhere; no duplicate implementations remain.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import type { ContentStreamChunk, ReasoningStreamChunk } from '@/hooks/useAdvancedStreaming';
 
 export type DebatePhase = 'OPENING_STATEMENTS' | 'REBUTTALS' | 'CLOSING_ARGUMENTS';
 
@@ -26,15 +24,6 @@ export interface JuryAnnotation {
 }
 
 export type JuryAnnotationsMap = Record<string, JuryAnnotation>;
- *
- * Author: gpt-5-codex
- * Date: October 17, 2025 at 18:55 UTC
- * PURPOSE: Debate session state manager with persisted turn hydration, duplicate-safe streaming reconciliation,
- *          resume helpers, and jury metadata support so the debate UI, exports, and history drawer stay in sync.
- * SRP/DRY check: Pass - Centralizes debate-session stateful logic without duplicating export/history handling elsewhere.
- */
-
-import { useMemo, useRef, useState } from 'react';
 
 export interface DebateTurnJuryAnnotation {
   verdict?: string;
@@ -56,12 +45,14 @@ export interface DebateTurnHistoryEntry {
     output?: number;
     reasoning?: number;
   };
-  cost?: number | {
-    input?: number;
-    output?: number;
-    reasoning?: number;
-    total?: number;
-  };
+  cost?:
+    | number
+    | {
+        input?: number;
+        output?: number;
+        reasoning?: number;
+        total?: number;
+      };
   durationMs?: number;
   createdAt?: string | number | Date;
   jury?: DebateTurnJuryAnnotation;
@@ -109,15 +100,6 @@ export interface DebateResumeContext {
   isModelBTurn: boolean;
   previousResponseId: string | null;
 }
-/*
- * Author: GPT-5 Codex
- * Date: 2025-10-17 18:56 UTC
- * PURPOSE: Persist debate messages alongside structured reasoning/content chunk timelines for replay tooling.
- * SRP/DRY check: Pass - Hook centralizes debate session state while delegating analytics to downstream components.
- */
-
-import { useState } from 'react';
-import type { ReasoningStreamChunk, ContentStreamChunk } from '@/hooks/useAdvancedStreaming';
 
 export interface DebateMessage {
   id: string;
@@ -176,8 +158,8 @@ export interface DebateSessionState {
   setModelBLastResponseId: (id: string | null) => void;
   debateSessionId: string | null;
   setDebateSessionId: (id: string | null) => void;
-  existingDebateSessions: any[];
-  setExistingDebateSessions: (sessions: any[]) => void;
+  existingDebateSessions: DebateSessionSummary[];
+  setExistingDebateSessions: (sessions: DebateSessionSummary[]) => void;
 
   // Phase tracking
   phaseIndex: number;
@@ -200,10 +182,11 @@ export interface DebateSessionState {
   hasUnresolvedJuryTasks: () => boolean;
 
   // Helper functions
-  existingDebateSessions: DebateSessionSummary[];
-  setExistingDebateSessions: (sessions: DebateSessionSummary[]) => void;
   addMessage: (message: DebateMessage) => void;
-  hydrateFromSession: (session: DebateSessionHydration, modelLookup: Map<string, { name: string; provider?: string }>) => void;
+  hydrateFromSession: (
+    session: DebateSessionHydration,
+    modelLookup: Map<string, { name: string; provider?: string }>
+  ) => void;
   updateJurySummary: (summary: DebateTurnJuryAnnotation | null) => void;
   getResumeContext: (params: { model1Id: string; model2Id: string }) => DebateResumeContext;
   resetSession: () => void;
@@ -226,17 +209,18 @@ function normalizeTurn(entry: DebateTurnHistoryEntry): DebateTurnHistoryEntry {
 }
 
 function buildMessageFromTurn(turn: DebateTurnHistoryEntry, fallbackName: string): DebateMessage {
-  const timestampValue = typeof turn.createdAt === 'number'
-    ? turn.createdAt
-    : turn.createdAt
-      ? new Date(turn.createdAt).getTime()
-      : Date.now();
+  const timestampValue =
+    typeof turn.createdAt === 'number'
+      ? turn.createdAt
+      : turn.createdAt
+        ? new Date(turn.createdAt).getTime()
+        : Date.now();
 
   const tokenUsage = turn.tokenUsage
     ? {
         input: turn.tokenUsage.input ?? 0,
         output: turn.tokenUsage.output ?? 0,
-        ...(turn.tokenUsage.reasoning ? { reasoning: turn.tokenUsage.reasoning } : {}),
+        ...(turn.tokenUsage.reasoning !== undefined ? { reasoning: turn.tokenUsage.reasoning } : {}),
       }
     : undefined;
 
@@ -267,17 +251,18 @@ function buildMessageFromTurn(turn: DebateTurnHistoryEntry, fallbackName: string
     round: Math.max(1, Math.ceil(turn.turn / 2)),
     turnNumber: turn.turn,
     reasoning: turn.reasoning,
-    responseId: turn.responseId,
+    responseId: turn.responseId ?? null,
     responseTime: turn.durationMs ?? 0,
     tokenUsage,
-    cost: costTotal !== undefined
-      ? {
-          input: costInput,
-          output: costOutput,
-          total: costTotal,
-          ...(costReasoning !== undefined ? { reasoning: costReasoning } : {}),
-        }
-      : undefined,
+    cost:
+      costTotal !== undefined
+        ? {
+            input: costInput,
+            output: costOutput,
+            total: costTotal,
+            ...(costReasoning !== undefined ? { reasoning: costReasoning } : {}),
+          }
+        : undefined,
   };
 }
 
@@ -285,59 +270,28 @@ function sortMessages(messages: DebateMessage[]): DebateMessage[] {
   return [...messages].sort((a, b) => a.turnNumber - b.turnNumber);
 }
 
+function cloneMessage(message: DebateMessage): DebateMessage {
+  return {
+    ...message,
+    reasoningChunks: message.reasoningChunks?.map(chunk => ({ ...chunk })),
+    contentChunks: message.contentChunks?.map(chunk => ({ ...chunk })),
+  };
+}
+
 export function useDebateSession(): DebateSessionState {
-  const [messages, setMessages] = useState<DebateMessage[]>([]);
+  const [messagesState, setMessagesState] = useState<DebateMessage[]>([]);
   const [turnHistory, setTurnHistory] = useState<DebateTurnHistoryEntry[]>([]);
   const [jurySummary, setJurySummary] = useState<DebateTurnJuryAnnotation | null>(null);
-  const [sessionMetadata, setSessionMetadata] = useState<DebateSessionMetadata>(INITIAL_METADATA);
+  const [sessionMetadataState, setSessionMetadataState] =
+    useState<DebateSessionMetadata>(INITIAL_METADATA);
   const [currentRound, setCurrentRound] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [modelALastResponseId, setModelALastResponseId] = useState<string | null>(null);
   const [modelBLastResponseId, setModelBLastResponseId] = useState<string | null>(null);
   const [debateSessionId, setDebateSessionId] = useState<string | null>(null);
-  const [existingDebateSessions, setExistingDebateSessions] = useState<DebateSessionSummary[]>([]);
+  const [existingDebateSessionsState, setExistingDebateSessionsState] = useState<DebateSessionSummary[]>([]);
 
   const responseRegistryRef = useRef(new Set<string>());
-
-  const upsertTurnHistory = (entry: DebateTurnHistoryEntry) => {
-    const normalizedEntry = normalizeTurn(entry);
-
-    setTurnHistory(prev => {
-      const next = [...prev];
-      let index = -1;
-
-      if (normalizedEntry.responseId) {
-        index = next.findIndex(turn => turn.responseId === normalizedEntry.responseId);
-      }
-
-      if (index === -1) {
-        index = next.findIndex(turn => turn.turn === normalizedEntry.turn && turn.modelId === normalizedEntry.modelId);
-      }
-
-      if (index >= 0) {
-        next[index] = { ...next[index], ...normalizedEntry };
-      } else {
-        next.push(normalizedEntry);
-      }
-
-      next.sort((a, b) => a.turn - b.turn);
-      return next;
-    });
-
-    if (normalizedEntry.responseId) {
-      responseRegistryRef.current.add(normalizedEntry.responseId);
-    }
-
-    if (sessionMetadata.model1Id && normalizedEntry.modelId === sessionMetadata.model1Id && normalizedEntry.responseId) {
-      setModelALastResponseId(normalizedEntry.responseId);
-    }
-
-    if (sessionMetadata.model2Id && normalizedEntry.modelId === sessionMetadata.model2Id && normalizedEntry.responseId) {
-      setModelBLastResponseId(normalizedEntry.responseId);
-    }
-
-    setCurrentRound(prev => Math.max(prev, normalizedEntry.turn));
-  };
 
   // Phase tracking
   const [phaseIndex, setPhaseIndex] = useState(0);
@@ -348,6 +302,22 @@ export function useDebateSession(): DebateSessionState {
 
   // Jury annotations
   const [juryAnnotations, setJuryAnnotations] = useState<JuryAnnotationsMap>({});
+
+  const messages = messagesState;
+  const sessionMetadata = sessionMetadataState;
+  const existingDebateSessions = existingDebateSessionsState;
+
+  const setSessionMetadata = useCallback((metadata: DebateSessionMetadata) => {
+    setSessionMetadataState(metadata);
+  }, []);
+
+  const setMessages = useCallback((messagesInput: DebateMessage[]) => {
+    setMessagesState(sortMessages(messagesInput.map(cloneMessage)));
+  }, []);
+
+  const setExistingDebateSessions = useCallback((sessions: DebateSessionSummary[]) => {
+    setExistingDebateSessionsState(sessions);
+  }, []);
 
   const getCurrentPhase = useCallback((): DebatePhase => {
     return ROBERTS_RULES_PHASES[Math.min(phaseIndex, ROBERTS_RULES_PHASES.length - 1)];
@@ -397,32 +367,38 @@ export function useDebateSession(): DebateSessionState {
     setFloorOpen(prev => !prev);
   }, []);
 
-  const initializeJury = useCallback((speakers: Array<{ modelId: string; modelName: string }>) => {
-    setJuryAnnotations(prev => {
-      const next: JuryAnnotationsMap = { ...prev };
-      let changed = false;
-      speakers.forEach(({ modelId, modelName }) => {
-        const existing = next[modelId];
-        if (existing) {
-          if (existing.modelName !== modelName) {
-            next[modelId] = { ...existing, modelName };
+  const initializeJury = useCallback(
+    (speakers: Array<{ modelId: string; modelName: string }>) => {
+      setJuryAnnotations(prev => {
+        const next: JuryAnnotationsMap = { ...prev };
+        let changed = false;
+
+        speakers.forEach(({ modelId, modelName }) => {
+          const existing = next[modelId];
+          if (existing) {
+            if (existing.modelName !== modelName) {
+              next[modelId] = { ...existing, modelName };
+              changed = true;
+            }
+          } else {
+            next[modelId] = ensureAnnotation(modelId, modelName);
             changed = true;
           }
-        } else {
-          next[modelId] = ensureAnnotation(modelId, modelName);
-          changed = true;
-        }
+        });
+
+        const activeIds = new Set(speakers.map(s => s.modelId));
+        Object.keys(next).forEach(modelId => {
+          if (!activeIds.has(modelId)) {
+            delete next[modelId];
+            changed = true;
+          }
+        });
+
+        return changed ? next : prev;
       });
-      const activeIds = new Set(speakers.map(s => s.modelId));
-      Object.keys(next).forEach(modelId => {
-        if (!activeIds.has(modelId)) {
-          delete next[modelId];
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [ensureAnnotation]);
+    },
+    [ensureAnnotation]
+  );
 
   const adjustPoints = useCallback((modelId: string, delta: number) => {
     setJuryAnnotations(prev => {
@@ -442,7 +418,6 @@ export function useDebateSession(): DebateSessionState {
   }, []);
 
   const incrementJuryPoints = useCallback((modelId: string) => adjustPoints(modelId, 1), [adjustPoints]);
-
   const decrementJuryPoints = useCallback((modelId: string) => adjustPoints(modelId, -1), [adjustPoints]);
 
   const toggleJuryTag = useCallback((modelId: string, tag: string) => {
@@ -498,260 +473,343 @@ export function useDebateSession(): DebateSessionState {
     return Object.values(juryAnnotations).some(annotation => annotation.needsReview);
   }, [juryAnnotations]);
 
-  // Helper function to add a single message
-  const addMessage = useCallback((message: DebateMessage) => {
-    setMessages(prev => [...prev, message]);
-    setJuryAnnotations(prev => {
-      const existing = prev[message.modelId];
-      if (!existing) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [message.modelId]: {
-          ...existing,
-          needsReview: true,
-        },
-      };
-    });
-  }, []);
-  const addMessage = (message: DebateMessage) => {
-    setMessages(prev => {
-      const index = message.responseId
-        ? prev.findIndex(item => item.responseId === message.responseId)
-        : prev.findIndex(item => item.turnNumber === message.turnNumber && item.modelId === message.modelId);
+  const upsertTurnHistory = useCallback(
+    (entry: DebateTurnHistoryEntry) => {
+      const normalizedEntry = normalizeTurn(entry);
 
-      if (index >= 0) {
+      setTurnHistory(prev => {
         const next = [...prev];
-        next[index] = { ...next[index], ...message };
+        let index = -1;
+
+        if (normalizedEntry.responseId) {
+          index = next.findIndex(turn => turn.responseId === normalizedEntry.responseId);
+        }
+
+        if (index === -1) {
+          index = next.findIndex(
+            turn => turn.turn === normalizedEntry.turn && turn.modelId === normalizedEntry.modelId
+          );
+        }
+
+        if (index >= 0) {
+          next[index] = { ...next[index], ...normalizedEntry };
+        } else {
+          next.push(normalizedEntry);
+        }
+
+        next.sort((a, b) => a.turn - b.turn);
+        return next;
+      });
+
+      if (normalizedEntry.responseId) {
+        responseRegistryRef.current.add(normalizedEntry.responseId);
+      }
+
+      if (
+        sessionMetadata.model1Id &&
+        normalizedEntry.modelId === sessionMetadata.model1Id &&
+        normalizedEntry.responseId
+      ) {
+        setModelALastResponseId(normalizedEntry.responseId);
+      }
+
+      if (
+        sessionMetadata.model2Id &&
+        normalizedEntry.modelId === sessionMetadata.model2Id &&
+        normalizedEntry.responseId
+      ) {
+        setModelBLastResponseId(normalizedEntry.responseId);
+      }
+
+      setCurrentRound(prev => Math.max(prev, normalizedEntry.turn));
+    },
+    [sessionMetadata.model1Id, sessionMetadata.model2Id]
+  );
+
+  const addMessage = useCallback(
+    (message: DebateMessage) => {
+      const normalizedMessage = cloneMessage(message);
+
+      setMessagesState(prev => {
+        const next = [...prev];
+        const index = normalizedMessage.responseId
+          ? next.findIndex(item => item.responseId === normalizedMessage.responseId)
+          : next.findIndex(
+              item => item.turnNumber === normalizedMessage.turnNumber && item.modelId === normalizedMessage.modelId
+            );
+
+        if (index >= 0) {
+          next[index] = { ...next[index], ...normalizedMessage };
+        } else {
+          next.push(normalizedMessage);
+        }
+
         return sortMessages(next);
-      }
+      });
 
-      return sortMessages([...prev, message]);
-    });
-
-    upsertTurnHistory({
-      turn: message.turnNumber,
-      modelId: message.modelId,
-      modelName: message.modelName,
-      content: message.content,
-      reasoning: message.reasoning,
-      responseId: message.responseId,
-      tokenUsage: message.tokenUsage,
-      cost: message.cost
-        ? {
-            input: message.cost.input,
-            output: message.cost.output,
-            total: message.cost.total,
-            reasoning: message.cost.reasoning,
-          }
-        : undefined,
-      durationMs: message.responseTime,
-      createdAt: message.timestamp,
-    });
-  };
-
-  const hydrateFromSession = (
-    session: DebateSessionHydration,
-    modelLookup: Map<string, { name: string; provider?: string }>
-  ) => {
-    setSessionMetadata({
-      topic: session.topic,
-      model1Id: session.model1Id,
-      model2Id: session.model2Id,
-      adversarialLevel: session.adversarialLevel,
-    });
-
-    setDebateSessionId(session.id);
-
-    responseRegistryRef.current.clear();
-
-    const normalizedTurns = session.turnHistory.map(turn => {
-      const modelName = modelLookup.get(turn.modelId)?.name ?? turn.modelName ?? turn.modelId;
-      return normalizeTurn({ ...turn, modelName });
-    });
-
-    normalizedTurns.forEach(turn => {
-      if (turn.responseId) {
-        responseRegistryRef.current.add(turn.responseId);
-      }
-    });
-
-    setTurnHistory(normalizedTurns.sort((a, b) => a.turn - b.turn));
-
-    setMessages(() => {
-      const mapped = normalizedTurns.map(turn => {
-        const fallbackName = modelLookup.get(turn.modelId)?.name ?? turn.modelName ?? 'Model';
-        const message = buildMessageFromTurn(turn, fallbackName);
-        const capabilities = turn.reasoning
-          ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true }
-          : { reasoning: false, multimodal: false, functionCalling: false, streaming: true };
-
+      setJuryAnnotations(prev => {
+        const existing = prev[normalizedMessage.modelId];
+        if (!existing) {
+          return prev;
+        }
         return {
-          ...message,
-          modelConfig: {
-            capabilities,
-            pricing: {
-              inputPerMillion: 0,
-              outputPerMillion: 0,
-            },
+          ...prev,
+          [normalizedMessage.modelId]: {
+            ...existing,
+            needsReview: true,
           },
         };
       });
 
-      return sortMessages(mapped);
-    });
+      upsertTurnHistory({
+        turn: normalizedMessage.turnNumber,
+        modelId: normalizedMessage.modelId,
+        modelName: normalizedMessage.modelName,
+        content: normalizedMessage.content,
+        reasoning: normalizedMessage.reasoning,
+        responseId: normalizedMessage.responseId ?? null,
+        tokenUsage: normalizedMessage.tokenUsage,
+        cost: normalizedMessage.cost
+          ? {
+              input: normalizedMessage.cost.input,
+              output: normalizedMessage.cost.output,
+              reasoning: normalizedMessage.cost.reasoning,
+              total: normalizedMessage.cost.total,
+            }
+          : undefined,
+        durationMs: normalizedMessage.responseTime,
+        createdAt: normalizedMessage.timestamp,
+      });
+    },
+    [upsertTurnHistory]
+  );
 
-    const finalModelAResponseId = session.model1ResponseIds?.at(-1) ?? null;
-    const finalModelBResponseId = session.model2ResponseIds?.at(-1) ?? null;
+  const hydrateFromSession = useCallback(
+    (
+      session: DebateSessionHydration,
+      modelLookup: Map<string, { name: string; provider?: string }>
+    ) => {
+      setSessionMetadataState({
+        topic: session.topic,
+        model1Id: session.model1Id,
+        model2Id: session.model2Id,
+        adversarialLevel: session.adversarialLevel,
+      });
 
-    setModelALastResponseId(finalModelAResponseId);
-    setModelBLastResponseId(finalModelBResponseId);
+      setDebateSessionId(session.id);
+      responseRegistryRef.current.clear();
 
-    if (session.jurySummary) {
-      setJurySummary(session.jurySummary);
-    }
+      const normalizedTurns = session.turnHistory.map(turn => {
+        const modelName = modelLookup.get(turn.modelId)?.name ?? turn.modelName ?? turn.modelId;
+        return normalizeTurn({ ...turn, modelName });
+      });
 
-    const highestTurn = normalizedTurns.reduce((max, turn) => Math.max(max, turn.turn), 0);
-    setCurrentRound(highestTurn);
-    setIsRunning(false);
-  };
+      normalizedTurns.forEach(turn => {
+        if (turn.responseId) {
+          responseRegistryRef.current.add(turn.responseId);
+        }
+      });
 
-  const updateJurySummary = (summary: DebateTurnJuryAnnotation | null) => {
-    setJurySummary(summary);
-  };
+      normalizedTurns.sort((a, b) => a.turn - b.turn);
+      setTurnHistory(normalizedTurns);
 
-  const findLastResponseId = (modelId: string): string | null => {
-    for (let index = turnHistory.length - 1; index >= 0; index -= 1) {
-      const turn = turnHistory[index];
-      if (turn.modelId === modelId && turn.responseId) {
-        return turn.responseId;
+      setMessagesState(() => {
+        const mapped = normalizedTurns.map(turn => {
+          const fallbackName = modelLookup.get(turn.modelId)?.name ?? turn.modelName ?? 'Model';
+          const message = buildMessageFromTurn(turn, fallbackName);
+          const capabilities = turn.reasoning
+            ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true }
+            : { reasoning: false, multimodal: false, functionCalling: false, streaming: true };
+
+          return {
+            ...message,
+            modelConfig: {
+              capabilities,
+              pricing: {
+                inputPerMillion: 0,
+                outputPerMillion: 0,
+              },
+            },
+          };
+        });
+
+        return sortMessages(mapped);
+      });
+
+      setModelALastResponseId(session.model1ResponseIds?.at(-1) ?? null);
+      setModelBLastResponseId(session.model2ResponseIds?.at(-1) ?? null);
+
+      if (session.jurySummary) {
+        setJurySummary(session.jurySummary);
       }
-    }
-    return null;
-  };
 
-  const getResumeContext = (params: { model1Id: string; model2Id: string }): DebateResumeContext => {
-    const { model1Id, model2Id } = params;
-    const nextTurnNumber = currentRound + 1;
-    const isModelBTurn = currentRound % 2 === 1;
-    const nextModelId = isModelBTurn ? model2Id : model1Id;
-    const previousResponseId = findLastResponseId(nextModelId);
+      const highestTurn = normalizedTurns.reduce((max, turn) => Math.max(max, turn.turn), 0);
+      setCurrentRound(highestTurn);
+      setIsRunning(false);
+    },
+    []
+  );
 
-    return {
-      nextTurnNumber,
-      nextModelId,
-      isModelBTurn,
-      previousResponseId,
-    };
-    const clonedMessage: DebateMessage = {
-      ...message,
-      reasoningChunks: message.reasoningChunks?.map(chunk => ({ ...chunk })),
-      contentChunks: message.contentChunks?.map(chunk => ({ ...chunk }))
-    };
-    setMessages(prev => [...prev, clonedMessage]);
-  };
+  const updateJurySummary = useCallback((summary: DebateTurnJuryAnnotation | null) => {
+    setJurySummary(summary);
+  }, []);
 
-  const resetSession = () => {
-    setMessages([]);
+  const findLastResponseId = useCallback(
+    (modelId: string): string | null => {
+      for (let index = turnHistory.length - 1; index >= 0; index -= 1) {
+        const turn = turnHistory[index];
+        if (turn.modelId === modelId && turn.responseId) {
+          return turn.responseId;
+        }
+      }
+      return null;
+    },
+    [turnHistory]
+  );
+
+  const getResumeContext = useCallback(
+    (params: { model1Id: string; model2Id: string }): DebateResumeContext => {
+      const { model1Id, model2Id } = params;
+      const nextTurnNumber = currentRound + 1;
+      const isModelBTurn = currentRound % 2 === 1;
+      const nextModelId = isModelBTurn ? model2Id : model1Id;
+      const previousResponseId = findLastResponseId(nextModelId);
+
+      return {
+        nextTurnNumber,
+        nextModelId,
+        isModelBTurn,
+        previousResponseId,
+      };
+    },
+    [currentRound, findLastResponseId]
+  );
+
+  const resetSession = useCallback(() => {
+    setMessagesState([]);
     setTurnHistory([]);
     setJurySummary(null);
-    setSessionMetadata(INITIAL_METADATA);
+    setSessionMetadataState(INITIAL_METADATA);
     setCurrentRound(0);
     setIsRunning(false);
     setModelALastResponseId(null);
     setModelBLastResponseId(null);
     setDebateSessionId(null);
-    setExistingDebateSessions([]);
+    setExistingDebateSessionsState([]);
     setPhaseIndex(0);
     setPhaseTimestamps({
       [ROBERTS_RULES_PHASES[0]]: Date.now(),
     });
     setFloorOpen(true);
     setJuryAnnotations({});
-  };
-
-  // Calculate total cost of all messages
-  const calculateTotalCost = useCallback(() => {
-    return messages.reduce((sum, msg) => sum + (msg.cost?.total || 0), 0);
-  }, [messages]);
     responseRegistryRef.current.clear();
-  };
+  }, []);
 
-  const calculateTotalCost = () => {
+  const calculateTotalCost = useCallback(() => {
     if (turnHistory.length === 0) {
       return messages.reduce((sum, msg) => sum + (msg.cost?.total ?? 0), 0);
     }
 
     return turnHistory.reduce((sum, turn) => {
       if (typeof turn.cost === 'number') {
-        return sum + (isNaN(turn.cost) ? 0 : turn.cost);
+        return sum + (Number.isFinite(turn.cost) ? turn.cost : 0);
       }
 
       const total = turn.cost?.total ?? 0;
-      return sum + (isNaN(total) ? 0 : total);
+      return sum + (Number.isFinite(total) ? total : 0);
     }, 0);
-  };
+  }, [turnHistory, messages]);
 
-  const memoizedState: DebateSessionState = useMemo(() => ({
-    messages,
-    turnHistory,
-    jurySummary,
-    sessionMetadata,
-    setSessionMetadata,
-    setMessages,
-    currentRound,
-    setCurrentRound,
-    isRunning,
-    setIsRunning,
-    modelALastResponseId,
-    setModelALastResponseId,
-    modelBLastResponseId,
-    setModelBLastResponseId,
-    debateSessionId,
-    setDebateSessionId,
-    existingDebateSessions,
-    setExistingDebateSessions,
+  return useMemo(
+    () => ({
+      messages,
+      turnHistory,
+      jurySummary,
+      sessionMetadata,
+      setSessionMetadata,
+      setMessages,
+      currentRound,
+      setCurrentRound,
+      isRunning,
+      setIsRunning,
+      modelALastResponseId,
+      setModelALastResponseId,
+      modelBLastResponseId,
+      setModelBLastResponseId,
+      debateSessionId,
+      setDebateSessionId,
+      existingDebateSessions,
+      setExistingDebateSessions,
 
-    // Phase tracking
-    phaseIndex,
-    advancePhase,
-    reopenPhase,
-    getCurrentPhase,
-    phaseTimestamps,
-    floorOpen,
-    toggleFloor,
-    isFloorOpen,
+      // Phase tracking
+      phaseIndex,
+      advancePhase,
+      reopenPhase,
+      getCurrentPhase,
+      phaseTimestamps,
+      floorOpen,
+      toggleFloor,
+      isFloorOpen,
 
-    // Jury annotations
-    juryAnnotations,
-    initializeJury,
-    incrementJuryPoints,
-    decrementJuryPoints,
-    toggleJuryTag,
-    setJuryNotes,
-    markJuryReviewed,
-    hasUnresolvedJuryTasks,
+      // Jury annotations
+      juryAnnotations,
+      initializeJury,
+      incrementJuryPoints,
+      decrementJuryPoints,
+      toggleJuryTag,
+      setJuryNotes,
+      markJuryReviewed,
+      hasUnresolvedJuryTasks,
 
-    // Helper functions
-    addMessage,
-    hydrateFromSession,
-    updateJurySummary,
-    getResumeContext,
-    resetSession,
-    calculateTotalCost,
-  }), [
-    messages,
-    turnHistory,
-    jurySummary,
-    sessionMetadata,
-    currentRound,
-    isRunning,
-    modelALastResponseId,
-    modelBLastResponseId,
-    debateSessionId,
-    existingDebateSessions,
-  ]);
-
-  return memoizedState;
+      // Helper functions
+      addMessage,
+      hydrateFromSession,
+      updateJurySummary,
+      getResumeContext,
+      resetSession,
+      calculateTotalCost,
+    }),
+    [
+      messages,
+      turnHistory,
+      jurySummary,
+      sessionMetadata,
+      setSessionMetadata,
+      setMessages,
+      currentRound,
+      setCurrentRound,
+      isRunning,
+      setIsRunning,
+      modelALastResponseId,
+      setModelALastResponseId,
+      modelBLastResponseId,
+      setModelBLastResponseId,
+      debateSessionId,
+      setDebateSessionId,
+      existingDebateSessions,
+      setExistingDebateSessions,
+      phaseIndex,
+      advancePhase,
+      reopenPhase,
+      getCurrentPhase,
+      phaseTimestamps,
+      floorOpen,
+      toggleFloor,
+      isFloorOpen,
+      juryAnnotations,
+      initializeJury,
+      incrementJuryPoints,
+      decrementJuryPoints,
+      toggleJuryTag,
+      setJuryNotes,
+      markJuryReviewed,
+      hasUnresolvedJuryTasks,
+      addMessage,
+      hydrateFromSession,
+      updateJurySummary,
+      getResumeContext,
+      resetSession,
+      calculateTotalCost,
+    ]
+  );
 }
