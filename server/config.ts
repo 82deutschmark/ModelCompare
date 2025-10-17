@@ -1,9 +1,17 @@
+/*
+ *
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 and 14:18
+ * PURPOSE: Centralized configuration loader; update ensures Helmet/CORS default on only in production while documenting hobby overrides; touches server/index.ts consumers.
+ * SRP/DRY check: Pass - config remains single source for settings; confirmed no duplicate loaders exist elsewhere.
+ */
+
 /**
  * Configuration Management System
- * 
+ *
  * Centralized configuration with environment-aware defaults and validation.
  * Provides type-safe access to all application settings.
- * 
+ *
  * Author: Claude Code
  * Date: 2025-08-26
  */
@@ -114,8 +122,9 @@ export function loadConfig(): AppConfig {
     },
 
     security: {
-      enableHelmet: process.env.ENABLE_HELMET !== 'false',
-      enableCors: process.env.ENABLE_CORS !== 'false',
+      // Helmet and CORS now default on only in production; hobby devs can opt-in via env flags.
+      enableHelmet: process.env.ENABLE_HELMET === 'true' || isProduction,
+      enableCors: process.env.ENABLE_CORS === 'true' || isProduction,
       cspDirectives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
