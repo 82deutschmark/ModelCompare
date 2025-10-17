@@ -82,6 +82,15 @@ export interface DebateResumeContext {
   isModelBTurn: boolean;
   previousResponseId: string | null;
 }
+/*
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 18:56 UTC
+ * PURPOSE: Persist debate messages alongside structured reasoning/content chunk timelines for replay tooling.
+ * SRP/DRY check: Pass - Hook centralizes debate session state while delegating analytics to downstream components.
+ */
+
+import { useState } from 'react';
+import type { ReasoningStreamChunk, ContentStreamChunk } from '@/hooks/useAdvancedStreaming';
 
 export interface DebateMessage {
   id: string;
@@ -95,6 +104,8 @@ export interface DebateMessage {
   systemPrompt?: string;
   responseId?: string | null;
   responseTime: number;
+  reasoningChunks?: ReasoningStreamChunk[];
+  contentChunks?: ContentStreamChunk[];
   tokenUsage?: {
     input: number;
     output: number;
@@ -406,6 +417,12 @@ export function useDebateSession(): DebateSessionState {
       isModelBTurn,
       previousResponseId,
     };
+    const clonedMessage: DebateMessage = {
+      ...message,
+      reasoningChunks: message.reasoningChunks?.map(chunk => ({ ...chunk })),
+      contentChunks: message.contentChunks?.map(chunk => ({ ...chunk }))
+    };
+    setMessages(prev => [...prev, clonedMessage]);
   };
 
   const resetSession = () => {

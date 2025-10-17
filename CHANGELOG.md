@@ -1,10 +1,18 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
- * Date: 2025-10-17 18:14 UTC
+ * Date: 2025-10-17 and the 19:05 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.7] - 2025-10-17
+
+### Added
+- **Claude Haiku 4.5 Availability:** Registered Anthropic's Claude Haiku 4.5 in `shared/model-catalog.ts` for both direct Anthropic and OpenRouter provider groups, including accurate pricing, context window, and reasoning capability metadata.
+
+### Changed
+- **Anthropic Token Limits:** Updated `server/providers/anthropic.ts` to enforce model-specific token ceilings, ensuring Haiku 4.5 requests honor the 16k generation cap while preserving user-specified overrides within documented limits.
 
 ## [Version 0.4.6] - 2025-10-17
 

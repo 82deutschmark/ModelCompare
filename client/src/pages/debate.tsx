@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Settings } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { StreamingDisplay } from "@/components/StreamingDisplay";
 import { StreamingControls } from "@/components/StreamingControls";
 import { AppNavigation } from "@/components/AppNavigation";
@@ -76,6 +77,7 @@ export default function Debate() {
     debateSetup.model2Id,
   ]);
 
+  // Create debate session mutation with streaming logic in onSuccess
   const createDebateSessionMutation = useMutation({
     mutationFn: async (data: { topic: string; model1Id: string; model2Id: string; adversarialLevel: number }) => {
       const response = await apiRequest('POST', '/api/debate/session', data);
@@ -218,11 +220,14 @@ export default function Debate() {
     ) {
       const model1 = debateService?.getModel(debateSetup.model1Id);
       debateSession.addMessage({
+      debateSession.setMessages([{ 
         id: `msg-1`,
         modelId: debateSetup.model1Id,
         modelName: model1?.name || "Model 1",
         content: debateStreaming.content,
         reasoning: debateStreaming.reasoning,
+        reasoningChunks: debateStreaming.reasoningChunks.map(chunk => ({ ...chunk })),
+        contentChunks: debateStreaming.contentChunks.map(chunk => ({ ...chunk })),
         timestamp: Date.now(),
         round: 1,
         turnNumber: 1,
@@ -237,6 +242,10 @@ export default function Debate() {
           pricing: { inputPerMillion: 0, outputPerMillion: 0 },
         },
       });
+            : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
+          pricing: { inputPerMillion: 0, outputPerMillion: 0 }
+        }
+      }]);
       debateSession.setModelALastResponseId(debateStreaming.responseId);
       debateSession.setCurrentRound(1);
       debateSetup.setShowSetup(false);
@@ -244,10 +253,16 @@ export default function Debate() {
   }, [
     debateStreaming.responseId,
     debateStreaming.content,
+    debateStreaming.reasoning,
+    debateStreaming.reasoningChunks,
+    debateStreaming.contentChunks,
+    debateStreaming.tokenUsage,
+    debateStreaming.cost,
     debateSession.messages.length,
     debateService,
     debateSetup.model1Id,
     debateSetup.model1Config.enableReasoning,
+    debateSetup.model1Config.maxTokens
   ]);
 
   useEffect(() => {
@@ -270,6 +285,8 @@ export default function Debate() {
         modelName: model?.name || "Model",
         content: debateStreaming.content,
         reasoning: debateStreaming.reasoning,
+        reasoningChunks: debateStreaming.reasoningChunks.map(chunk => ({ ...chunk })),
+        contentChunks: debateStreaming.contentChunks.map(chunk => ({ ...chunk })),
         timestamp: Date.now(),
         round: Math.ceil(nextTurn / 2),
         turnNumber: nextTurn,
@@ -296,6 +313,11 @@ export default function Debate() {
   }, [
     debateStreaming.responseId,
     debateStreaming.content,
+    debateStreaming.reasoning,
+    debateStreaming.reasoningChunks,
+    debateStreaming.contentChunks,
+    debateStreaming.tokenUsage,
+    debateStreaming.cost,
     debateSession.messages.length,
     debateSession.currentRound,
     debateService,
@@ -303,6 +325,7 @@ export default function Debate() {
     debateSetup.model2Id,
     debateSetup.model1Config.enableReasoning,
     debateSetup.model2Config.enableReasoning,
+    debateSetup.model2Config.enableReasoning
   ]);
 
   useEffect(() => {

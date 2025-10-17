@@ -22,7 +22,7 @@
  * Date: August 11, 2025
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,15 +76,17 @@ interface MessageCardProps {
   showFooter?: boolean;
   className?: string;
   seatColor?: string; // For battle-chat mode seat colors
+  footerActions?: ReactNode;
 }
 
-export function MessageCard({ 
-  message, 
+export function MessageCard({
+  message,
   variant = 'default',
   showHeader = true,
   showFooter = true,
   className = '',
-  seatColor 
+  seatColor,
+  footerActions
 }: MessageCardProps) {
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
@@ -314,16 +316,19 @@ export function MessageCard({
               )}
             </div>
             
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={copyToClipboard}
-              disabled={isCopying}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 h-8 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-            >
-              <Copy className="w-4 h-4 mr-2" />
-              <span className="text-sm font-medium">{isCopying ? 'Copied!' : 'Copy'}</span>
-            </Button>
+            <div className="flex items-center space-x-2">
+              {footerActions}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copyToClipboard}
+                disabled={isCopying}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 h-8 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                <span className="text-sm font-medium">{isCopying ? 'Copied!' : 'Copy'}</span>
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

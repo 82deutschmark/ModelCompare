@@ -1,18 +1,23 @@
-/**
- * Custom hook for managing debate streaming state
- *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Manages streaming-related state and integrates with useAdvancedStreaming hook
- * SRP/DRY check: Pass - Single responsibility for debate streaming state management
+/*
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 18:52 UTC
+ * PURPOSE: Wrap debate streaming hook to expose structured chunk arrays alongside legacy fields for replay UIs.
+ * SRP/DRY check: Pass - Delegates streaming mechanics to useAdvancedStreaming while reshaping consumer-facing state.
  */
 
-import { useAdvancedStreaming, type StreamingOptions } from '@/hooks/useAdvancedStreaming';
+import {
+  useAdvancedStreaming,
+  type StreamingOptions,
+  type ReasoningStreamChunk,
+  type ContentStreamChunk
+} from '@/hooks/useAdvancedStreaming';
 
 export interface DebateStreamingState {
   // Streaming state from useAdvancedStreaming
   reasoning: string;
   content: string;
+  reasoningChunks: ReasoningStreamChunk[];
+  contentChunks: ContentStreamChunk[];
   isStreaming: boolean;
   error: string | null;
   responseId: string | null;
@@ -35,6 +40,8 @@ export function useDebateStreaming(): DebateStreamingState {
   const {
     reasoning,
     content,
+    reasoningChunks,
+    contentChunks,
     isStreaming,
     error,
     responseId,
@@ -58,6 +65,8 @@ export function useDebateStreaming(): DebateStreamingState {
     // Streaming state
     reasoning,
     content,
+    reasoningChunks,
+    contentChunks,
     isStreaming,
     error,
     responseId,
