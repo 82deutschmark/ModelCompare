@@ -23,7 +23,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Settings } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { useAdvancedStreaming, type StreamingOptions } from "@/hooks/useAdvancedStreaming";
 import { MessageCard, type MessageCardData } from "@/components/MessageCard";
 import { StreamingDisplay } from "@/components/StreamingDisplay";
 import { StreamingControls } from "@/components/StreamingControls";
@@ -90,23 +89,6 @@ export default function Debate() {
     debateSetup.model1Id,
     debateSetup.model2Id,
   ]);
-
-  // Advanced streaming hook
-  const {
-    reasoning: streamReasoning,
-    content: streamContent,
-    isStreaming,
-    error: streamError,
-    responseId: streamResponseId,
-    tokenUsage: streamTokenUsage,
-    cost: streamCost,
-    progress: streamProgress,
-    estimatedCost: streamEstimatedCost,
-    startStream,
-    cancelStream,
-    pauseStream,
-    resumeStream
-  } = useAdvancedStreaming();
 
   // Create debate session mutation with streaming logic in onSuccess
   const createDebateSessionMutation = useMutation({
@@ -257,19 +239,23 @@ export default function Debate() {
   useEffect(() => {
     if (debateStreaming.responseId && debateStreaming.content && debateSession.messages.length === 0) {
       const model1 = debateService?.getModel(debateSetup.model1Id);
-      debateSession.setMessages([{
+      debateSession.setMessages([{ 
         id: `msg-1`,
         modelId: debateSetup.model1Id,
         modelName: model1?.name || "Model 1",
         content: debateStreaming.content,
         reasoning: debateStreaming.reasoning,
+        reasoningChunks: debateStreaming.reasoningChunks.map(chunk => ({ ...chunk })),
+        contentChunks: debateStreaming.contentChunks.map(chunk => ({ ...chunk })),
         timestamp: Date.now(),
         round: 1,
         responseTime: 0,
         tokenUsage: debateStreaming.tokenUsage,
         cost: debateStreaming.cost,
         modelConfig: {
-          capabilities: debateSetup.model1Config.enableReasoning ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true } : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
+          capabilities: debateSetup.model1Config.enableReasoning
+            ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true }
+            : { reasoning: false, multimodal: false, functionCalling: false, streaming: false },
           pricing: { inputPerMillion: 0, outputPerMillion: 0 }
         }
       }]);
@@ -277,7 +263,20 @@ export default function Debate() {
       debateSession.setCurrentRound(1);
       debateSetup.setShowSetup(false);
     }
-  }, [debateStreaming.responseId, debateStreaming.content, debateSession.messages.length, debateService, debateSetup.model1Id, debateSetup.model1Config.enableReasoning, debateSetup.model1Config.maxTokens]);
+  }, [
+    debateStreaming.responseId,
+    debateStreaming.content,
+    debateStreaming.reasoning,
+    debateStreaming.reasoningChunks,
+    debateStreaming.contentChunks,
+    debateStreaming.tokenUsage,
+    debateStreaming.cost,
+    debateSession.messages.length,
+    debateService,
+    debateSetup.model1Id,
+    debateSetup.model1Config.enableReasoning,
+    debateSetup.model1Config.maxTokens
+  ]);
 
   // Handle streaming completion for subsequent turns
   useEffect(() => {
@@ -296,6 +295,8 @@ export default function Debate() {
         modelName: model?.name || "Model",
         content: debateStreaming.content,
         reasoning: debateStreaming.reasoning,
+        reasoningChunks: debateStreaming.reasoningChunks.map(chunk => ({ ...chunk })),
+        contentChunks: debateStreaming.contentChunks.map(chunk => ({ ...chunk })),
         timestamp: Date.now(),
         round: Math.ceil(nextRound / 2),
         responseTime: 0,
@@ -316,7 +317,22 @@ export default function Debate() {
 
       debateSession.setCurrentRound(nextRound);
     }
-  }, [debateStreaming.responseId, debateStreaming.content, debateSession.messages.length, debateSession.currentRound, debateService, debateSetup.model1Id, debateSetup.model2Id, debateSetup.model1Config.enableReasoning, debateSetup.model2Config.enableReasoning]);
+  }, [
+    debateStreaming.responseId,
+    debateStreaming.content,
+    debateStreaming.reasoning,
+    debateStreaming.reasoningChunks,
+    debateStreaming.contentChunks,
+    debateStreaming.tokenUsage,
+    debateStreaming.cost,
+    debateSession.messages.length,
+    debateSession.currentRound,
+    debateService,
+    debateSetup.model1Id,
+    debateSetup.model2Id,
+    debateSetup.model1Config.enableReasoning,
+    debateSetup.model2Config.enableReasoning
+  ]);
 
   // Load existing debate sessions on component mount
   useEffect(() => {
