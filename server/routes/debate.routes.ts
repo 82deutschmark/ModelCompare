@@ -1,9 +1,9 @@
 /*
  * Author: GPT-5 Codex
- * Date: 2025-10-17 02:45 UTC
+ * Date: 2025-10-17 18:14 UTC
  * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
- *          SSE dispatcher, and shared streaming logic that preserves compatibility with legacy POST usage
- *          while persisting debate session turns.
+ *          SSE dispatcher, shared streaming logic, and heartbeat keepalives so modern React clients can
+ *          consume Responses API streams without premature proxy disconnects while persisting debate turns.
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
  *                across init, SSE, and legacy entry points.
  */
@@ -256,6 +256,9 @@ function setSseHeaders(res: Response): void {
 }
 
 function emitSse(res: Response, event: string, data: Record<string, unknown>): void {
+  if (res.writableEnded) {
+    return;
+  }
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
@@ -285,10 +288,21 @@ Respond as the ${role} debater:
 async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Promise<void> {
   let aggregatedReasoning = "";
   let aggregatedContent = "";
+  let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+  const stopHeartbeat = () => {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  };
+
+  res.on("close", stopHeartbeat);
 
   try {
     const debateSession = await storage.getDebateSession(payload.debateSessionId);
     if (!debateSession) {
+      stopHeartbeat();
       emitSse(res, "stream.error", { error: "Debate session not found" });
       res.end();
       return;
@@ -317,10 +331,19 @@ async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Pr
     }
 
     if (!provider.callModelStreaming) {
+      stopHeartbeat();
       emitSse(res, "stream.error", { error: "Streaming not supported for this provider" });
       res.end();
       return;
     }
+
+    heartbeatTimer = setInterval(() => {
+      if (res.writableEnded) {
+        stopHeartbeat();
+        return;
+      }
+      emitSse(res, "stream.keepalive", { timestamp: Date.now() });
+    }, 15_000);
 
     await provider.callModelStreaming({
       modelId: payload.modelId,
@@ -350,6 +373,7 @@ async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Pr
         });
       },
       onComplete: async (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => {
+        stopHeartbeat();
         const finalContent = content ?? aggregatedContent;
         const finalReasoning = reasoning ?? aggregatedReasoning;
 
@@ -376,11 +400,15 @@ async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Pr
         res.end();
       },
       onError: (error: Error) => {
+        stopHeartbeat();
         emitSse(res, "stream.error", { error: error.message });
         res.end();
       }
     });
+
+    stopHeartbeat();
   } catch (error) {
+    stopHeartbeat();
     console.error("Debate stream error:", error);
     emitSse(res, "stream.error", {
       error: error instanceof Error ? error.message : "Unknown error"

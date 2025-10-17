@@ -1,11 +1,10 @@
 /*
- * Author: gpt-5-codex
- * Date: 2025-10-17 15:26 UTC
- * PURPOSE: Refactors debate streaming hook to consume the server-sent events stream
- *          directly from the /api/debate/stream POST endpoint while preserving
- *          progress tracking, cancellation, and abort controller coordination.
- * SRP/DRY check: Pass - Hook remains responsible for orchestrating debate
- *                streaming state without duplicating server logic.
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 18:14 UTC
+ * PURPOSE: Stream debate responses via SSE using ref-backed buffers to avoid stale closures, throttle React
+ *          renders, and maintain accurate OpenAI Responses API metadata propagation to the debate UI.
+ * SRP/DRY check: Pass - Hook continues to coordinate debate streaming state only; buffering helpers prevent
+ *                duplication while keeping provider logic server-side.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
@@ -17,11 +16,9 @@ export interface StreamingOptions {
   opponentMessage: string | null;
   previousResponseId: string | null;
   turnNumber: number;
-  sessionId?: string; // For debate session management
-  model1Id?: string;  // For debate session creation
-  model2Id?: string;  // For debate session creation
-
-  // Advanced configuration
+  sessionId?: string;
+  model1Id?: string;
+  model2Id?: string;
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
   reasoningSummary?: 'auto' | 'detailed' | 'concise';
   textVerbosity?: 'low' | 'medium' | 'high';
@@ -41,25 +38,97 @@ interface StreamingState {
   estimatedCost: number;
 }
 
+interface ParsedSseEvent {
+  event: string;
+  data: unknown;
+}
+
+const createInitialState = (): StreamingState => ({
+  reasoning: '',
+  content: '',
+  isStreaming: false,
+  error: null,
+  responseId: null,
+  tokenUsage: null,
+  cost: null,
+  progress: 0,
+  estimatedCost: 0
+});
+
+const parseSseEvent = (raw: string): ParsedSseEvent | null => {
+  if (!raw.trim()) {
+    return null;
+  }
+
+  const lines = raw.split('\n');
+  let eventType = '';
+  const dataLines: string[] = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith(':')) {
+      continue;
+    }
+    if (line.startsWith('event:')) {
+      eventType = line.slice(6).trim();
+    } else if (line.startsWith('data:')) {
+      dataLines.push(line.slice(5).trim());
+    }
+  }
+
+  if (!eventType) {
+    return null;
+  }
+
+  const dataPayload = dataLines.join('\n');
+
+  if (!dataPayload) {
+    return { event: eventType, data: null };
+  }
+
+  try {
+    return {
+      event: eventType,
+      data: JSON.parse(dataPayload)
+    };
+  } catch (error) {
+    console.warn('Failed to parse SSE payload', { error, dataPayload });
+    return {
+      event: eventType,
+      data: dataPayload
+    };
+  }
+};
+
+const isRecord = (value: unknown): value is Record<string, any> =>
+  value !== null && typeof value === 'object';
+
 export function useAdvancedStreaming() {
-  const [state, setState] = useState<StreamingState>({
-    reasoning: '',
-    content: '',
-    isStreaming: false,
-    error: null,
-    responseId: null,
-    tokenUsage: null,
-    cost: null,
-    progress: 0,
-    estimatedCost: 0
-  });
+  const [state, setState] = useState<StreamingState>(() => createInitialState());
+  const stateRef = useRef<StreamingState>(state);
 
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Cleanup on unmount
+  const reasoningBufferRef = useRef<string>('');
+  const contentBufferRef = useRef<string>('');
+  const progressRef = useRef<number>(0);
+  const estimatedCostRef = useRef<number>(0);
+
+  const flushPendingRef = useRef<boolean>(false);
+  const flushCancelRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // Ensure pending network resources and scheduled flushes are cleared on unmount.
   useEffect(() => {
     return () => {
+      flushCancelRef.current?.();
+      flushCancelRef.current = null;
+      flushPendingRef.current = false;
+
       if (readerRef.current) {
         readerRef.current.cancel().catch(() => undefined);
         readerRef.current = null;
@@ -71,34 +140,146 @@ export function useAdvancedStreaming() {
     };
   }, []);
 
+  const setStateWithProducer = useCallback((producer: (prev: StreamingState) => StreamingState | null) => {
+    setState(prev => {
+      const result = producer(prev);
+      if (result === null) {
+        return prev;
+      }
+      stateRef.current = result;
+      return result;
+    });
+  }, []);
+
+  const patchState = useCallback((partial: Partial<StreamingState>) => {
+    if (!partial || Object.keys(partial).length === 0) {
+      return;
+    }
+
+    setStateWithProducer(prev => {
+      let changed = false;
+      const next: StreamingState = { ...prev };
+
+      for (const key of Object.keys(partial) as (keyof StreamingState)[]) {
+        const value = partial[key];
+        if (value !== undefined && next[key] !== value) {
+          next[key] = value as StreamingState[typeof key];
+          changed = true;
+        }
+      }
+
+      return changed ? next : null;
+    });
+  }, [setStateWithProducer]);
+
+  const resetState = useCallback((next: StreamingState) => {
+    flushCancelRef.current?.();
+    flushCancelRef.current = null;
+    flushPendingRef.current = false;
+
+    reasoningBufferRef.current = next.reasoning;
+    contentBufferRef.current = next.content;
+    progressRef.current = next.progress;
+    estimatedCostRef.current = next.estimatedCost;
+
+    stateRef.current = next;
+    setState(next);
+  }, []);
+
+  const commitBuffers = useCallback(() => {
+    flushPendingRef.current = false;
+    flushCancelRef.current = null;
+
+    const nextReasoning = reasoningBufferRef.current;
+    const nextContent = contentBufferRef.current;
+    const nextProgress = progressRef.current;
+    const nextEstimatedCost = estimatedCostRef.current;
+
+    setStateWithProducer(prev => {
+      if (
+        prev.reasoning === nextReasoning &&
+        prev.content === nextContent &&
+        prev.progress === nextProgress &&
+        prev.estimatedCost === nextEstimatedCost
+      ) {
+        return null;
+      }
+
+      return {
+        ...prev,
+        reasoning: nextReasoning,
+        content: nextContent,
+        progress: nextProgress,
+        estimatedCost: nextEstimatedCost
+      };
+    });
+  }, [setStateWithProducer]);
+
+  const flushImmediately = useCallback(() => {
+    if (flushCancelRef.current) {
+      flushCancelRef.current();
+      flushCancelRef.current = null;
+    }
+    commitBuffers();
+  }, [commitBuffers]);
+
+  const scheduleFlush = useCallback(() => {
+    if (flushPendingRef.current) {
+      return;
+    }
+    flushPendingRef.current = true;
+
+    const runFlush = () => {
+      commitBuffers();
+    };
+
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      const frameId = window.requestAnimationFrame(runFlush);
+      flushCancelRef.current = () => {
+        if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+          window.cancelAnimationFrame(frameId);
+        }
+        flushPendingRef.current = false;
+        flushCancelRef.current = null;
+      };
+    } else {
+      const timeoutId: ReturnType<typeof setTimeout> = setTimeout(runFlush, 16);
+      flushCancelRef.current = () => {
+        clearTimeout(timeoutId);
+        flushPendingRef.current = false;
+        flushCancelRef.current = null;
+      };
+    }
+  }, [commitBuffers]);
+
   const startStream = useCallback(async (options: StreamingOptions) => {
-    // Cancel any existing stream
     if (readerRef.current) {
       readerRef.current.cancel().catch(() => undefined);
       readerRef.current = null;
     }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
 
-    // Reset state
-    setState({
-      reasoning: '',
-      content: '',
-      isStreaming: true,
-      error: null,
-      responseId: null,
-      tokenUsage: null,
-      cost: null,
-      progress: 0,
-      estimatedCost: 0
-    });
+    flushCancelRef.current?.();
+    flushCancelRef.current = null;
+    flushPendingRef.current = false;
+
+    reasoningBufferRef.current = '';
+    contentBufferRef.current = '';
+    progressRef.current = 0;
+    estimatedCostRef.current = 0;
+
+    const initialState = {
+      ...createInitialState(),
+      isStreaming: true
+    };
+    resetState(initialState);
+
+    abortControllerRef.current = new AbortController();
 
     try {
-      // Create AbortController for the streaming request
-      abortControllerRef.current = new AbortController();
-
-      // Directly initiate the streaming session
       const response = await fetch('/api/debate/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,7 +292,6 @@ export function useAdvancedStreaming() {
       }
 
       const reader = response.body?.getReader();
-
       if (!reader) {
         throw new Error('Readable stream not available');
       }
@@ -121,82 +301,76 @@ export function useAdvancedStreaming() {
       let buffer = '';
       let isActive = true;
 
-      const closeReader = async () => {
-        if (readerRef.current) {
-          try {
-            await readerRef.current.cancel();
-          } catch {
-            // ignore cancellation errors
+      const handleParsedEvent = (parsed: ParsedSseEvent) => {
+        const { event, data } = parsed;
+
+        if (event === 'stream.chunk' && isRecord(data)) {
+          const delta = typeof data.delta === 'string' ? data.delta : '';
+          if (!delta) {
+            return;
           }
-          readerRef.current = null;
-        }
-      };
 
-      const processEvent = (rawEvent: string) => {
-        const lines = rawEvent.split('\n');
-        let eventType = 'message';
-        const dataLines: string[] = [];
-
-        for (const line of lines) {
-          if (line.startsWith('event:')) {
-            eventType = line.slice(6).trim();
-          } else if (line.startsWith('data:')) {
-            dataLines.push(line.slice(5).trim());
+          const chunkType = data.type;
+          if (chunkType === 'reasoning') {
+            reasoningBufferRef.current += delta;
+            progressRef.current = Math.min(progressRef.current + 4, 85);
+          } else if (chunkType === 'text') {
+            contentBufferRef.current += delta;
+            progressRef.current = Math.min(progressRef.current + 6, 98);
           }
-        }
-
-        if (dataLines.length === 0) {
+          scheduleFlush();
           return;
         }
 
-        const dataStr = dataLines.join('\n');
-        let parsedData: any;
-
-        try {
-          parsedData = JSON.parse(dataStr);
-        } catch (parseError) {
-          console.error('Failed to parse SSE data:', parseError);
+        if (event === 'stream.progress' && isRecord(data)) {
+          if (typeof data.percentage === 'number' && Number.isFinite(data.percentage)) {
+            progressRef.current = Math.min(Math.max(data.percentage, progressRef.current), 100);
+          }
+          if (typeof data.estimatedCost === 'number' && Number.isFinite(data.estimatedCost)) {
+            estimatedCostRef.current = data.estimatedCost;
+          }
+          scheduleFlush();
           return;
         }
 
-        if (eventType === 'stream.chunk') {
-          if (parsedData.type === 'reasoning') {
-            setState(prev => ({
-              ...prev,
-              reasoning: prev.reasoning + (parsedData.delta ?? ''),
-              progress: Math.min(prev.progress + 5, 80)
-            }));
-          } else if (parsedData.type === 'text') {
-            setState(prev => ({
-              ...prev,
-              content: prev.content + (parsedData.delta ?? ''),
-              progress: Math.min(prev.progress + 10, 95)
-            }));
+        if (event === 'stream.complete' && isRecord(data)) {
+          progressRef.current = 100;
+          if (isRecord(data.cost) && typeof data.cost.total === 'number') {
+            estimatedCostRef.current = data.cost.total;
           }
-        } else if (eventType === 'stream.progress') {
-          setState(prev => ({
-            ...prev,
-            progress: parsedData.percentage ?? prev.progress,
-            estimatedCost: parsedData.estimatedCost ?? prev.estimatedCost
-          }));
-        } else if (eventType === 'stream.complete') {
-          setState(prev => ({
-            ...prev,
+          flushImmediately();
+          patchState({
             isStreaming: false,
-            responseId: parsedData.responseId ?? null,
-            tokenUsage: parsedData.tokenUsage ?? null,
-            cost: parsedData.cost ?? null,
-            progress: 100
-          }));
+            responseId: typeof data.responseId === 'string' ? data.responseId : null,
+            tokenUsage: data.tokenUsage ?? null,
+            cost: data.cost ?? null,
+            error: null
+          });
           isActive = false;
-        } else if (eventType === 'stream.error' || eventType === 'error') {
-          setState(prev => ({
-            ...prev,
+          return;
+        }
+
+        if ((event === 'stream.error' || event === 'error') && isRecord(data)) {
+          const errorMessage = typeof data.error === 'string' ? data.error : 'Stream error occurred';
+          progressRef.current = 0;
+          flushImmediately();
+          patchState({
             isStreaming: false,
-            error: parsedData.error || 'Stream error occurred',
+            error: errorMessage,
             progress: 0
-          }));
+          });
           isActive = false;
+          return;
+        }
+
+        if (event === 'stream.init') {
+          progressRef.current = Math.max(progressRef.current, 1);
+          scheduleFlush();
+          return;
+        }
+
+        if (event === 'stream.keepalive') {
+          return;
         }
       };
 
@@ -212,27 +386,37 @@ export function useAdvancedStreaming() {
         while (boundary !== -1) {
           const rawEvent = buffer.slice(0, boundary);
           buffer = buffer.slice(boundary + 2);
-          processEvent(rawEvent);
+          const parsed = parseSseEvent(rawEvent);
+          if (parsed) {
+            handleParsedEvent(parsed);
+          }
           boundary = buffer.indexOf('\n\n');
         }
       }
 
-      // Flush any remaining buffered text
       if (buffer.trim().length > 0) {
-        processEvent(buffer);
-        buffer = '';
+        const parsed = parseSseEvent(buffer);
+        if (parsed) {
+          handleParsedEvent(parsed);
+        }
       }
 
-      await closeReader();
+      flushImmediately();
+
+      if (readerRef.current) {
+        try {
+          await readerRef.current.cancel();
+        } catch {
+          // ignore cancel errors
+        }
+        readerRef.current = null;
+      }
+
       if (isActive) {
-        setState(prev => ({
-          ...prev,
-          isStreaming: false
-        }));
+        patchState({ isStreaming: false });
       }
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log('Stream cancelled');
+      if (error?.name === 'AbortError') {
         return;
       }
 
@@ -241,16 +425,25 @@ export function useAdvancedStreaming() {
         readerRef.current = null;
       }
 
-      setState(prev => ({
-        ...prev,
+      progressRef.current = 0;
+      flushImmediately();
+      patchState({
         isStreaming: false,
-        error: error.message || 'Failed to start stream',
+        error: error instanceof Error ? error.message : 'Failed to start stream',
         progress: 0
-      }));
+      });
+    } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
     }
-  }, []);
+  }, [patchState, resetState, scheduleFlush, flushImmediately]);
 
   const cancelStream = useCallback(() => {
+    flushCancelRef.current?.();
+    flushCancelRef.current = null;
+    flushPendingRef.current = false;
+
     if (readerRef.current) {
       readerRef.current.cancel().catch(() => undefined);
       readerRef.current = null;
@@ -261,20 +454,19 @@ export function useAdvancedStreaming() {
       abortControllerRef.current = null;
     }
 
-    setState(prev => ({
-      ...prev,
+    progressRef.current = 0;
+    flushImmediately();
+    patchState({
       isStreaming: false,
       progress: 0
-    }));
-  }, []);
+    });
+  }, [flushImmediately, patchState]);
 
   const pauseStream = useCallback(() => {
-    // For future implementation - pause/resume functionality
     console.log('Pause functionality not yet implemented');
   }, []);
 
   const resumeStream = useCallback(() => {
-    // For future implementation - pause/resume functionality
     console.log('Resume functionality not yet implemented');
   }, []);
 
