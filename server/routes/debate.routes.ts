@@ -8,10 +8,12 @@
  *                across init, SSE, and legacy entry points.
  */
 import { Router } from "express";
-import type { Response } from "express";
 import { randomUUID } from "crypto";
 import { getProviderForModel } from "../providers/index.js";
 import { storage } from "../storage.js";
+import { StreamSessionRegistry } from "../streaming/session-registry.js";
+import { SseStreamManager } from "../streaming/sse-manager.js";
+import { StreamHarness } from "../streaming/stream-harness.js";
 
 const router = Router();
 
@@ -45,26 +47,27 @@ interface DebateStreamPayload {
   model2Id: string;
 }
 
-interface PendingStreamJob {
-  createdAt: number;
-  payload: DebateStreamPayload;
-}
-
 const STREAM_SESSION_TTL_MS = 5 * 60 * 1000;
-const pendingStreamJobs = new Map<string, PendingStreamJob>();
+const streamSessionRegistry = new StreamSessionRegistry<DebateStreamPayload>(STREAM_SESSION_TTL_MS);
 
 const VALID_ROLES: DebateRole[] = ["AFFIRMATIVE", "NEGATIVE"];
 const VALID_REASONING_EFFORTS = new Set(["minimal", "low", "medium", "high"]);
 const VALID_REASONING_SUMMARIES = new Set(["auto", "detailed", "concise"]);
 const VALID_REASONING_VERBOSITIES = new Set(["low", "medium", "high"]);
 
-function cleanupExpiredStreamJobs(): void {
-  const now = Date.now();
-  for (const [key, job] of pendingStreamJobs.entries()) {
-    if (now - job.createdAt > STREAM_SESSION_TTL_MS) {
-      pendingStreamJobs.delete(key);
-    }
-  }
+function isStreamingEnabled(): boolean {
+  const flagValue =
+    process.env.STREAMING_ENABLED ?? process.env.VITE_STREAMING_ENABLED ?? "true";
+  const normalized = flagValue.toString().toLowerCase();
+  return normalized !== "false" && normalized !== "0";
+}
+
+function buildTaskId(payload: DebateStreamPayload): string {
+  return `${payload.debateSessionId}:turn-${payload.turnNumber}:model-${payload.modelId}`;
+}
+
+function cleanupExpiredStreamSessions(): void {
+  streamSessionRegistry.cleanupExpired();
 }
 
 function ensureString(value: unknown, fieldName: string): string {
@@ -243,26 +246,6 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   };
 }
 
-function setSseHeaders(res: Response): void {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-    "Access-Control-Allow-Origin": "*"
-  });
-  if (typeof (res as any).flushHeaders === "function") {
-    (res as any).flushHeaders();
-  }
-}
-
-function emitSse(res: Response, event: string, data: Record<string, unknown>): void {
-  if (res.writableEnded) {
-    return;
-  }
-  res.write(`event: ${event}\n`);
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
-}
-
 function buildInputMessages(payload: DebateStreamPayload): Array<{ role: string; content: string }> {
   const { turnNumber, role, topic, intensity, opponentMessage } = payload;
 
@@ -285,26 +268,16 @@ Respond as the ${role} debater:
   return [{ role: "user", content: rebuttalPrompt }];
 }
 
-async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Promise<void> {
-  let aggregatedReasoning = "";
-  let aggregatedContent = "";
-  let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-
-  const stopHeartbeat = () => {
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer);
-      heartbeatTimer = null;
-    }
-  };
-
-  res.on("close", stopHeartbeat);
-
+async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPayload): Promise<void> {
   try {
+    harness.status("validating_session", {
+      debateSessionId: payload.debateSessionId,
+      turnNumber: payload.turnNumber
+    });
+
     const debateSession = await storage.getDebateSession(payload.debateSessionId);
     if (!debateSession) {
-      stopHeartbeat();
-      emitSse(res, "stream.error", { error: "Debate session not found" });
-      res.end();
+      harness.error("Debate session not found", "SESSION_NOT_FOUND");
       return;
     }
 
@@ -320,30 +293,23 @@ async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Pr
 
     const inputMessages = buildInputMessages(payload);
 
+    harness.status("resolving_provider", { modelId: payload.modelId });
     let provider;
     try {
       provider = getProviderForModel(payload.modelId);
     } catch (error) {
       console.error("Failed to resolve provider for debate stream:", error);
-      emitSse(res, "stream.error", { error: "Provider not found for selected model" });
-      res.end();
+      harness.error("Provider not found for selected model", "PROVIDER_NOT_FOUND");
       return;
     }
 
     if (!provider.callModelStreaming) {
-      stopHeartbeat();
-      emitSse(res, "stream.error", { error: "Streaming not supported for this provider" });
-      res.end();
+      harness.error("Streaming not supported for this provider", "STREAMING_NOT_SUPPORTED");
       return;
     }
 
-    heartbeatTimer = setInterval(() => {
-      if (res.writableEnded) {
-        stopHeartbeat();
-        return;
-      }
-      emitSse(res, "stream.keepalive", { timestamp: Date.now() });
-    }, 15_000);
+    harness.status("provider_ready", { provider: provider.name });
+    harness.status("stream_start", { provider: provider.name });
 
     await provider.callModelStreaming({
       modelId: payload.modelId,
@@ -356,64 +322,65 @@ async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Pr
         summary: payload.reasoningSummary,
         verbosity: payload.reasoningVerbosity
       },
-      onReasoningChunk: (chunk: string) => {
-        aggregatedReasoning += chunk;
-        emitSse(res, "stream.chunk", {
-          type: "reasoning",
-          delta: chunk,
-          timestamp: Date.now()
+      onStatus: (phase, data) => {
+        harness.status(phase, {
+          provider: provider.name,
+          ...(data ?? {})
         });
+      },
+      onReasoningChunk: (chunk: string) => {
+        harness.pushReasoning(chunk);
       },
       onContentChunk: (chunk: string) => {
-        aggregatedContent += chunk;
-        emitSse(res, "stream.chunk", {
-          type: "text",
-          delta: chunk,
-          timestamp: Date.now()
-        });
+        harness.pushContent(chunk);
       },
-      onComplete: async (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => {
-        stopHeartbeat();
-        const finalContent = content ?? aggregatedContent;
-        const finalReasoning = reasoning ?? aggregatedReasoning;
+      onJsonChunk: (chunk: unknown) => {
+        harness.pushJsonChunk(chunk);
+      },
+      onComplete: async (responseId: string, tokenUsage: any, cost: any, extras) => {
+        harness.status("persisting", { responseId });
+        const finalContent = extras?.content ?? harness.getContent();
+        const finalReasoning = extras?.reasoning ?? harness.getReasoning();
+        const structuredOutput = extras?.structuredOutput ?? harness.getJsonChunks();
 
         try {
-          const turnCost = Number(cost?.total ?? 0);
+          const turnCostRaw = typeof cost?.total === "number" ? cost.total : Number(cost ?? 0);
+          const turnCost = Number.isFinite(turnCostRaw) ? turnCostRaw : 0;
           await storage.updateDebateSession(payload.debateSessionId, {
             turn: payload.turnNumber,
             modelId: payload.modelId,
             content: finalContent,
             reasoning: finalReasoning,
             responseId,
-            cost: turnCost
+            cost: turnCost,
+            costBreakdown: cost,
+            tokenUsage,
+            structuredOutput,
+            summary: finalReasoning
           });
         } catch (error) {
           console.error("Failed to save turn data:", error);
         }
 
-        emitSse(res, "stream.complete", {
+        harness.complete({
           responseId,
           tokenUsage,
           cost,
-          sessionId: payload.debateSessionId
+          responseSummary: finalReasoning,
+          metadata: {
+            debateSessionId: payload.debateSessionId,
+            turnNumber: payload.turnNumber,
+            structuredOutput
+          }
         });
-        res.end();
       },
       onError: (error: Error) => {
-        stopHeartbeat();
-        emitSse(res, "stream.error", { error: error.message });
-        res.end();
+        harness.error(error);
       }
     });
-
-    stopHeartbeat();
   } catch (error) {
-    stopHeartbeat();
     console.error("Debate stream error:", error);
-    emitSse(res, "stream.error", {
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
-    res.end();
+    harness.error(error instanceof Error ? error : new Error("Unknown error"));
   }
 }
 
@@ -491,19 +458,25 @@ router.get("/session/:id", async (req, res) => {
 });
 
 router.post("/stream/init", async (req, res) => {
+  if (!isStreamingEnabled()) {
+    res.status(503).json({ error: "Streaming is disabled by configuration" });
+    return;
+  }
+
   try {
     const payload = await prepareStreamPayload(req.body);
-    cleanupExpiredStreamJobs();
+    cleanupExpiredStreamSessions();
 
-    const streamId = `debate-stream-${randomUUID()}`;
-    pendingStreamJobs.set(streamId, {
-      createdAt: Date.now(),
-      payload
-    });
+    const taskId = buildTaskId(payload);
+    const modelKey = payload.modelId;
+    const { sessionId, expiresAt } = streamSessionRegistry.createSession(taskId, modelKey, payload);
 
     res.json({
-      sessionId: streamId,
-      debateSessionId: payload.debateSessionId
+      sessionId,
+      taskId,
+      modelKey,
+      debateSessionId: payload.debateSessionId,
+      expiresAt: new Date(expiresAt).toISOString()
     });
   } catch (error) {
     const statusCode = error instanceof HttpError ? error.statusCode : 500;
@@ -515,48 +488,72 @@ router.post("/stream/init", async (req, res) => {
   }
 });
 
-router.get("/stream/:streamId", async (req, res) => {
-  cleanupExpiredStreamJobs();
+router.get("/stream/:taskId/:modelKey/:sessionId", async (req, res) => {
+  if (!isStreamingEnabled()) {
+    res.status(503).json({ error: "Streaming is disabled by configuration" });
+    return;
+  }
 
-  const streamId = req.params.streamId;
-  const pendingJob = pendingStreamJobs.get(streamId);
+  cleanupExpiredStreamSessions();
 
-  if (!pendingJob) {
+  const { taskId, modelKey, sessionId } = req.params;
+  const sessionEntry = streamSessionRegistry.consumeSession(sessionId, { taskId, modelKey });
+
+  if (!sessionEntry) {
     res.status(404).json({ error: "Stream session not found or expired" });
     return;
   }
 
-  pendingStreamJobs.delete(streamId);
-
-  setSseHeaders(res);
-  emitSse(res, "stream.init", {
-    debateSessionId: pendingJob.payload.debateSessionId,
-    turnNumber: pendingJob.payload.turnNumber,
-    modelId: pendingJob.payload.modelId
+  const manager = new SseStreamManager(res, {
+    taskId,
+    modelKey,
+    sessionId
   });
 
-  await streamDebateTurn(res, pendingJob.payload);
+  const harness = new StreamHarness(manager);
+  harness.init({
+    debateSessionId: sessionEntry.payload.debateSessionId,
+    turnNumber: sessionEntry.payload.turnNumber,
+    modelId: sessionEntry.payload.modelId,
+    role: sessionEntry.payload.role
+  });
+
+  await streamDebateTurn(harness, sessionEntry.payload);
 });
 
 // POST /api/debate/stream - Streaming debate with reasoning (legacy single-call flow)
 router.post("/stream", async (req, res) => {
+  if (!isStreamingEnabled()) {
+    res.status(503).json({ error: "Streaming is disabled by configuration" });
+    return;
+  }
+
+  let harness: StreamHarness | null = null;
+
   try {
     const payload = await prepareStreamPayload(req.body);
-    setSseHeaders(res);
-    emitSse(res, "stream.init", {
+    const sessionId = `debate-legacy-${randomUUID()}`;
+    const taskId = buildTaskId(payload);
+    const modelKey = payload.modelId;
+
+    const manager = new SseStreamManager(res, { taskId, modelKey, sessionId });
+    harness = new StreamHarness(manager);
+    harness.init({
       debateSessionId: payload.debateSessionId,
       turnNumber: payload.turnNumber,
-      modelId: payload.modelId
+      modelId: payload.modelId,
+      role: payload.role
     });
-    await streamDebateTurn(res, payload);
+
+    await streamDebateTurn(harness, payload);
   } catch (error) {
-    const statusCode = error instanceof HttpError ? error.statusCode : 500;
-    const message = error instanceof Error ? error.message : "Failed to start debate stream";
-    if (res.headersSent) {
-      emitSse(res, "stream.error", { error: message });
-      res.end();
+    if (harness) {
+      harness.error(error instanceof Error ? error : new Error("Failed to start debate stream"));
       return;
     }
+
+    const statusCode = error instanceof HttpError ? error.statusCode : 500;
+    const message = error instanceof Error ? error.message : "Failed to start debate stream";
     if (!(error instanceof HttpError)) {
       console.error("Debate stream error:", error);
     }

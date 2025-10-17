@@ -11,6 +11,7 @@
 
 import 'dotenv/config';
 import OpenAI from 'openai';
+import { handleResponsesStreamEvent } from '../streaming/openai-event-handler.js';
 import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions, StreamingCallOptions } from './base.js';
 
 type ResponseMessage = {
@@ -446,6 +447,53 @@ export class OpenAIProvider extends BaseProvider {
     return '';
   }
 
+  private extractStructuredOutput(response: any): unknown {
+    if (!response || typeof response !== 'object') {
+      return undefined;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(response, 'output_parsed')) {
+      return (response as any).output_parsed;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(response, 'output_json')) {
+      return (response as any).output_json;
+    }
+
+    if (Array.isArray((response as any).output)) {
+      const structuredBlocks = (response as any).output.filter((block: any) => {
+        const type = typeof block?.type === 'string' ? block.type.toLowerCase() : '';
+        return type && type !== 'text' && type !== 'message' && type !== 'reasoning';
+      });
+
+      if (structuredBlocks.length > 0) {
+        const mapped = structuredBlocks
+          .map((block: any) => {
+            if (block?.data !== undefined) {
+              return block.data;
+            }
+            if (block?.content !== undefined) {
+              return block.content;
+            }
+            if (block?.json !== undefined) {
+              return block.json;
+            }
+            return block;
+          })
+          .filter((value: unknown) => value !== undefined);
+
+        if (mapped.length === 1) {
+          return mapped[0];
+        }
+        if (mapped.length > 1) {
+          return mapped;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
   async callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse> {
     const startTime = Date.now();
     const modelConfig = this.models.find(m => m.id === model);
@@ -563,6 +611,8 @@ export class OpenAIProvider extends BaseProvider {
       instructions,
       onReasoningChunk,
       onContentChunk,
+      onJsonChunk,
+      onStatus,
       onComplete,
       onError
     } = options;
@@ -620,69 +670,49 @@ export class OpenAIProvider extends BaseProvider {
 
       const stream = await openai.responses.stream(requestPayload);
 
-      let aggregatedReasoning = '';
-      let aggregatedContent = '';
+      let aggregatedReasoning = "";
+      let aggregatedContent = "";
+      const aggregatedJson: unknown[] = [];
+      let streamFailed = false;
 
       for await (const event of stream) {
-        const eventAny = event as any;
-        switch (eventAny.type) {
-          case 'response.reasoning_summary_text.delta': {
-            const delta = typeof eventAny.delta === 'string' ? eventAny.delta : '';
+        handleResponsesStreamEvent(event as any, {
+          onStatus: (phase, data) => {
+            onStatus?.(phase, data ?? {});
+          },
+          onReasoningDelta: delta => {
             if (delta) {
               aggregatedReasoning += delta;
               onReasoningChunk(delta);
             }
-            break;
-          }
-          case 'response.reasoning_summary_part.added': {
-            const text = typeof eventAny.part?.text === 'string'
-              ? eventAny.part.text
-              : typeof eventAny.part?.content === 'string'
-              ? eventAny.part.content
-              : '';
-            if (text) {
-              aggregatedReasoning += text;
-              onReasoningChunk(text);
-            }
-            break;
-          }
-          case 'response.content_part.added': {
-            const text = typeof eventAny.part?.text === 'string'
-              ? eventAny.part.text
-              : typeof eventAny.part?.content === 'string'
-              ? eventAny.part.content
-              : '';
-            if (text) {
-              aggregatedContent += text;
-              onContentChunk(text);
-            }
-            break;
-          }
-          case 'response.output_text.delta': {
-            const delta = typeof eventAny.delta === 'string' ? eventAny.delta : '';
+          },
+          onContentDelta: delta => {
             if (delta) {
               aggregatedContent += delta;
               onContentChunk(delta);
             }
-            break;
+          },
+          onJsonDelta: json => {
+            aggregatedJson.push(json);
+            onJsonChunk?.(json);
+          },
+          onRefusal: payload => {
+            const refusalRecord = { refusal: payload };
+            aggregatedJson.push(refusalRecord);
+            onJsonChunk?.(refusalRecord);
+          },
+          onError: error => {
+            streamFailed = true;
+            onError(error);
           }
-          case 'response.failed':
-          case 'error': {
-            const errorMessage = eventAny?.error?.message || 'OpenAI streaming failed';
-            onError(new Error(errorMessage));
-            return;
-          }
-          case 'response.canceled': {
-            onError(new Error('OpenAI streaming cancelled'));
-            return;
-          }
-          default:
-            if (eventAny.type === 'response.cancelled') {
-              onError(new Error('OpenAI streaming cancelled'));
-              return;
-            }
-            break;
+        });
+        if (streamFailed) {
+          break;
         }
+      }
+
+      if (streamFailed) {
+        return;
       }
 
       const finalResponse = await (stream as any).finalResponse();
@@ -691,17 +721,27 @@ export class OpenAIProvider extends BaseProvider {
 
       const parsedContent = this.extractContentText(finalResponse);
       const parsedReasoning = this.extractReasoningSummary(finalResponse);
+      const structuredOutput = this.extractStructuredOutput(finalResponse);
 
       if (!aggregatedContent && parsedContent) {
+        aggregatedContent = parsedContent;
         onContentChunk(parsedContent);
       }
 
       if (!aggregatedReasoning && parsedReasoning) {
+        aggregatedReasoning = parsedReasoning;
         onReasoningChunk(parsedReasoning);
       }
 
-      const finalContent = aggregatedContent || parsedContent || '';
-      const finalReasoning = aggregatedReasoning || parsedReasoning || '';
+      if (structuredOutput !== undefined && aggregatedJson.length === 0) {
+        aggregatedJson.push(structuredOutput);
+        onJsonChunk?.(structuredOutput);
+      }
+
+      const finalContent = aggregatedContent || parsedContent || "";
+      const finalReasoning = aggregatedReasoning || parsedReasoning || "";
+      const finalStructured =
+        aggregatedJson.length > 0 ? (aggregatedJson.length === 1 ? aggregatedJson[0] : aggregatedJson) : undefined;
 
       const cost = modelConfig && finalUsage
         ? this.calculateCost(modelConfig, {
@@ -711,7 +751,11 @@ export class OpenAIProvider extends BaseProvider {
           })
         : { total: 0, input: 0, output: 0, reasoning: 0 };
 
-      onComplete(finalResponseId, finalUsage, cost, finalContent, finalReasoning);
+      onComplete(finalResponseId, finalUsage, cost, {
+        content: finalContent,
+        reasoning: finalReasoning,
+        structuredOutput: finalStructured,
+      });
     } catch (error: any) {
       console.error('OpenAI streaming error:', error);
       onError(error instanceof Error ? error : new Error(String(error)));

@@ -42,11 +42,18 @@ export interface ContentStreamChunk extends StreamChunkBase {
   type: 'content';
 }
 
+export interface JsonStreamChunk {
+  type: 'json';
+  timestamp: number;
+  payload: unknown;
+}
+
 interface StreamingState {
   reasoning: string;
   content: string;
   reasoningChunks: ReasoningStreamChunk[];
   contentChunks: ContentStreamChunk[];
+  jsonChunks: JsonStreamChunk[];
   isStreaming: boolean;
   error: string | null;
   responseId: string | null;
@@ -54,11 +61,17 @@ interface StreamingState {
   cost: any | null;
   progress: number;
   estimatedCost: number;
+  statusPhase: string | null;
+  statusMessage: string | null;
+  session: StreamingSessionInfo | null;
 }
 
-interface ParsedSseEvent {
-  event: string;
-  data: unknown;
+interface StreamingSessionInfo {
+  sessionId: string;
+  taskId: string;
+  modelKey: string;
+  debateSessionId?: string;
+  expiresAt?: string;
 }
 
 const createInitialState = (): StreamingState => ({
@@ -66,58 +79,35 @@ const createInitialState = (): StreamingState => ({
   content: '',
   reasoningChunks: [],
   contentChunks: [],
+  jsonChunks: [],
   isStreaming: false,
   error: null,
   responseId: null,
   tokenUsage: null,
   cost: null,
   progress: 0,
-  estimatedCost: 0
+  estimatedCost: 0,
+  statusPhase: null,
+  statusMessage: null,
+  session: null
 });
 
-const parseSseEvent = (raw: string): ParsedSseEvent | null => {
-  if (!raw.trim()) {
+const parseEventData = (raw: unknown): unknown => {
+  if (raw === null || raw === undefined) {
     return null;
   }
-
-  const lines = raw.split('\n');
-  let eventType = '';
-  const dataLines: string[] = [];
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith(':')) {
-      continue;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      return null;
     }
-    if (line.startsWith('event:')) {
-      eventType = line.slice(6).trim();
-    } else if (line.startsWith('data:')) {
-      dataLines.push(line.slice(5).trim());
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return trimmed;
     }
   }
-
-  if (!eventType) {
-    return null;
-  }
-
-  const dataPayload = dataLines.join('\n');
-
-  if (!dataPayload) {
-    return { event: eventType, data: null };
-  }
-
-  try {
-    return {
-      event: eventType,
-      data: JSON.parse(dataPayload)
-    };
-  } catch (error) {
-    console.warn('Failed to parse SSE payload', { error, dataPayload });
-    return {
-      event: eventType,
-      data: dataPayload
-    };
-  }
+  return raw;
 };
 
 const isRecord = (value: unknown): value is Record<string, any> =>
@@ -136,13 +126,15 @@ export function useAdvancedStreaming() {
   const [state, setState] = useState<StreamingState>(() => createInitialState());
   const stateRef = useRef<StreamingState>(state);
 
-  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const sessionInfoRef = useRef<StreamingSessionInfo | null>(null);
 
   const reasoningBufferRef = useRef<string>('');
   const contentBufferRef = useRef<string>('');
   const reasoningChunksRef = useRef<ReasoningStreamChunk[]>([]);
   const contentChunksRef = useRef<ContentStreamChunk[]>([]);
+  const jsonChunksRef = useRef<JsonStreamChunk[]>([]);
   const progressRef = useRef<number>(0);
   const estimatedCostRef = useRef<number>(0);
 
@@ -160,14 +152,15 @@ export function useAdvancedStreaming() {
       flushCancelRef.current = null;
       flushPendingRef.current = false;
 
-      if (readerRef.current) {
-        readerRef.current.cancel().catch(() => undefined);
-        readerRef.current = null;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
+      sessionInfoRef.current = null;
     };
   }, []);
 
@@ -215,8 +208,10 @@ export function useAdvancedStreaming() {
     contentBufferRef.current = next.content;
     reasoningChunksRef.current = next.reasoningChunks;
     contentChunksRef.current = next.contentChunks;
+    jsonChunksRef.current = next.jsonChunks;
     progressRef.current = next.progress;
     estimatedCostRef.current = next.estimatedCost;
+    sessionInfoRef.current = next.session;
 
     stateRef.current = next;
     setState(next);
@@ -230,6 +225,7 @@ export function useAdvancedStreaming() {
     const nextContent = contentBufferRef.current;
     const nextReasoningChunks = reasoningChunksRef.current;
     const nextContentChunks = contentChunksRef.current;
+    const nextJsonChunks = jsonChunksRef.current;
     const nextProgress = progressRef.current;
     const nextEstimatedCost = estimatedCostRef.current;
 
@@ -239,6 +235,7 @@ export function useAdvancedStreaming() {
         prev.content === nextContent &&
         prev.reasoningChunks === nextReasoningChunks &&
         prev.contentChunks === nextContentChunks &&
+        prev.jsonChunks === nextJsonChunks &&
         prev.progress === nextProgress &&
         prev.estimatedCost === nextEstimatedCost
       ) {
@@ -251,6 +248,7 @@ export function useAdvancedStreaming() {
         content: nextContent,
         reasoningChunks: nextReasoningChunks,
         contentChunks: nextContentChunks,
+        jsonChunks: nextJsonChunks,
         progress: nextProgress,
         estimatedCost: nextEstimatedCost
       };

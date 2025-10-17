@@ -96,6 +96,11 @@ export interface IStorage {
     reasoning: string;
     responseId: string;
     cost: number;
+    costBreakdown?: any;
+    tokenUsage?: any;
+    structuredOutput?: unknown;
+    summary?: string;
+    metadata?: Record<string, unknown>;
   }): Promise<void>;
   getDebateSession(id: string): Promise<DebateSession | undefined>;
 
@@ -301,12 +306,31 @@ export class DbStorage implements IStorage {
       reasoning: string;
       responseId: string;
       cost: number;
+      costBreakdown?: any;
+      tokenUsage?: any;
+      structuredOutput?: unknown;
+      summary?: string;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<void> {
     const session = await this.getDebateSession(id);
     if (!session) throw new Error('Session not found');
 
-    const turnHistory = [...(session.turnHistory as any[]), turnData];
+    const turnRecord = {
+      turn: turnData.turn,
+      modelId: turnData.modelId,
+      content: turnData.content,
+      reasoning: turnData.reasoning,
+      responseId: turnData.responseId,
+      cost: turnData.cost,
+      costBreakdown: turnData.costBreakdown ?? null,
+      tokenUsage: turnData.tokenUsage ?? null,
+      structuredOutput: turnData.structuredOutput ?? null,
+      summary: turnData.summary ?? turnData.reasoning,
+      metadata: turnData.metadata ?? {},
+    };
+
+    const turnHistory = [...(session.turnHistory as any[]), turnRecord];
 
     // Update appropriate response ID array
     const isModel1 = turnData.modelId === session.model1Id;
@@ -731,12 +755,31 @@ export class MemStorage implements IStorage {
       reasoning: string;
       responseId: string;
       cost: number;
+      costBreakdown?: any;
+      tokenUsage?: any;
+      structuredOutput?: unknown;
+      summary?: string;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<void> {
     const existing = this.debateSessions.get(id);
     if (!existing) throw new Error('Session not found');
 
-    const turnHistory = [...(existing.turnHistory as any[]), turnData];
+    const turnRecord = {
+      turn: turnData.turn,
+      modelId: turnData.modelId,
+      content: turnData.content,
+      reasoning: turnData.reasoning,
+      responseId: turnData.responseId,
+      cost: turnData.cost,
+      costBreakdown: turnData.costBreakdown ?? null,
+      tokenUsage: turnData.tokenUsage ?? null,
+      structuredOutput: turnData.structuredOutput ?? null,
+      summary: turnData.summary ?? turnData.reasoning,
+      metadata: turnData.metadata ?? {},
+    };
+
+    const turnHistory = [...(existing.turnHistory as any[]), turnRecord];
 
     // Update appropriate response ID array
     const isModel1 = turnData.modelId === existing.model1Id;
