@@ -6,6 +6,11 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.4] - 2025-10-17
+
+### Fixed
+- **Debate Streaming Contract Alignment:** Added `/api/debate/stream/init` plus SSE GET handler, consolidated streaming logic, and retained the legacy POST endpoint so the frontend hook and scripting workflows both reach OpenAI.
+
 ## [Version 0.4.3] - 2025-10-16
 
 ### Fixed
@@ -36,8 +41,8 @@
 ### Refactored
 - **Complete Debate Mode Architecture Overhaul:** Major refactoring for improved maintainability and modularity
   - **Custom Hooks Architecture:** Extracted state management into `useDebateState`, `useDebatePrompts`, and `useDebateExport` hooks
-  - **Service Layer Implementation:** Created `DebateService` class for centralized business logic (prompt generation, rebuttal building, cost calculation)
-  - **Modular Component System:** Split monolithic debate.tsx into focused components:
+ - **Service Layer Implementation:** Created `DebateService` class for centralized business logic (prompt generation, rebuttal building, cost calculation)
+ - **Modular Component System:** Split monolithic debate.tsx into focused components:
     - `DebateTopicSelector` - Topic selection UI
     - `ModelSelector` - Model selection and configuration
     - `AdversarialLevelSelector` - Intensity selection

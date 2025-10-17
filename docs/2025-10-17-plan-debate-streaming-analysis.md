@@ -15,3 +15,8 @@ Understand why the debate client never issues an OpenAI request when starting a 
 ## Notes
 - Client `useAdvancedStreaming` now expects a two-phase flow: POST `/api/debate/stream/init` followed by SSE from `/api/debate/stream/:sessionId`.
 - Current server registration appears to expose only POST `/api/debate/stream`, hinting at a contract mismatch.
+
+## Implementation Decision (2025-10-17)
+- Align the backend with the two-phase client contract while keeping the original POST `/api/debate/stream` endpoint for scripted compatibility.
+- Add an in-memory streaming job registry that stores the validated payload collected during `/stream/init` so the GET handler can launch the provider call without duplicating validation code.
+- Reuse shared streaming logic across both entry points to avoid divergence and keep SRP intact for the route module.

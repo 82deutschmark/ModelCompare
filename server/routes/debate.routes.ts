@@ -1,25 +1,402 @@
 /*
- * Author: gpt-5-codex
- * Date: 2025-10-16 18:34 UTC
- * PURPOSE: Updates debate streaming routes to align with corrected Responses API options by
- *          removing deprecated verbosity controls and relying on provider-level reasoning defaults
- *          while preserving existing debate session orchestration.
- * SRP/DRY check: Pass - File continues to focus on debate routing concerns without duplicating
- *                provider logic.
+ * Author: GPT-5 Codex
+ * Date: 2025-10-17 02:45 UTC
+ * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
+ *          SSE dispatcher, and shared streaming logic that preserves compatibility with legacy POST usage
+ *          while persisting debate session turns.
+ * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
+ *                across init, SSE, and legacy entry points.
  */
-import { Router, Request, Response } from "express";
+import { Router } from "express";
+import type { Response } from "express";
+import { randomUUID } from "crypto";
 import { getProviderForModel } from "../providers/index.js";
 import { storage } from "../storage.js";
 
 const router = Router();
+
+class HttpError extends Error {
+  statusCode: number;
+
+  constructor(message: string, statusCode = 400) {
+    super(message);
+    this.name = "HttpError";
+    this.statusCode = statusCode;
+  }
+}
+
+type DebateRole = "AFFIRMATIVE" | "NEGATIVE";
+
+interface DebateStreamPayload {
+  modelId: string;
+  topic: string;
+  role: DebateRole;
+  intensity: number;
+  opponentMessage: string | null;
+  previousResponseId: string | null;
+  turnNumber: number;
+  reasoningEffort: "low" | "medium" | "high";
+  reasoningSummary: "auto" | "detailed";
+  reasoningVerbosity: "low" | "medium" | "high";
+  temperature: number;
+  maxTokens: number;
+  debateSessionId: string;
+  model1Id: string;
+  model2Id: string;
+}
+
+interface PendingStreamJob {
+  createdAt: number;
+  payload: DebateStreamPayload;
+}
+
+const STREAM_SESSION_TTL_MS = 5 * 60 * 1000;
+const pendingStreamJobs = new Map<string, PendingStreamJob>();
+
+const VALID_ROLES: DebateRole[] = ["AFFIRMATIVE", "NEGATIVE"];
+const VALID_REASONING_EFFORTS = new Set(["minimal", "low", "medium", "high"]);
+const VALID_REASONING_SUMMARIES = new Set(["auto", "detailed", "concise"]);
+const VALID_REASONING_VERBOSITIES = new Set(["low", "medium", "high"]);
+
+function cleanupExpiredStreamJobs(): void {
+  const now = Date.now();
+  for (const [key, job] of pendingStreamJobs.entries()) {
+    if (now - job.createdAt > STREAM_SESSION_TTL_MS) {
+      pendingStreamJobs.delete(key);
+    }
+  }
+}
+
+function ensureString(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new HttpError(`${fieldName} is required`, 400);
+  }
+  return value.trim();
+}
+
+function ensureNumber(value: unknown, fieldName: string): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new HttpError(`${fieldName} must be a number`, 400);
+  }
+  return parsed;
+}
+
+function normalizeRole(value: unknown): DebateRole {
+  if (typeof value !== "string") {
+    throw new HttpError("role is required", 400);
+  }
+  const upper = value.toUpperCase();
+  if (!VALID_ROLES.includes(upper as DebateRole)) {
+    throw new HttpError("role must be AFFIRMATIVE or NEGATIVE", 400);
+  }
+  return upper as DebateRole;
+}
+
+function normalizeReasoningEffort(value: unknown): "low" | "medium" | "high" {
+  if (typeof value !== "string") {
+    return "medium";
+  }
+  const normalized = value.toLowerCase();
+  if (!VALID_REASONING_EFFORTS.has(normalized)) {
+    return "medium";
+  }
+  if (normalized === "minimal") {
+    return "low";
+  }
+  return (normalized as "low" | "medium" | "high") || "medium";
+}
+
+function normalizeReasoningSummary(value: unknown): "auto" | "detailed" {
+  if (typeof value !== "string") {
+    return "detailed";
+  }
+  const normalized = value.toLowerCase();
+  if (!VALID_REASONING_SUMMARIES.has(normalized)) {
+    return "detailed";
+  }
+  if (normalized === "concise") {
+    return "auto";
+  }
+  return (normalized as "auto" | "detailed") || "detailed";
+}
+
+function normalizeReasoningVerbosity(value: unknown): "low" | "medium" | "high" {
+  if (typeof value !== "string") {
+    return "high";
+  }
+  const normalized = value.toLowerCase();
+  if (!VALID_REASONING_VERBOSITIES.has(normalized)) {
+    return "high";
+  }
+  return normalized as "low" | "medium" | "high";
+}
+
+function normalizeTemperature(value: unknown): number {
+  if (value === null || value === undefined) {
+    return 0.7;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0.7;
+  }
+  return Math.min(Math.max(parsed, 0), 2);
+}
+
+function normalizeMaxTokens(value: unknown): number {
+  if (value === null || value === undefined) {
+    return 16384;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 16384;
+  }
+  return Math.floor(parsed);
+}
+
+async function resolveDebateSessionId(params: {
+  sessionId?: string;
+  turnNumber: number;
+  topic: string;
+  model1Id: string;
+  model2Id: string;
+  intensity: number;
+}): Promise<string> {
+  const { sessionId, turnNumber, topic, model1Id, model2Id, intensity } = params;
+
+  if (sessionId) {
+    const existing = await storage.getDebateSession(sessionId);
+    if (!existing) {
+      throw new HttpError("Debate session not found", 404);
+    }
+    return sessionId;
+  }
+
+  if (turnNumber !== 1) {
+    throw new HttpError("Session ID required for continuing debates", 400);
+  }
+
+  try {
+    const debateSession = await storage.createDebateSession({
+      topicText: topic,
+      model1Id,
+      model2Id,
+      adversarialLevel: intensity,
+      turnHistory: [],
+      model1ResponseIds: [],
+      model2ResponseIds: []
+    });
+    return debateSession.id;
+  } catch (error) {
+    console.error("Failed to create debate session:", error);
+    throw new HttpError("Failed to create debate session", 500);
+  }
+}
+
+async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
+  if (!body) {
+    throw new HttpError("Request body is required", 400);
+  }
+
+  const modelId = ensureString(body.modelId, "modelId");
+  const topic = ensureString(body.topic, "topic");
+  const role = normalizeRole(body.role);
+  const intensity = ensureNumber(body.intensity, "intensity");
+  const turnNumber = ensureNumber(body.turnNumber, "turnNumber");
+  const model1Id = ensureString(body.model1Id, "model1Id");
+  const model2Id = ensureString(body.model2Id, "model2Id");
+
+  const debateSessionId = await resolveDebateSessionId({
+    sessionId: typeof body.sessionId === "string" ? body.sessionId : undefined,
+    turnNumber,
+    topic,
+    model1Id,
+    model2Id,
+    intensity
+  });
+
+  const opponentMessage =
+    typeof body.opponentMessage === "string" && body.opponentMessage.trim().length > 0
+      ? body.opponentMessage
+      : null;
+  const previousResponseId =
+    typeof body.previousResponseId === "string" && body.previousResponseId.trim().length > 0
+      ? body.previousResponseId.trim()
+      : null;
+
+  return {
+    modelId,
+    topic,
+    role,
+    intensity,
+    opponentMessage,
+    previousResponseId,
+    turnNumber,
+    reasoningEffort: normalizeReasoningEffort(body.reasoningEffort),
+    reasoningSummary: normalizeReasoningSummary(body.reasoningSummary),
+    reasoningVerbosity: normalizeReasoningVerbosity(body.reasoningVerbosity),
+    temperature: normalizeTemperature(body.temperature),
+    maxTokens: normalizeMaxTokens(body.maxTokens),
+    debateSessionId,
+    model1Id,
+    model2Id
+  };
+}
+
+function setSseHeaders(res: Response): void {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "Access-Control-Allow-Origin": "*"
+  });
+  if (typeof (res as any).flushHeaders === "function") {
+    (res as any).flushHeaders();
+  }
+}
+
+function emitSse(res: Response, event: string, data: Record<string, unknown>): void {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function buildInputMessages(payload: DebateStreamPayload): Array<{ role: string; content: string }> {
+  const { turnNumber, role, topic, intensity, opponentMessage } = payload;
+
+  if (turnNumber === 1 || turnNumber === 2) {
+    const position = role === "AFFIRMATIVE" ? "FOR" : "AGAINST";
+    const systemPrompt = `You are the ${role} debater ${position} the proposition: "${topic}".
+Present your opening argument following Robert's Rules of Order.
+Adversarial intensity level: ${intensity}.`;
+    return [{ role: "user", content: systemPrompt }];
+  }
+
+  const rebuttalPrompt = `Your opponent just argued: "${opponentMessage ?? ""}"
+
+Respond as the ${role} debater:
+1. Address your opponent's specific points
+2. Refute their arguments with evidence and logic
+3. Strengthen your own position
+4. Use adversarial intensity level: ${intensity}`;
+
+  return [{ role: "user", content: rebuttalPrompt }];
+}
+
+async function streamDebateTurn(res: Response, payload: DebateStreamPayload): Promise<void> {
+  let aggregatedReasoning = "";
+  let aggregatedContent = "";
+
+  try {
+    const debateSession = await storage.getDebateSession(payload.debateSessionId);
+    if (!debateSession) {
+      emitSse(res, "stream.error", { error: "Debate session not found" });
+      res.end();
+      return;
+    }
+
+    let actualPreviousResponseId = payload.previousResponseId ?? null;
+
+    if (payload.turnNumber > 2) {
+      const isModel1 = payload.modelId === debateSession.model1Id;
+      const responseIds = (isModel1
+        ? (debateSession.model1ResponseIds as string[])
+        : (debateSession.model2ResponseIds as string[])) || [];
+      actualPreviousResponseId = responseIds[responseIds.length - 1] || null;
+    }
+
+    const inputMessages = buildInputMessages(payload);
+
+    let provider;
+    try {
+      provider = getProviderForModel(payload.modelId);
+    } catch (error) {
+      console.error("Failed to resolve provider for debate stream:", error);
+      emitSse(res, "stream.error", { error: "Provider not found for selected model" });
+      res.end();
+      return;
+    }
+
+    if (!provider.callModelStreaming) {
+      emitSse(res, "stream.error", { error: "Streaming not supported for this provider" });
+      res.end();
+      return;
+    }
+
+    await provider.callModelStreaming({
+      modelId: payload.modelId,
+      messages: inputMessages,
+      previousResponseId: actualPreviousResponseId || undefined,
+      temperature: payload.temperature,
+      maxTokens: payload.maxTokens,
+      reasoningConfig: {
+        effort: payload.reasoningEffort,
+        summary: payload.reasoningSummary,
+        verbosity: payload.reasoningVerbosity
+      },
+      onReasoningChunk: (chunk: string) => {
+        aggregatedReasoning += chunk;
+        emitSse(res, "stream.chunk", {
+          type: "reasoning",
+          delta: chunk,
+          timestamp: Date.now()
+        });
+      },
+      onContentChunk: (chunk: string) => {
+        aggregatedContent += chunk;
+        emitSse(res, "stream.chunk", {
+          type: "text",
+          delta: chunk,
+          timestamp: Date.now()
+        });
+      },
+      onComplete: async (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => {
+        const finalContent = content ?? aggregatedContent;
+        const finalReasoning = reasoning ?? aggregatedReasoning;
+
+        try {
+          const turnCost = Number(cost?.total ?? 0);
+          await storage.updateDebateSession(payload.debateSessionId, {
+            turn: payload.turnNumber,
+            modelId: payload.modelId,
+            content: finalContent,
+            reasoning: finalReasoning,
+            responseId,
+            cost: turnCost
+          });
+        } catch (error) {
+          console.error("Failed to save turn data:", error);
+        }
+
+        emitSse(res, "stream.complete", {
+          responseId,
+          tokenUsage,
+          cost,
+          sessionId: payload.debateSessionId
+        });
+        res.end();
+      },
+      onError: (error: Error) => {
+        emitSse(res, "stream.error", { error: error.message });
+        res.end();
+      }
+    });
+  } catch (error) {
+    console.error("Debate stream error:", error);
+    emitSse(res, "stream.error", {
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+    res.end();
+  }
+}
+
 router.get("/sessions", async (req, res) => {
   try {
     // For now, return empty array - in a real implementation, this would list user's debate sessions
     // const sessions = await storage.getDebateSessions(); // Would need to add this method
     res.json([]);
   } catch (error) {
-    console.error('Failed to get debate sessions:', error);
-    res.status(500).json({ error: 'Failed to get debate sessions' });
+    console.error("Failed to get debate sessions:", error);
+    res.status(500).json({ error: "Failed to get debate sessions" });
   }
 });
 
@@ -29,7 +406,7 @@ router.post("/session", async (req, res) => {
     const { topic, model1Id, model2Id, adversarialLevel } = req.body;
 
     if (!topic || !model1Id || !model2Id || adversarialLevel == null) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const debateSession = await storage.createDebateSession({
@@ -51,8 +428,8 @@ router.post("/session", async (req, res) => {
       createdAt: debateSession.createdAt
     });
   } catch (error) {
-    console.error('Failed to create debate session:', error);
-    res.status(500).json({ error: 'Failed to create debate session' });
+    console.error("Failed to create debate session:", error);
+    res.status(500).json({ error: "Failed to create debate session" });
   }
 });
 
@@ -63,7 +440,7 @@ router.get("/session/:id", async (req, res) => {
     const session = await storage.getDebateSession(id);
 
     if (!session) {
-      return res.status(404).json({ error: 'Debate session not found' });
+      return res.status(404).json({ error: "Debate session not found" });
     }
 
     res.json({
@@ -80,217 +457,82 @@ router.get("/session/:id", async (req, res) => {
       updatedAt: session.updatedAt
     });
   } catch (error) {
-    console.error('Failed to get debate session:', error);
-    res.status(500).json({ error: 'Failed to get debate session' });
+    console.error("Failed to get debate session:", error);
+    res.status(500).json({ error: "Failed to get debate session" });
   }
 });
 
-// POST /api/debate/stream - Streaming debate with reasoning
-router.post("/stream", async (req, res) => {
+router.post("/stream/init", async (req, res) => {
   try {
-    const {
-      modelId,
-      topic,
-      role, // 'AFFIRMATIVE' | 'NEGATIVE'
-      intensity,
-      opponentMessage, // null for Turn 1/2, opponent's content for subsequent turns
-      previousResponseId, // null for Turn 1/2, model's own last response ID
-      turnNumber, // 1-10
-      // New configuration parameters
-      reasoningEffort = 'medium',
-      reasoningSummary = 'detailed',
-      reasoningVerbosity = 'high',
-      temperature = 0.7,
-      maxTokens = 16384,
-      // Session management
-      sessionId, // Optional: existing session ID for resuming
-      model1Id,
-      model2Id
-    } = req.body;
+    const payload = await prepareStreamPayload(req.body);
+    cleanupExpiredStreamJobs();
 
-    // Validation
-    if (!modelId || !topic || !role || !intensity || turnNumber == null || !model1Id || !model2Id) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    // Set SSE headers
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*'
+    const streamId = `debate-stream-${randomUUID()}`;
+    pendingStreamJobs.set(streamId, {
+      createdAt: Date.now(),
+      payload
     });
 
-    // Create or get debate session
-    let debateSessionId = sessionId;
-
-    if (!sessionId) {
-      // Create new debate session for first turn
-      if (turnNumber === 1) {
-        try {
-          const debateSession = await storage.createDebateSession({
-            topicText: topic,
-            model1Id: model1Id,
-            model2Id: model2Id,
-            adversarialLevel: intensity,
-            turnHistory: [],
-            model1ResponseIds: [],
-            model2ResponseIds: []
-          });
-          debateSessionId = debateSession.id;
-          console.log(`Created debate session: ${debateSessionId}`);
-        } catch (error) {
-          console.error('Failed to create debate session:', error);
-          res.write(`event: error\ndata: ${JSON.stringify({
-            error: 'Failed to create debate session'
-          })}\n\n`);
-          res.end();
-          return;
-        }
-      } else {
-        // This shouldn't happen - we need a session ID for turns > 1
-        res.write(`event: error\ndata: ${JSON.stringify({
-          error: 'Session ID required for continuing debates'
-        })}\n\n`);
-        res.end();
-        return;
-      }
-    } else {
-      // Verify existing session exists
-      const existingSession = await storage.getDebateSession(sessionId);
-      if (!existingSession) {
-        res.write(`event: error\ndata: ${JSON.stringify({
-          error: 'Debate session not found'
-        })}\n\n`);
-        res.end();
-        return;
-      }
-      debateSessionId = sessionId;
+    res.json({
+      sessionId: streamId,
+      debateSessionId: payload.debateSessionId
+    });
+  } catch (error) {
+    const statusCode = error instanceof HttpError ? error.statusCode : 500;
+    const message = error instanceof Error ? error.message : "Failed to initialize debate stream";
+    if (!(error instanceof HttpError)) {
+      console.error("Failed to initialize debate stream:", error);
     }
+    res.status(statusCode).json({ error: message });
+  }
+});
 
-    // Get the correct previous response ID from database
-    let actualPreviousResponseId = previousResponseId;
+router.get("/stream/:streamId", async (req, res) => {
+  cleanupExpiredStreamJobs();
 
-    if (turnNumber > 2) {
-      // For turns > 2, get the model's own last response ID from the database
-      const session = await storage.getDebateSession(debateSessionId);
-      if (session) {
-        const isModel1 = modelId === session.model1Id;
-        const responseIds = isModel1
-          ? (session.model1ResponseIds as string[])
-          : (session.model2ResponseIds as string[]);
-        actualPreviousResponseId = responseIds[responseIds.length - 1] || null;
-      }
-    }
+  const streamId = req.params.streamId;
+  const pendingJob = pendingStreamJobs.get(streamId);
 
-    // Build prompt based on turn number
-    let inputMessages: Array<{ role: string; content: string }>;
+  if (!pendingJob) {
+    res.status(404).json({ error: "Stream session not found or expired" });
+    return;
+  }
 
-    if (turnNumber === 1 || turnNumber === 2) {
-      // Opening statements - no previous context
-      const position = role === 'AFFIRMATIVE' ? 'FOR' : 'AGAINST';
-      const systemPrompt = `You are the ${role} debater ${position} the proposition: "${topic}".
-Present your opening argument following Robert's Rules of Order.
-Adversarial intensity level: ${intensity}.`;
+  pendingStreamJobs.delete(streamId);
 
-      inputMessages = [{ role: 'user', content: systemPrompt }];
-    } else {
-      // Rebuttals - respond to opponent
-      const rebuttalPrompt = `Your opponent just argued: "${opponentMessage}"
+  setSseHeaders(res);
+  emitSse(res, "stream.init", {
+    debateSessionId: pendingJob.payload.debateSessionId,
+    turnNumber: pendingJob.payload.turnNumber,
+    modelId: pendingJob.payload.modelId
+  });
 
-Respond as the ${role} debater:
-1. Address your opponent's specific points
-2. Refute their arguments with evidence and logic
-3. Strengthen your own position
-4. Use adversarial intensity level: ${intensity}`;
+  await streamDebateTurn(res, pendingJob.payload);
+});
 
-      inputMessages = [{ role: 'user', content: rebuttalPrompt }];
-    }
-
-    // Call OpenAI provider with streaming enabled and proper configuration
-    const provider = getProviderForModel(modelId);
-
-    if (!provider.callModelStreaming) {
-      res.write(`event: error\ndata: ${JSON.stringify({
-        message: 'Streaming not supported for this provider'
-      })}\n\n`);
+// POST /api/debate/stream - Streaming debate with reasoning (legacy single-call flow)
+router.post("/stream", async (req, res) => {
+  try {
+    const payload = await prepareStreamPayload(req.body);
+    setSseHeaders(res);
+    emitSse(res, "stream.init", {
+      debateSessionId: payload.debateSessionId,
+      turnNumber: payload.turnNumber,
+      modelId: payload.modelId
+    });
+    await streamDebateTurn(res, payload);
+  } catch (error) {
+    const statusCode = error instanceof HttpError ? error.statusCode : 500;
+    const message = error instanceof Error ? error.message : "Failed to start debate stream";
+    if (res.headersSent) {
+      emitSse(res, "stream.error", { error: message });
       res.end();
       return;
     }
-
-    // Pass configuration parameters to the streaming call
-    await provider.callModelStreaming({
-      modelId,
-      messages: inputMessages,
-      previousResponseId: actualPreviousResponseId || undefined,
-      temperature: temperature,
-      maxTokens: maxTokens,
-      // Reasoning configuration for OpenAI provider
-      reasoningConfig: {
-        effort: reasoningEffort,
-        summary: reasoningSummary,
-        verbosity: reasoningVerbosity
-      },
-      onReasoningChunk: (chunk: string) => {
-        res.write(`event: stream.chunk\ndata: ${JSON.stringify({
-          type: 'reasoning',
-          delta: chunk,
-          timestamp: Date.now()
-        })}\n\n`);
-      },
-      onContentChunk: (chunk: string) => {
-        res.write(`event: stream.chunk\ndata: ${JSON.stringify({
-          type: 'text',
-          delta: chunk,
-          timestamp: Date.now()
-        })}\n\n`);
-      },
-      onComplete: async (responseId: string, tokenUsage: any, cost: any, content?: string, reasoning?: string) => {
-        // Save turn data to database with actual streamed content
-        try {
-          const turnCost = cost?.total || 0;
-          await storage.updateDebateSession(debateSessionId, {
-            turn: turnNumber,
-            modelId: modelId,
-            content: content || '', // Use streamed content if available
-            reasoning: reasoning || '', // Use streamed reasoning if available
-            responseId: responseId,
-            cost: turnCost
-          });
-
-          // Send response ID back to client for conversation chaining
-          res.write(`event: stream.complete\ndata: ${JSON.stringify({
-            responseId,
-            tokenUsage,
-            cost,
-            sessionId: debateSessionId
-          })}\n\n`);
-        } catch (error) {
-          console.error('Failed to save turn data:', error);
-          // Still send the response even if saving fails
-          res.write(`event: stream.complete\ndata: ${JSON.stringify({
-            responseId,
-            tokenUsage,
-            cost,
-            sessionId: debateSessionId
-          })}\n\n`);
-        }
-        res.end();
-      },
-      onError: (error: Error) => {
-        res.write(`event: stream.error\ndata: ${JSON.stringify({
-          error: error.message
-        })}\n\n`);
-        res.end();
-      }
-    });
-
-  } catch (error) {
-    console.error('Debate stream error:', error);
-    res.write(`event: stream.error\ndata: ${JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })}\n\n`);
-    res.end();
+    if (!(error instanceof HttpError)) {
+      console.error("Debate stream error:", error);
+    }
+    res.status(statusCode).json({ error: message });
   }
 });
 
