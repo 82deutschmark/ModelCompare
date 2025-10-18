@@ -3,8 +3,9 @@
 - All environment variables and secrets are properly configured in .env files!
 
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-Every file you create or edit should start with:
+Update the Changelog after you complete your work.  Update at the top with correct date and time and semver appropriate to the change!!!
+Every file you create or edit should start with a basic header appropriate to the file type!!!
+Use this as a guide for typescript files only:
  * 
  * Author: Your {model name}
  * Date: {date} and the {time}
