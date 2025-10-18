@@ -1,10 +1,25 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
- * Date: 2025-10-17 18:14 UTC
+ * Date: 2025-10-18 00:50 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.10] - 2025-10-18
+
+### Added
+- **Debate Handshake Regression Test:** Added `tests/server/debate-handshake.test.ts` to boot the debate router with mocked
+  providers, assert the POST→GET handshake, parse SSE chunks, and verify debate turn persistence through the shared storage
+  layer.
+
+### Changed
+- **Legacy Debate Endpoint Hardening:** Updated `server/routes/debate.routes.ts` so direct `POST /api/debate/stream` calls return
+  `410 Gone` with upgrade guidance, ensuring no caller silently reverts to the retired single-request flow.
+
+### Documentation
+- **Streaming Validation Plan:** Captured regression goals and verification steps in
+  `docs/2025-10-18-plan-debate-streaming-validation.md` for future release audits.
 
 ## [Version 0.4.9] - 2025-10-17
 
@@ -22,7 +37,7 @@
 - **Changelog Alignment:** Bumped the documented release to capture the streaming retrofit and ensure downstream audit trails remain accurate.
 
 ### Removed
-- **Legacy Debate Streaming Contract:** Deleted `client/src/hooks/useDebateStream.ts` and the fallback `POST /api/debate/stream` route to eliminate ambiguity now that all clients use the init + SSE handshake via `useDebateStreaming`.
+- **Legacy Debate Streaming Contract:** Deleted `client/src/hooks/useDebateStream.ts` and the fallback `POST /api/debate/stream` route so the two-phase init + SSE handshake is the only supported debate streaming path.
 
 ## [Version 0.4.8] - 2025-10-17
 
@@ -73,7 +88,7 @@
 ## [Version 0.4.4] - 2025-10-17
 
 ### Fixed
-- **Debate Streaming Contract Alignment:** Added `/api/debate/stream/init` plus SSE GET handler, consolidated streaming logic, and retained the legacy POST endpoint so the frontend hook and scripting workflows both reach OpenAI.
+- **Debate Streaming Contract Alignment:** Added `/api/debate/stream/init` plus SSE GET handler, consolidated streaming logic, and temporarily retained the legacy POST endpoint for compatibility (subsequently removed in v0.4.9).
 
 ## [Version 0.4.3] - 2025-10-16
 

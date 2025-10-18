@@ -175,7 +175,8 @@ The `IStorage` interface in `server/storage.ts` provides:
 - Automated debate progression with manual turn-by-turn controls
 - **Advanced Streaming Features**:
   - Server-Sent Events (SSE) for real-time reasoning and content display
-  - `/api/debate/stream` endpoint with init + stream contract
+  - Two-phase streaming handshake via `POST /api/debate/stream/init` followed by
+    `GET /api/debate/stream/:taskId/:modelKey/:sessionId`
   - Conversation chaining using OpenAI Responses API `response.id` tracking
   - Database session persistence with turn history
   - Model-specific configuration (reasoning effort, temperature, max tokens)
@@ -299,8 +300,8 @@ GET  /api/comparisons/:id  # Retrieve specific comparison
 # Debate Mode (with streaming)
 POST /api/debate/session      # Create new debate session
 GET  /api/debate/sessions     # List existing debate sessions
-POST /api/debate/stream       # Initialize debate streaming (SSE)
-GET  /api/debate/stream       # Stream debate responses (SSE)
+POST /api/debate/stream/init                     # Validate payload and create streaming session
+GET  /api/debate/stream/:taskId/:modelKey/:sessionId  # Stream debate responses via SSE
 
 # Model Responses
 POST /api/models/respond      # Get single model response
