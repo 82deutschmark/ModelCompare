@@ -525,7 +525,7 @@ export class OpenAIProvider extends BaseProvider {
           store: true,
         };
 
-        if (options?.temperature !== undefined) {
+        if (options?.temperature !== undefined && this.supportsTemperature(modelConfig?.model ?? model)) {
           requestPayload.temperature = options.temperature;
         }
 
@@ -650,7 +650,7 @@ export class OpenAIProvider extends BaseProvider {
         requestPayload.previous_response_id = previousResponseId;
       }
 
-      if (temperature !== undefined) {
+      if (temperature !== undefined && this.supportsTemperature(modelConfig.model)) {
         requestPayload.temperature = temperature;
       }
 
@@ -760,5 +760,13 @@ export class OpenAIProvider extends BaseProvider {
       console.error('OpenAI streaming error:', error);
       onError(error instanceof Error ? error : new Error(String(error)));
     }
+  }
+
+  private supportsTemperature(modelId: string): boolean {
+    const normalized = modelId.toLowerCase();
+    if (normalized.startsWith('gpt-5')) {
+      return false;
+    }
+    return true;
   }
 }

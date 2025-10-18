@@ -15,11 +15,11 @@ Confirm the debate streaming flow actually triggers GPT-5 mini and GPT-5 nano pr
 - What do server diagnostics show when we hit the endpoint locally?
 
 ## Investigation Checklist
-- [ ] Review the client debate initiation flow (`DebateControls`, `debateService`, `useDebateStreaming`).
-- [ ] Trace the server debate streaming route (`debate.routes.ts`, `routes.ts`) and its SSE lifecycle.
-- [ ] Inspect model capability lookups for GPT-5 mini/nano in `model.service` and provider registry.
-- [ ] Exercise the debate streaming endpoint locally with real models and capture server logs.
-- [ ] Verify the client receives streaming chunks or diagnose failure response handling.
+- [x] Review the client debate initiation flow (`DebateControls`, `debateService`, `useDebateStreaming`).
+- [x] Trace the server debate streaming route (`debate.routes.ts`, `routes.ts`) and its SSE lifecycle.
+- [x] Inspect model capability lookups for GPT-5 mini/nano in `model.service` and provider registry.
+- [x] Exercise the debate streaming endpoint locally with real models and capture server logs.
+- [x] Verify the client receives streaming chunks or diagnose failure response handling.
 - [ ] Summarize findings with recommended remediation steps.
 
 ## Deliverables
