@@ -76,6 +76,12 @@ export interface ModelMessage {
   metadata?: Record<string, any>;
 }
 
+export interface PromptReference {
+  id: string;
+  version: string;
+  variables?: Record<string, string>;
+}
+
 /**
  * Call options for model invocation
  * Provides fine-grained control over model behavior
@@ -97,6 +103,8 @@ export interface CallOptions {
     summary?: 'auto' | 'detailed';
     verbosity?: 'low' | 'medium' | 'high';
   };
+  /** Optional stored prompt reference with variable payload */
+  prompt?: PromptReference;
 }
 
 export interface StreamingCompleteExtras {
@@ -133,6 +141,8 @@ export interface StreamingCallOptions {
   };
   /** Optional Responses API instructions steering */
   instructions?: string;
+  /** Optional stored prompt reference with variable payload */
+  prompt?: PromptReference;
   onReasoningChunk: (chunk: string) => void;
   onContentChunk: (chunk: string) => void;
   onJsonChunk?: (chunk: unknown) => void;

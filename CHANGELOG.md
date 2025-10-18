@@ -6,6 +6,15 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.12] - 2025-10-18
+
+### Changed
+- **Debate Prompt Integration:** Updated `server/routes/debate.routes.ts` and `server/providers/openai.ts` to send debate turns
+  through the stored OpenAI prompt `pmpt_6856e018a02c8196aa1ccd7eac56ee020cbd4441b7c750b1`, forwarding topic, position, and
+  intensity variables as strings while preserving cross-provider streaming fallbacks.
+- **Provider Prompt Options:** Extended `server/providers/base.ts` prompt typings so both streaming and non-streaming calls can
+  share the stored prompt reference contract across providers.
+
 ## [Version 0.4.11] - 2025-10-17
 
 ### Changed

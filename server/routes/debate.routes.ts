@@ -32,6 +32,7 @@ interface DebateStreamPayload {
   modelId: string;
   topic: string;
   role: DebateRole;
+  position: "FOR" | "AGAINST";
   intensity: number;
   opponentMessage: string | null;
   previousResponseId: string | null;
@@ -48,6 +49,11 @@ interface DebateStreamPayload {
 
 const STREAM_SESSION_TTL_MS = 5 * 60 * 1000;
 const streamSessionRegistry = new StreamSessionRegistry<DebateStreamPayload>(STREAM_SESSION_TTL_MS);
+
+const STORED_DEBATE_PROMPT: { id: string; version: string } = {
+  id: "pmpt_6856e018a02c8196aa1ccd7eac56ee020cbd4441b7c750b1",
+  version: "2"
+};
 
 const VALID_ROLES: DebateRole[] = ["AFFIRMATIVE", "NEGATIVE"];
 const VALID_REASONING_EFFORTS = new Set(["minimal", "low", "medium", "high"]);
@@ -203,6 +209,7 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   const modelId = ensureString(body.modelId, "modelId");
   const topic = ensureString(body.topic, "topic");
   const role = normalizeRole(body.role);
+  const position: "FOR" | "AGAINST" = role === "AFFIRMATIVE" ? "FOR" : "AGAINST";
   const intensity = ensureNumber(body.intensity, "intensity");
   const turnNumber = ensureNumber(body.turnNumber, "turnNumber");
   const model1Id = ensureString(body.model1Id, "model1Id");
@@ -230,6 +237,7 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
     modelId,
     topic,
     role,
+    position,
     intensity,
     opponentMessage,
     previousResponseId,
@@ -246,10 +254,9 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
 }
 
 function buildInputMessages(payload: DebateStreamPayload): Array<{ role: string; content: string }> {
-  const { turnNumber, role, topic, intensity, opponentMessage } = payload;
+  const { turnNumber, role, position, topic, intensity, opponentMessage } = payload;
 
   if (turnNumber === 1 || turnNumber === 2) {
-    const position = role === "AFFIRMATIVE" ? "FOR" : "AGAINST";
     const systemPrompt = `You are the ${role} debater ${position} the proposition: "${topic}".
 Present your opening argument following Robert's Rules of Order.
 Adversarial intensity level: ${intensity}.`;
@@ -291,6 +298,11 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
     }
 
     const inputMessages = buildInputMessages(payload);
+    const promptVariables: Record<string, string> = {
+      intensity: String(payload.intensity),
+      position: payload.position,
+      topic: payload.topic,
+    };
 
     harness.status("resolving_provider", undefined, { modelId: payload.modelId });
     let provider;
@@ -320,6 +332,10 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
         effort: payload.reasoningEffort,
         summary: payload.reasoningSummary,
         verbosity: payload.reasoningVerbosity
+      },
+      prompt: {
+        ...STORED_DEBATE_PROMPT,
+        variables: promptVariables,
       },
       onStatus: (phase, data) => {
         harness.status(phase, undefined, {
@@ -369,7 +385,8 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
           metadata: {
             debateSessionId: payload.debateSessionId,
             turnNumber: payload.turnNumber,
-            structuredOutput
+            structuredOutput,
+            promptVariables
           }
         });
       },
