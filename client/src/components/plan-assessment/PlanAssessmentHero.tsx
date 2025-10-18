@@ -1,10 +1,10 @@
 /**
  * Author: gpt-5-codex
- * Date: 2025-10-18 18:45 UTC
+ * Date: 2025-10-18 20:10 UTC
  * PURPOSE: Hero form for the plan assessment mode, mirroring the modern compare
  *          layout while collecting plan inputs and managing inline model
- *          selection. Reuses shadcn/ui cards, floating model picker, and model
- *          pills to keep visual parity with the compare page experience.
+ *          selection. Updated to launch with vibrant gradients, colorful pills,
+ *          and accentuated buttons while preserving shared comparison logic.
  * SRP/DRY check: Pass - Single responsibility (plan assessment hero section),
  *                reuses shared comparison components without duplicating API logic.
  */
@@ -96,15 +96,18 @@ export function PlanAssessmentHero({
 
   const modelPickerTrigger = (
     <Button
-      variant="outline"
+      variant="default"
       size="sm"
-      className="gap-1.5 border-dashed border-2 hover:border-primary/50 h-7"
+      className="gap-1.5 h-8 bg-gradient-to-r from-primary via-fuchsia-500 to-orange-400 text-primary-foreground shadow-md hover:shadow-lg transition-all"
       disabled={modelsLoading}
     >
-      <Brain className="w-3 h-3" />
+      <Brain className="w-3 h-3 drop-shadow-sm" />
       Manage Models
       {selectedModels.length > 0 && (
-        <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-xs">
+        <Badge
+          variant="secondary"
+          className="ml-1 h-4 px-1.5 text-[0.65rem] uppercase tracking-wide bg-background/80 text-primary border-none"
+        >
           {selectedModels.length}
         </Badge>
       )}
@@ -113,32 +116,56 @@ export function PlanAssessmentHero({
 
   return (
     <div className="space-y-6">
-      <Card className="relative">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center justify-between text-base">
-            <div className="flex items-center gap-2 text-sm">
-              <ClipboardList className="w-4 h-4 text-primary" />
-              <span>Plan Assessment Brief</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline" className="font-medium uppercase tracking-wide">
+      <Card className="relative overflow-hidden border-2 border-primary/20 shadow-xl">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
+        <div className="pointer-events-none absolute -top-24 -right-10 h-48 w-48 rounded-full bg-fuchsia-400/30 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -left-12 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
+
+        <CardHeader className="relative pb-4">
+          <CardTitle className="flex flex-col gap-3 text-base">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <ClipboardList className="w-4 h-4 text-primary drop-shadow-sm" />
+                <span className="font-semibold bg-gradient-to-r from-primary via-fuchsia-500 to-orange-500 bg-clip-text text-transparent">
+                  Plan Assessment Brief
+                </span>
+              </div>
+              <Badge className="bg-gradient-to-r from-primary/80 to-fuchsia-500/80 text-primary-foreground text-[0.65rem] uppercase tracking-wide shadow-sm">
                 {hobbyDev === "hobby" ? "Hobby" : "Enterprise"}
               </Badge>
-              <span>{planWordCount} words</span>
-              <span>{promptWordCount} prompt words</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 font-medium text-primary">
+                <Sparkles className="w-3 h-3" />
+                {planWordCount} plan words
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 px-2 py-1 font-medium text-fuchsia-600">
+                <Eye className="w-3 h-3" />
+                {promptWordCount} prompt words
+              </span>
             </div>
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-5">
+        <CardContent className="relative space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>{selectedModels.length === 0 ? "No models selected" : `${selectedModels.length} model${selectedModels.length === 1 ? "" : "s"} selected`}</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-primary">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="rounded-full bg-primary/10 px-2 py-1 text-primary">
+                {selectedModels.length === 0
+                  ? "No models selected"
+                  : `${selectedModels.length} model${selectedModels.length === 1 ? "" : "s"} selected`}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               {selectedModels.length > 0 && (
-                <Button variant="ghost" size="sm" className="h-7" onClick={onClearAllModels}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-primary/40 text-primary hover:bg-primary/10"
+                  onClick={onClearAllModels}
+                >
                   Clear
                 </Button>
               )}
@@ -154,14 +181,14 @@ export function PlanAssessmentHero({
             </div>
           </div>
 
-          <Separator />
+          <Separator className="bg-gradient-to-r from-primary/30 via-transparent to-fuchsia-300/30" />
 
           <div className="grid grid-cols-1 gap-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Project Type</Label>
-                <Select value={hobbyDev} onValueChange={(value) => onHobbyDevChange(value as "hobby" | "enterprise")}> 
-                  <SelectTrigger className="w-full h-9 text-sm">
+                <Label className="text-xs uppercase tracking-wide text-primary">Project Type</Label>
+                <Select value={hobbyDev} onValueChange={(value) => onHobbyDevChange(value as "hobby" | "enterprise")}>
+                  <SelectTrigger className="w-full h-9 text-sm border-primary/30 bg-background/80 backdrop-blur-sm">
                     <SelectValue placeholder="Select project type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,36 +198,36 @@ export function PlanAssessmentHero({
                 </Select>
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Constraints</Label>
+                <Label className="text-xs uppercase tracking-wide text-fuchsia-600">Constraints</Label>
                 <Textarea
                   rows={2}
                   value={constraints}
                   onChange={(event) => onConstraintsChange(event.target.value)}
                   placeholder="Any constraints (timeline, budget, compliance, tech stack)"
-                  className="text-sm"
+                  className="text-sm border-primary/20 bg-background/70 backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-primary/30"
                 />
               </div>
             </div>
 
             <div>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Plan (Markdown or text)</Label>
+              <Label className="text-xs uppercase tracking-wide text-orange-600">Plan (Markdown or text)</Label>
               <Textarea
                 rows={10}
                 value={planMarkdown}
                 onChange={(event) => onPlanMarkdownChange(event.target.value)}
                 placeholder="Paste or write the plan to assess..."
-                className="text-sm"
+                className="text-sm border-primary/25 bg-background/75 backdrop-blur focus-visible:ring-2 focus-visible:ring-fuchsia-400/40"
               />
             </div>
 
             <div>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Context (optional)</Label>
+              <Label className="text-xs uppercase tracking-wide text-primary">Context (optional)</Label>
               <Textarea
                 rows={3}
                 value={contextSummary}
                 onChange={(event) => onContextSummaryChange(event.target.value)}
                 placeholder="Assess my over-confident junior developer's plan. What is missing?"
-                className="text-sm"
+                className="text-sm border-primary/20 bg-background/75 backdrop-blur focus-visible:ring-2 focus-visible:ring-orange-400/40"
               />
             </div>
           </div>
@@ -209,10 +236,10 @@ export function PlanAssessmentHero({
             <div className="flex flex-wrap gap-2">
               {modelsLoading ? (
                 Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton key={index} className="h-7 w-24" />
+                  <Skeleton key={index} className="h-8 w-28 rounded-full bg-primary/20" />
                 ))
               ) : selectedModelObjects.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Selected models will appear here as pills once added.</p>
+                <p className="text-xs text-primary/80">Selected models will appear here as vibrant pills once added.</p>
               ) : (
                 selectedModelObjects.map((model) => (
                   <ModelPill
@@ -228,7 +255,7 @@ export function PlanAssessmentHero({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-primary font-medium">
                 {disableSubmitReason
                   ? disableSubmitReason
                   : canSubmit
@@ -239,7 +266,7 @@ export function PlanAssessmentHero({
                 onClick={onSubmit}
                 disabled={!canSubmit || isSubmitting}
                 size="sm"
-                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                className="gap-2 bg-gradient-to-r from-primary via-fuchsia-500 to-orange-400 text-primary-foreground shadow-lg hover:brightness-105"
               >
                 {isSubmitting ? (
                   <>
@@ -258,7 +285,7 @@ export function PlanAssessmentHero({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs px-2"
+              className="h-8 text-xs px-3 text-primary hover:bg-primary/10"
               onClick={() => setShowPromptPreview((prev) => !prev)}
             >
               <Eye className="w-3 h-3 mr-1" />
@@ -266,7 +293,7 @@ export function PlanAssessmentHero({
             </Button>
 
             {showPromptPreview && (
-              <div className="rounded-md border bg-muted/40 p-3 text-xs font-mono whitespace-pre-wrap">
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs font-mono whitespace-pre-wrap">
                 {finalPrompt}
               </div>
             )}

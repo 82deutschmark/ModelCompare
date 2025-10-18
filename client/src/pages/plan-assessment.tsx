@@ -1,19 +1,23 @@
 /**
  * Author: gpt-5-codex
- * Date: 2025-10-18 18:48 UTC
+ * Date: 2025-10-18 21:06 UTC
  * PURPOSE: Plan assessment mode page aligned with the compare layout. Reuses the
  *          shared comparison hook, floating model picker, and results grid while
  *          adding plan-specific form inputs to build the assessment prompt.
+ *          Updated to pre-select the colorful default trio of models for a
+ *          vibrant first-run experience and centralizes default model IDs via a
+ *          shared config.
  * SRP/DRY check: Pass - Page orchestrates plan assessment flow via shared
  *                components without duplicating mutation logic.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Brain } from "lucide-react";
 import { AppNavigation } from "@/components/AppNavigation";
 import { PlanAssessmentHero } from "@/components/plan-assessment/PlanAssessmentHero";
 import { ComparisonResults } from "@/components/comparison/ComparisonResults";
+import { PLAN_ASSESSMENT_DEFAULT_MODEL_IDS } from "@/config/planAssessmentDefaults";
 import { useComparison } from "@/hooks/useComparison";
 import { useToast } from "@/hooks/use-toast";
 import type { AIModel } from "@/types/ai-models";
@@ -24,6 +28,7 @@ export default function PlanAssessmentPage() {
   const [constraints, setConstraints] = useState<string>("");
   const [planMarkdown, setPlanMarkdown] = useState<string>("");
   const [contextSummary, setContextSummary] = useState<string>("");
+  const [initialModelsSelected, setInitialModelsSelected] = useState<boolean>(false);
 
   const { state, actions, status } = useComparison();
 
@@ -35,6 +40,19 @@ export default function PlanAssessmentPage() {
       return response.json() as Promise<AIModel[]>;
     },
   });
+
+  useEffect(() => {
+    if (!initialModelsSelected && models.length > 0 && state.selectedModels.length === 0) {
+      const availableDefaults = PLAN_ASSESSMENT_DEFAULT_MODEL_IDS.filter((modelId) =>
+        models.some((model) => model.id === modelId),
+      );
+
+      if (availableDefaults.length > 0) {
+        actions.selectAllModels(availableDefaults);
+        setInitialModelsSelected(true);
+      }
+    }
+  }, [models, state.selectedModels.length, initialModelsSelected, actions]);
 
   const finalPrompt = useMemo(() => {
     const lines: string[] = [
