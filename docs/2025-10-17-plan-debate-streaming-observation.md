@@ -28,5 +28,40 @@ Confirm the debate streaming flow actually triggers GPT-5 mini and GPT-5 nano pr
 - Recommended fixes or configuration changes ready for implementation.
 
 ## Findings (2025-10-18)
+
+### Previous Session
 - Streaming failures traced to OpenAI's Responses API rejecting the `temperature` parameter for GPT-5 family models; removing the field restores GPT-5 mini/nano streaming.
 - Defaulting debate setup to GPT-5 Mini vs GPT-5 Nano on Topic 13 keeps the regression fixture one click away for fast streaming validation.
+
+### Current Session (2025-10-17 21:15 UTC)
+✅ **Streaming is working correctly!**
+
+#### Test Results
+- Created test script (`test-debate-stream.mjs`) that triggers debate between GPT-5 Mini and GPT-5 Nano
+- Successfully validated full streaming pipeline:
+  1. POST `/api/debate/stream/init` → Returns `sessionId`, `taskId`, `modelKey`
+  2. GET `/api/debate/stream/:taskId/:modelKey/:sessionId` → SSE stream with chunks
+  3. Reasoning chunks streaming correctly
+  4. Content chunks streaming correctly
+  5. Stream completes with `responseId`, `tokenUsage`, `cost`
+
+#### Key Code Locations
+- **Server Routes**: `server/routes/debate.routes.ts` (lines 459-521)
+  - Init endpoint: Line 459
+  - SSE endpoint: Line 490
+  - Stream handler: Line 270-383 (`streamDebateTurn`)
+- **Temperature Filtering**: `server/providers/openai.ts:765`
+  - `supportsTemperature()` method correctly filters out temperature for GPT-5 models
+  - Applied at lines 528, 653
+- **Client Hook**: `client/src/hooks/useAdvancedStreaming.ts:322`
+  - `startStream()` implements two-stage handshake (init + SSE)
+- **Model IDs**: Must use full IDs from `shared/model-catalog.ts`
+  - ✅ `gpt-5-mini-2025-08-07` (not `gpt-5-mini`)
+  - ✅ `gpt-5-nano-2025-08-07` (not `gpt-5-nano`)
+
+#### No Issues Found
+- Temperature parameter is correctly filtered for GPT-5 models
+- Provider resolution working
+- SSE streaming working
+- OpenAI Responses API calls working
+- No server errors logged
