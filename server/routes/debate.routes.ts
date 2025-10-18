@@ -302,6 +302,7 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
       intensity: String(payload.intensity),
       position: payload.position,
       topic: payload.topic,
+      role: payload.role,
     };
 
     harness.status("resolving_provider", undefined, { modelId: payload.modelId });

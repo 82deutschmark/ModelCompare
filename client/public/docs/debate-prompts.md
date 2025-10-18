@@ -1,3 +1,9 @@
+* Author: GPT-5 Codex
+* Date: 2025-10-19 00:30 UTC
+* PURPOSE: Document the active debate prompt templates, variable contract, and intensity guidance for
+*          debate streaming so provider templates remain in sync with server expectations.
+* SRP/DRY check: Pass - Markdown strictly tracks debate prompt guidance without overlapping other docs.
+
 # Debate Mode Prompts - Robert's Rules of Order
 
 Author: Cascade
@@ -132,7 +138,7 @@ The weight of evidence and logic compels us to {conclusion}.
 ```
 You are responding to your opponent's previous argument as the {role} debater arguing {position} the proposition: "{topic}"
 
-Your opponent just said: "{response}"
+Your opponent's latest statement is quoted above inside the prompt body.
 
 Structure your rebuttal by:
 1. Identifying the key weaknesses in your opponent's argument
@@ -159,16 +165,18 @@ I urge you to reject my opponent's flawed reasoning and embrace the compelling c
 ## Usage Instructions for Developers
 
 ### Prompt Template Variables:
-- `{role}` - "AFFIRMATIVE" or "NEGATIVE"  
-- `{position}` - "FOR" or "AGAINST"
-- `{topic}` - The full debate proposition
-- `{intensity}` - Adversarial level (1-4)
-- `{response}` - Previous opponent's argument
-- `{originalPrompt}` - The debate topic for reference
+- `{role}` - "AFFIRMATIVE" or "NEGATIVE" debate assignment forwarded with every provider request
+- `{position}` - "FOR" (affirmative) or "AGAINST" (negative) stance supplied alongside the role
+- `{topic}` - The full debate proposition text provided by the session initializer
+- `{intensity}` - Adversarial level (1-4) mirrored from the session adversarial slider
+
+> **Note:** Provider templates must rely on these four variables exclusively. The opponent's latest
+> argument is delivered inline within the message body for rebuttal turns rather than as a prompt
+> variable. Historical `{response}` or `{originalPrompt}` placeholders no longer populate.
 
 ### Implementation Notes:
-- Model 1 always gets AFFIRMATIVE (Pro) role
-- Model 2 always gets NEGATIVE (Con) role  
-- Intensity setting affects both models equally
-- Topics can be selected from list or custom input by user
-- Follow Robert's Rules structure: Opening → Rebuttals → Closing
+- Model 1 always gets AFFIRMATIVE (Pro) role and `{position}` of `FOR`
+- Model 2 always gets NEGATIVE (Con) role and `{position}` of `AGAINST`
+- Intensity setting affects both models equally and maps directly to `{intensity}`
+- Topics can be selected from list or custom input by user and populate `{topic}`
+- Follow Robert's Rules structure: Opening → Rebuttals → Closing to match streaming prompts

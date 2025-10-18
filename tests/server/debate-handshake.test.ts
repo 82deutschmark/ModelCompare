@@ -185,6 +185,8 @@ describe('Debate streaming handshake', () => {
     expect(statusEvent?.data?.phase).toBeDefined();
 
     expect(providerStreamMock).toHaveBeenCalledTimes(1);
+    const providerCall = providerStreamMock.mock.calls[0]?.[0];
+    expect(providerCall?.prompt?.variables?.role).toBe('AFFIRMATIVE');
 
     const persisted = await storage.storage.getDebateSession(sessionInfo.id);
     expect(persisted).toBeTruthy();
