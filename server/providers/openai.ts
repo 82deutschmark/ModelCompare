@@ -12,7 +12,7 @@
 import 'dotenv/config';
 import OpenAI from 'openai';
 import { handleResponsesStreamEvent } from '../streaming/openai-event-handler.js';
-import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions, StreamingCallOptions } from './base.js';
+import { BaseProvider, ModelConfig, ModelResponse, ModelMessage, CallOptions, StreamingCallOptions, PromptReference } from './base.js';
 
 type ResponseMessage = {
   role: 'system' | 'user' | 'assistant' | 'developer';
@@ -257,6 +257,35 @@ export class OpenAIProvider extends BaseProvider {
     return normalized;
   }
 
+  private buildPromptPayload(reference: PromptReference): Record<string, any> {
+    const payload: Record<string, any> = {
+      id: reference.id,
+      version: reference.version,
+    };
+
+    const normalizedVariables = this.normalizePromptVariables(reference.variables ?? {});
+    if (Object.keys(normalizedVariables).length > 0) {
+      payload.variables = normalizedVariables;
+    }
+
+    return payload;
+  }
+
+  private normalizePromptVariables(variables: Record<string, string>): Record<string, string> {
+    const normalized: Record<string, string> = {};
+    for (const [key, rawValue] of Object.entries(variables)) {
+      if (rawValue === undefined || rawValue === null) {
+        continue;
+      }
+      const value = typeof rawValue === 'string' ? rawValue : String(rawValue);
+      if (value.trim().length === 0) {
+        continue;
+      }
+      normalized[key] = value;
+    }
+    return normalized;
+  }
+
   private isGpt5Family(modelId?: string): boolean {
     return typeof modelId === 'string' && modelId.startsWith('gpt-5');
   }
@@ -498,6 +527,7 @@ export class OpenAIProvider extends BaseProvider {
     const startTime = Date.now();
     const modelConfig = this.models.find(m => m.id === model);
     const input = this.mapMessagesToResponsesInput(messages, options);
+    const promptReference = options?.prompt;
 
     // Configure max_output_tokens
     const isGpt5Series = [
@@ -520,10 +550,17 @@ export class OpenAIProvider extends BaseProvider {
       try {
         const requestPayload: Record<string, any> = {
           model: modelConfig?.model ?? model,
-          input,
           max_output_tokens: options?.maxTokens ?? maxOutputTokens,
           store: true,
         };
+
+        if (!promptReference || input.length > 0) {
+          requestPayload.input = input;
+        }
+
+        if (promptReference) {
+          requestPayload.prompt = this.buildPromptPayload(promptReference);
+        }
 
         if (options?.temperature !== undefined && this.supportsTemperature(modelConfig?.model ?? model)) {
           requestPayload.temperature = options.temperature;
@@ -609,6 +646,7 @@ export class OpenAIProvider extends BaseProvider {
       maxTokens,
       reasoningConfig,
       instructions,
+      prompt,
       onReasoningChunk,
       onContentChunk,
       onJsonChunk,
@@ -631,6 +669,7 @@ export class OpenAIProvider extends BaseProvider {
       metadata: (message as { metadata?: Record<string, any> }).metadata,
     }));
     const input = this.mapMessagesToResponsesInput(normalizedMessages);
+    const promptReference = prompt;
 
     // Configure max_output_tokens
     const isGpt5Series = this.isGpt5Family(modelConfig.model);
@@ -640,11 +679,18 @@ export class OpenAIProvider extends BaseProvider {
     try {
       const requestPayload: any = {
         model: modelConfig.model,
-        input,
         max_output_tokens: configuredMax,
         stream: true,
         store: true,
       };
+
+      if (!promptReference || input.length > 0) {
+        requestPayload.input = input;
+      }
+
+      if (promptReference) {
+        requestPayload.prompt = this.buildPromptPayload(promptReference);
+      }
 
       if (previousResponseId) {
         requestPayload.previous_response_id = previousResponseId;
