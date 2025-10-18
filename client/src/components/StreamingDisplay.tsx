@@ -1,3 +1,7 @@
+// * Author: GPT-5 Codex
+// * Date: 2025-10-17 and the 20:29 UTC
+// * PURPOSE: Present live reasoning/content streams with optional auto-scroll guards for debate and related experiences.
+// * SRP/DRY check: Pass - Component focuses on streaming visualization without leaking transport logic or consumer state.
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +21,7 @@ interface StreamingDisplayProps {
   progress?: number;
   estimatedCost?: number;
   className?: string;
+  disableAutoScroll?: boolean;
 }
 
 export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
@@ -28,7 +33,8 @@ export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
   modelProvider,
   progress = 0,
   estimatedCost,
-  className
+  className,
+  disableAutoScroll = false
 }) => {
   const reasoningEndRef = useRef<HTMLDivElement>(null);
   const contentEndRef = useRef<HTMLDivElement>(null);
@@ -36,24 +42,24 @@ export const StreamingDisplay: React.FC<StreamingDisplayProps> = ({
   // Auto-scroll to bottom when new content arrives
   // Add defensive guards to prevent browser extension MutationObserver errors
   useEffect(() => {
-    if (!reasoningEndRef.current) return;
+    if (disableAutoScroll || !reasoningEndRef.current) return;
     try {
       reasoningEndRef.current.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
       // Silently ignore scroll errors (browser extensions can interfere)
       console.debug('Scroll error:', error);
     }
-  }, [reasoning]);
+  }, [reasoning, disableAutoScroll]);
 
   useEffect(() => {
-    if (!contentEndRef.current) return;
+    if (disableAutoScroll || !contentEndRef.current) return;
     try {
       contentEndRef.current.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
       // Silently ignore scroll errors (browser extensions can interfere)
       console.debug('Scroll error:', error);
     }
-  }, [content]);
+  }, [content, disableAutoScroll]);
 
   const formatText = (text: string) => {
     if (!text) return '';

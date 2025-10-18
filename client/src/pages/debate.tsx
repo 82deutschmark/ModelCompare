@@ -6,7 +6,7 @@
  * SRP/DRY check: Pass - Component composes hooks/services to manage debate state without duplicating underlying logic.
  */
 
-import { useRef, useEffect, useMemo, useState } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,8 +34,6 @@ import { DebateControls } from "@/components/debate/DebateControls";
 import { DebateMessageList } from "@/components/debate/DebateMessageList";
 import { DebateHistoryDrawer } from "@/components/debate/DebateHistoryDrawer";
 
-const AUTO_SCROLL_THRESHOLD_PX = 200;
-
 interface CreateDebateSessionResponse {
   id: string;
   topic: string;
@@ -47,7 +45,6 @@ interface CreateDebateSessionResponse {
 export default function Debate() {
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [isPinnedToLatest, setIsPinnedToLatest] = useState(true);
 
   const debateSetup = useDebateSetup();
   const debateSession = useDebateSession();
@@ -171,30 +168,7 @@ export default function Debate() {
     loadDebateSessionsMutation.mutate();
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
 
-    const handleScroll = () => {
-      const scrollElement = document.scrollingElement ?? document.documentElement;
-      if (!scrollElement) return;
-      const distanceFromBottom = scrollElement.scrollHeight - (scrollElement.scrollTop + scrollElement.clientHeight);
-      const nearBottom = distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX;
-      setIsPinnedToLatest(prev => (prev === nearBottom ? prev : nearBottom));
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!chatEndRef.current || !isPinnedToLatest) return;
-    try {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    } catch (error) {
-      console.debug('Chat scroll error:', error);
-    }
-  }, [debateSession.messages, isPinnedToLatest]);
 
   useEffect(() => {
     if (
@@ -760,6 +734,7 @@ export default function Debate() {
                 )?.provider}
                 progress={debateStreaming.progress}
                 estimatedCost={debateStreaming.estimatedCost}
+                disableAutoScroll
               />
             )}
 
