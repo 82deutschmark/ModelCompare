@@ -1,10 +1,8 @@
-/**
- * Custom hook for managing debate setup state
- *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Manages debate setup state including topic selection, model configuration, and UI state
- * SRP/DRY check: Pass - Single responsibility for debate setup state management
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-02-14 00:10 UTC
+ * PURPOSE: Manage debate setup state including dynamic topic defaults, model configuration, and setup visibility controls.
+ * SRP/DRY check: Pass - Hook encapsulates setup state management without duplicating debate session logic.
  */
 
 import { useState } from 'react';
@@ -55,14 +53,13 @@ const initialModelConfig: ModelConfiguration = {
   enableStructuredOutput: false
 };
 
-const DEFAULT_TOPIC_ID = 'knights-of-the-sun';
 const DEFAULT_MODEL_1_ID = 'gpt-5-mini-2025-08-07';
 const DEFAULT_MODEL_2_ID = 'gpt-5-nano-2025-08-07';
 const DEFAULT_INTENSITY = 3;
 
 export function useDebateSetup(): DebateSetupState {
   // Topic state
-  const [selectedTopic, setSelectedTopic] = useState(DEFAULT_TOPIC_ID);
+  const [selectedTopic, setSelectedTopic] = useState('');
   const [customTopic, setCustomTopic] = useState('');
   const [useCustomTopic, setUseCustomTopic] = useState(false);
 
@@ -83,7 +80,7 @@ export function useDebateSetup(): DebateSetupState {
 
   // Reset function for setup state
   const resetSetup = () => {
-    setSelectedTopic(DEFAULT_TOPIC_ID);
+    setSelectedTopic('');
     setCustomTopic('');
     setUseCustomTopic(false);
     setAdversarialLevel(DEFAULT_INTENSITY);
