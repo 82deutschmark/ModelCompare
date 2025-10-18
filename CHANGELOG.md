@@ -1,10 +1,21 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
- * Date: 2025-10-18 00:50 UTC
+ * Date: 2025-10-19 00:34 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.13] - 2025-10-19
+
+### Changed
+- **Debate Prompt Variables:** Propagated the debate role through streaming provider prompts and updated
+  `tests/server/debate-handshake.test.ts` to assert the role metadata reaches providers.
+- **Documentation Sync:** Refreshed `client/public/docs/debate-prompts.md` so the documented prompt
+  variables (role, position, topic, intensity) match the server contract and clarified rebuttal message
+  handling.
+- **Planning Artifact:** Extended `docs/2025-10-18-plan-debate-variables.md` to cover documentation and
+  changelog follow-ups for traceability.
 
 ## [Version 0.4.12] - 2025-10-18
 
