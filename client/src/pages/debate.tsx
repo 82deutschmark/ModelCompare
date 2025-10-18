@@ -1,9 +1,8 @@
 /*
- * Author: GPT-5 Codex
- * Date: 2025-10-17 22:58 UTC
- * PURPOSE: Debate mode orchestrator that hydrates persisted turn history, reconciles streaming updates, and coordinates the
- *          modern streaming handshake while keeping exports, history, and jury controls aligned.
- * SRP/DRY check: Pass - Component composes hooks/services to manage debate state without duplicating underlying logic.
+ * Author: gpt-5-codex
+ * Date: 2025-02-14 00:12 UTC
+ * PURPOSE: Orchestrate debate mode, hydrate persisted history, manage streaming, and ensure setup defaults select a valid topic.
+ * SRP/DRY check: Pass - Component composes specialized hooks/services without overlapping their responsibilities.
  */
 
 import { useRef, useEffect, useMemo } from "react";
@@ -52,6 +51,10 @@ export default function Debate() {
 
   const { debateData, loading: debateLoading, error: debateError, generateDebatePrompts } = useDebatePrompts();
   const { exportMarkdown, copyToClipboard } = useDebateExport();
+
+  const setupSelectedTopic = debateSetup.selectedTopic;
+  const setupUseCustomTopic = debateSetup.useCustomTopic;
+  const setSetupSelectedTopic = debateSetup.setSelectedTopic;
 
   const { data: models = [] } = useQuery({
     queryKey: ['/api/models'],
@@ -167,6 +170,19 @@ export default function Debate() {
   useEffect(() => {
     loadDebateSessionsMutation.mutate();
   }, []);
+
+  useEffect(() => {
+    if (!debateData?.topics.length) {
+      return;
+    }
+    if (setupUseCustomTopic) {
+      return;
+    }
+    const hasValidSelection = debateData.topics.some(topic => topic.id === setupSelectedTopic);
+    if (!hasValidSelection) {
+      setSetupSelectedTopic(debateData.topics[0].id);
+    }
+  }, [debateData, setupSelectedTopic, setupUseCustomTopic, setSetupSelectedTopic]);
 
 
 
