@@ -20,9 +20,13 @@ Confirm the debate streaming flow actually triggers GPT-5 mini and GPT-5 nano pr
 - [x] Inspect model capability lookups for GPT-5 mini/nano in `model.service` and provider registry.
 - [x] Exercise the debate streaming endpoint locally with real models and capture server logs.
 - [x] Verify the client receives streaming chunks or diagnose failure response handling.
-- [ ] Summarize findings with recommended remediation steps.
+- [x] Summarize findings with recommended remediation steps.
 
 ## Deliverables
 - Reproduction steps with observed behavior.
 - Root cause analysis or prioritized hypotheses with code references.
 - Recommended fixes or configuration changes ready for implementation.
+
+## Findings (2025-10-18)
+- Streaming failures traced to OpenAI's Responses API rejecting the `temperature` parameter for GPT-5 family models; removing the field restores GPT-5 mini/nano streaming.
+- Defaulting debate setup to GPT-5 Mini vs GPT-5 Nano on Topic 13 keeps the regression fixture one click away for fast streaming validation.

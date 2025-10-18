@@ -16,6 +16,10 @@
 ### Changed
 - **Legacy Debate Endpoint Hardening:** Updated `server/routes/debate.routes.ts` so direct `POST /api/debate/stream` calls return
   `410 Gone` with upgrade guidance, ensuring no caller silently reverts to the retired single-request flow.
+- **Debate QA Defaults:** Preselected GPT-5 Mini (affirmative), GPT-5 Nano (negative), and the preset Topic 13 inside `useDebateSetup` so the debate
+  page boots with the streaming regression fixture without extra clicks.
+- **OpenAI Temperature Guardrails:** Updated `server/providers/openai.ts` to omit the `temperature` parameter for GPT-5 Responses API models while
+  preserving the knob for providers that still honour it.
 
 ### Documentation
 - **Streaming Validation Plan:** Captured regression goals and verification steps in

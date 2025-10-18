@@ -55,22 +55,27 @@ const initialModelConfig: ModelConfiguration = {
   enableStructuredOutput: false
 };
 
+const DEFAULT_TOPIC_ID = 'knights-of-the-sun';
+const DEFAULT_MODEL_1_ID = 'gpt-5-mini-2025-08-07';
+const DEFAULT_MODEL_2_ID = 'gpt-5-nano-2025-08-07';
+const DEFAULT_INTENSITY = 3;
+
 export function useDebateSetup(): DebateSetupState {
   // Topic state
-  const [selectedTopic, setSelectedTopic] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState(DEFAULT_TOPIC_ID);
   const [customTopic, setCustomTopic] = useState('');
   const [useCustomTopic, setUseCustomTopic] = useState(false);
 
   // Adversarial level
-  const [adversarialLevel, setAdversarialLevel] = useState(3);
+  const [adversarialLevel, setAdversarialLevel] = useState(DEFAULT_INTENSITY);
 
   // Model selection
-  const [model1Id, setModel1Id] = useState('');
-  const [model2Id, setModel2Id] = useState('');
+  const [model1Id, setModel1Id] = useState(DEFAULT_MODEL_1_ID);
+  const [model2Id, setModel2Id] = useState(DEFAULT_MODEL_2_ID);
 
   // Model configurations
-  const [model1Config, setModel1Config] = useState<ModelConfiguration>(initialModelConfig);
-  const [model2Config, setModel2Config] = useState<ModelConfiguration>(initialModelConfig);
+  const [model1Config, setModel1Config] = useState<ModelConfiguration>({ ...initialModelConfig });
+  const [model2Config, setModel2Config] = useState<ModelConfiguration>({ ...initialModelConfig });
 
   // UI state
   const [showSetup, setShowSetup] = useState(true);
@@ -78,14 +83,14 @@ export function useDebateSetup(): DebateSetupState {
 
   // Reset function for setup state
   const resetSetup = () => {
-    setSelectedTopic('');
+    setSelectedTopic(DEFAULT_TOPIC_ID);
     setCustomTopic('');
     setUseCustomTopic(false);
-    setAdversarialLevel(3);
-    setModel1Id('');
-    setModel2Id('');
-    setModel1Config(initialModelConfig);
-    setModel2Config(initialModelConfig);
+    setAdversarialLevel(DEFAULT_INTENSITY);
+    setModel1Id(DEFAULT_MODEL_1_ID);
+    setModel2Id(DEFAULT_MODEL_2_ID);
+    setModel1Config({ ...initialModelConfig });
+    setModel2Config({ ...initialModelConfig });
     setShowSetup(true);
     setShowSystemPrompts(false);
   };
