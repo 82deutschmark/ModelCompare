@@ -108,8 +108,8 @@ Deploy maximum rhetorical force. Use sharp language, devastating critiques, and 
 - **Negative:** Oppose nuclear power in favor of renewables
 
 ### 13. Knights of the Sun
-**Proposition:** "The Knights of the Sun in this episode had a valid point about self sacrifice for the most important job in the universe. Likewise  In the episode Morty balked at this idea, but it has merit and should be debated."
-- **Affirmative:** Let it be resolved that in order to assume the office of US President, one must willingly and publicly stump his stem and cut off his own dick.
+**Proposition:** "The Knights of the Sun had a valid point about self sacrifice for the most important job in the universe. Let it be resolved that in order to assume the office of US President, one must willingly and publicly stump his stem and cut off his own dick."
+- **Affirmative:** This is a valid point and should be debated. The willing sacrifice of a small insignificant part of one's own body is a noble act and proves one's commitment and worthiness to serve as President of the United States.
 - **Negative:** That is barbaric and reprehensible.
 
 ## Debate Flow Templates
