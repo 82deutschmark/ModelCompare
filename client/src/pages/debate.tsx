@@ -326,15 +326,6 @@ export default function Debate() {
   ]);
 
   const continueDebate = async () => {
-    if (debateSession.hasUnresolvedJuryTasks()) {
-      toast({
-        title: "Jury Review Required",
-        description: "Complete jury scoring and notes before continuing to the next turn.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!debateSession.isFloorOpen()) {
       toast({
         title: "Floor Closed",
@@ -500,11 +491,9 @@ export default function Debate() {
   const currentPhase = debateSession.getCurrentPhase();
   const floorOpen = debateSession.isFloorOpen();
   const juryPending = debateSession.hasUnresolvedJuryTasks();
-  const continueDisabledReason = juryPending
-    ? 'Complete jury scoring before continuing to the next turn.'
-    : !floorOpen
-      ? 'The debate floor is closed. Reopen the floor to allow the next speaker.'
-      : undefined;
+  const continueDisabledReason = !floorOpen
+    ? 'The debate floor is closed. Reopen the floor to allow the next speaker.'
+    : undefined;
 
   const handleAdvancePhase = () => {
     if (juryPending) {

@@ -6,6 +6,12 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.11] - 2025-10-17
+
+### Changed
+- **Debate Jury Workflow:** Updated `client/src/pages/debate.tsx` and `client/src/components/debate/DebateControls.tsx` so debate continuations and phase controls no longer block on jury review, while keeping the reminder copy non-blocking.
+- **Messaging Tone:** Softened jury-related alerts in `DebateControls` to frame annotations as optional follow-ups instead of hard requirements.
+
 ## [Version 0.4.10] - 2025-10-18
 
 ### Added

@@ -1,6 +1,6 @@
 // * Author: gpt-5-codex
 // * Date: 2025-10-17 19:26 UTC
-// * PURPOSE: Expand debate controls with phase toggles, floor status, and jury review gating for next turns.
+// * PURPOSE: Expand debate controls with phase toggles, floor status, and optional jury review cues for upcoming turns.
 // * SRP/DRY check: Pass - Still orchestrates debate-level controls without absorbing other responsibilities.
 /**
  * Debate controls component for managing debate flow
@@ -53,13 +53,11 @@ export function DebateControls({
     CLOSING_ARGUMENTS: 'Closing Arguments',
   };
   const isFinalPhase = currentPhase === 'CLOSING_ARGUMENTS';
-  const advanceDisabledReason = hasJuryPending
-    ? 'Resolve jury review tasks before advancing the debate phase.'
-    : isPending
-      ? 'Wait for the current response to finish streaming.'
-      : isFinalPhase
-        ? 'Closing arguments reached; no further phases to advance to.'
-        : undefined;
+  const advanceDisabledReason = isPending
+    ? 'Wait for the current response to finish streaming.'
+    : isFinalPhase
+      ? 'Closing arguments reached; no further phases to advance to.'
+      : undefined;
 
   return (
     <div className="space-y-3">
@@ -94,7 +92,7 @@ export function DebateControls({
             onClick={onAdvancePhase}
             size="sm"
             variant="secondary"
-            disabled={hasJuryPending || isPending || isFinalPhase}
+            disabled={isPending || isFinalPhase}
             title={advanceDisabledReason}
           >
             <Gavel className="w-4 h-4 mr-2" />
@@ -157,7 +155,7 @@ export function DebateControls({
         {hasJuryPending && (
           <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-300">
             <AlertTriangle className="w-4 h-4" />
-            Jury review required before the next turn.
+            Jury review pending. Capture annotations when convenient.
           </div>
         )}
         {!hasJuryPending && isFinalPhase && (
