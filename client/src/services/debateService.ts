@@ -8,7 +8,6 @@
  */
 
 import type { DebateInstructions } from '@/lib/promptParser';
-import { replaceTemplatePlaceholders } from '@/lib/templateTokens';
 import type { AIModel } from '@/types/ai-models';
 import { applyTemplateReplacements, formatOpponentQuote } from '@/lib/debatePromptUtils';
 
@@ -53,26 +52,17 @@ export class DebateService {
   generatePrompts() {
     const topicText = this.useCustomTopic
       ? this.customTopic
-      : (this.debateData?.topics.find(t => t.id === this.selectedTopic)?.proposition || '');
+      : (this.debateData?.topics.find(t => t.id === this.selectedTopic)?.proposition || "");
 
-<<<<<<< Updated upstream
-    const baseTemplate = applyTemplateReplacements(this.debateData?.baseTemplate || '', {
-=======
-    const baseTemplate = this.debateData?.baseTemplate || '';
-    const baseWithContext = replaceTemplatePlaceholders(baseTemplate, {
->>>>>>> Stashed changes
+    const baseTemplate = applyTemplateReplacements(this.debateData?.baseTemplate || "", {
       topic: topicText,
       intensity: String(this.adversarialLevel),
     });
 
-    const intensityText = this.debateData?.intensities?.[this.adversarialLevel] || '';
+    const intensityText = this.debateData?.intensities?.[this.adversarialLevel] || "";
 
-    const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') => {
-<<<<<<< Updated upstream
-      const resolved = applyTemplateReplacements(baseTemplate, {
-        role,
-        position,
-      });
+    const roleBlock = (role: "AFFIRMATIVE" | "NEGATIVE", position: "FOR" | "AGAINST") => {
+      const resolved = applyTemplateReplacements(baseTemplate, { role, position });
       return intensityText ? `${resolved}\n\n${intensityText}` : resolved;
     };
 
@@ -92,35 +82,11 @@ Structure your rebuttal by:
     });
 
     const rebuttalTemplate = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
-=======
-      const withRole = replaceTemplatePlaceholders(baseWithContext, {
-        role,
-        position,
-      });
-      return intensityText ? `${withRole}\n\n${intensityText}` : withRole;
-    };
-
-    const rebuttalTemplate = this.debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
-
-Respond as the {ROLE} debater following Robert's Rules of Order:
-1. Address your opponent's specific points
-2. Refute their arguments with evidence and logic
-3. Strengthen your own position
-4. Use the adversarial intensity level: {INTENSITY}`;
-    const rebuttalBase = replaceTemplatePlaceholders(rebuttalTemplate, {
-      intensity: String(this.adversarialLevel),
-    });
-    const finalRebuttal = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
->>>>>>> Stashed changes
 
     return {
-      affirmativePrompt: roleBlock('AFFIRMATIVE', 'FOR'),
-      negativePrompt: roleBlock('NEGATIVE', 'AGAINST'),
-<<<<<<< Updated upstream
+      affirmativePrompt: roleBlock("AFFIRMATIVE", "FOR"),
+      negativePrompt: roleBlock("NEGATIVE", "AGAINST"),
       rebuttalTemplate,
-=======
-      rebuttalTemplate: finalRebuttal,
->>>>>>> Stashed changes
       topicText,
     };
   }
@@ -130,7 +96,6 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     const prompts = this.generatePrompts();
     const currentTopic = prompts.topicText;
 
-<<<<<<< Updated upstream
     const opponentQuote = formatOpponentQuote(lastMessage);
 
     const resolvedTemplate = applyTemplateReplacements(prompts.rebuttalTemplate, {
@@ -138,18 +103,10 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
       position,
       topic: currentTopic,
       intensity: String(this.adversarialLevel),
+      response: lastMessage,
     });
 
     return `${opponentQuote}${resolvedTemplate}`;
-=======
-    return replaceTemplatePlaceholders(prompts.rebuttalTemplate, {
-      response: lastMessage,
-      role,
-      position,
-      original_prompt: currentTopic,
-      topic: currentTopic,
-    });
->>>>>>> Stashed changes
   }
 
   // Get next debater model ID

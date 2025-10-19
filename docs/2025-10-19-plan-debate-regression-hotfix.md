@@ -16,22 +16,13 @@ Restore the debate page so it renders without runtime errors and ensure prompt g
 - Backend flow remains functional; we need client fixes plus validation.
 
 ## Task Checklist
-<<<<<<< Updated upstream
-- [ ] Guard all render-time usages of `debateService.getNextDebater` in `client/src/pages/debate.tsx` by relying on the memoized `nextSpeakerId`.
-- [ ] Update `DebateService.generatePrompts`, `DebateService.buildRebuttalPrompt`, and `useDebatePrompts.generateDebatePrompts` to replace both lowercase and uppercase template variables.
-- [ ] Run `npm run check` and `npm run build` to verify type safety and production build stability.
-- [ ] Smoke test debate startup (create session, stream opening, continue turn) after code changes.
-- [ ] Update `CHANGELOG.md` with a new patch release entry summarizing the fixes.
-- [ ] Commit changes with a detailed message after validation.
-=======
 - [x] Guard all render-time usages of `debateService.getNextDebater` in `client/src/pages/debate.tsx` by relying on the memoized `nextSpeakerId`.
-- [x] Update `DebateService.generatePrompts`, `DebateService.buildRebuttalPrompt`, and `useDebatePrompts.generateDebatePrompts` to replace both lowercase and uppercase template variables.
+- [x] Update `DebateService.generatePrompts`, `DebateService.buildRebuttalPrompt`, and `useDebatePrompts.generateDebatePrompts` to replace both lowercase and uppercase template variables while preserving opponent quote formatting.
 - [x] Introduce a global MutationObserver guard so third-party extensions cannot crash the page before React mounts.
 - [x] Run `npm run check` and `npm run build` to verify type safety and production build stability.
 - [ ] Smoke test debate startup (create session, stream opening, continue turn) after code changes.
 - [x] Update `CHANGELOG.md` with a new patch release entry summarizing the fixes.
 - [x] Commit changes with a detailed message after validation.
->>>>>>> Stashed changes
 
 ## Risk Notes
 - Ensure the template replacements remain backwards-compatible with any unconverted placeholders.
