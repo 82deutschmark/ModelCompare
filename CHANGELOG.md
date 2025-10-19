@@ -6,6 +6,15 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.18] - 2025-10-19 03:58 UTC
+
+### Fixed
+- **Debate Session Hydration:** Stopped `/api/debate/session/:id` refetches from wiping in-progress transcripts by skipping stale turn histories and preserving local response tracking until the server catches up.
+- **Setup Panel Regression:** Guarded debate setup state so the stage view no longer collapses back to the setup panel while the first stream is in flight.
+
+### Documentation
+- Logged the debugging and mitigation steps in `docs/2025-10-19-plan-debate-regression.md`.
+
 ## [Version 0.4.17] - 2025-10-19 03:18 UTC
 
 ### Fixed

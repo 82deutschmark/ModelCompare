@@ -602,54 +602,60 @@ export function useDebateSession(): DebateSessionState {
       });
 
       setDebateSessionId(session.id);
-      responseRegistryRef.current.clear();
 
       const normalizedTurns = session.turnHistory.map(turn => {
         const modelName = modelLookup.get(turn.modelId)?.name ?? turn.modelName ?? turn.modelId;
         return normalizeTurn({ ...turn, modelName });
       });
 
-      normalizedTurns.forEach(turn => {
-        if (turn.responseId) {
-          responseRegistryRef.current.add(turn.responseId);
-        }
-      });
+      const hasTurns = normalizedTurns.length > 0;
 
-      normalizedTurns.sort((a, b) => a.turn - b.turn);
-      setTurnHistory(normalizedTurns);
+      if (hasTurns) {
+        responseRegistryRef.current.clear();
 
-      setMessagesState(() => {
-        const mapped = normalizedTurns.map(turn => {
-          const fallbackName = modelLookup.get(turn.modelId)?.name ?? turn.modelName ?? 'Model';
-          const message = buildMessageFromTurn(turn, fallbackName);
-          const capabilities = turn.reasoning
-            ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true }
-            : { reasoning: false, multimodal: false, functionCalling: false, streaming: true };
-
-          return {
-            ...message,
-            modelConfig: {
-              capabilities,
-              pricing: {
-                inputPerMillion: 0,
-                outputPerMillion: 0,
-              },
-            },
-          };
+        normalizedTurns.forEach(turn => {
+          if (turn.responseId) {
+            responseRegistryRef.current.add(turn.responseId);
+          }
         });
 
-        return sortMessages(mapped);
-      });
+        normalizedTurns.sort((a, b) => a.turn - b.turn);
+        setTurnHistory(normalizedTurns);
 
-      setModelALastResponseId(session.model1ResponseIds?.at(-1) ?? null);
-      setModelBLastResponseId(session.model2ResponseIds?.at(-1) ?? null);
+        setMessagesState(() => {
+          const mapped = normalizedTurns.map(turn => {
+            const fallbackName = modelLookup.get(turn.modelId)?.name ?? turn.modelName ?? 'Model';
+            const message = buildMessageFromTurn(turn, fallbackName);
+            const capabilities = turn.reasoning
+              ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true }
+              : { reasoning: false, multimodal: false, functionCalling: false, streaming: true };
+
+            return {
+              ...message,
+              modelConfig: {
+                capabilities,
+                pricing: {
+                  inputPerMillion: 0,
+                  outputPerMillion: 0,
+                },
+              },
+            };
+          });
+
+          return sortMessages(mapped);
+        });
+
+        setModelALastResponseId(session.model1ResponseIds?.at(-1) ?? null);
+        setModelBLastResponseId(session.model2ResponseIds?.at(-1) ?? null);
+
+        const highestTurn = normalizedTurns.reduce((max, turn) => Math.max(max, turn.turn), 0);
+        setCurrentRound(highestTurn);
+      }
 
       if (session.jurySummary) {
         setJurySummary(session.jurySummary);
       }
 
-      const highestTurn = normalizedTurns.reduce((max, turn) => Math.max(max, turn.turn), 0);
-      setCurrentRound(highestTurn);
       setIsRunning(false);
     },
     []
