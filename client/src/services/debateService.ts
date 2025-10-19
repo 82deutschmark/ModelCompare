@@ -10,6 +10,7 @@
 import type { DebateInstructions } from '@/lib/promptParser';
 import { replaceTemplatePlaceholders } from '@/lib/templateTokens';
 import type { AIModel } from '@/types/ai-models';
+import { applyTemplateReplacements, formatOpponentQuote } from '@/lib/debatePromptUtils';
 
 export interface DebateServiceConfig {
   debateData: DebateInstructions | null;
@@ -54,8 +55,7 @@ export class DebateService {
       ? this.customTopic
       : (this.debateData?.topics.find(t => t.id === this.selectedTopic)?.proposition || '');
 
-    const baseTemplate = this.debateData?.baseTemplate || '';
-    const baseWithContext = replaceTemplatePlaceholders(baseTemplate, {
+    const baseTemplate = applyTemplateReplacements(this.debateData?.baseTemplate || '', {
       topic: topicText,
       intensity: String(this.adversarialLevel),
     });
@@ -63,29 +63,34 @@ export class DebateService {
     const intensityText = this.debateData?.intensities?.[this.adversarialLevel] || '';
 
     const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') => {
-      const withRole = replaceTemplatePlaceholders(baseWithContext, {
+      const resolved = applyTemplateReplacements(baseTemplate, {
         role,
         position,
       });
-      return intensityText ? `${withRole}\n\n${intensityText}` : withRole;
+      return intensityText ? `${resolved}\n\n${intensityText}` : resolved;
     };
 
-    const rebuttalTemplate = this.debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
+    const fallbackRebuttal = `You are responding to your opponent as the {role} debater arguing {position} the proposition: "{topic}".
 
-Respond as the {ROLE} debater following Robert's Rules of Order:
-1. Address your opponent's specific points
-2. Refute their arguments with evidence and logic
-3. Strengthen your own position
-4. Use the adversarial intensity level: {INTENSITY}`;
-    const rebuttalBase = replaceTemplatePlaceholders(rebuttalTemplate, {
+Debate intensity: {intensity}
+
+Structure your rebuttal by:
+1. Identifying the key weaknesses in your opponent's argument
+2. Presenting three strong counter-arguments with evidence
+3. Reinforcing your original position with additional supporting evidence
+4. Challenging their main claims with factual rebuttals`;
+
+    const rebuttalBase = applyTemplateReplacements(this.debateData?.templates.rebuttal || fallbackRebuttal, {
+      topic: topicText,
       intensity: String(this.adversarialLevel),
     });
-    const finalRebuttal = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
+
+    const rebuttalTemplate = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
 
     return {
       affirmativePrompt: roleBlock('AFFIRMATIVE', 'FOR'),
       negativePrompt: roleBlock('NEGATIVE', 'AGAINST'),
-      rebuttalTemplate: finalRebuttal,
+      rebuttalTemplate,
       topicText,
     };
   }
@@ -95,13 +100,16 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     const prompts = this.generatePrompts();
     const currentTopic = prompts.topicText;
 
-    return replaceTemplatePlaceholders(prompts.rebuttalTemplate, {
-      response: lastMessage,
+    const opponentQuote = formatOpponentQuote(lastMessage);
+
+    const resolvedTemplate = applyTemplateReplacements(prompts.rebuttalTemplate, {
       role,
       position,
-      original_prompt: currentTopic,
       topic: currentTopic,
+      intensity: String(this.adversarialLevel),
     });
+
+    return `${opponentQuote}${resolvedTemplate}`;
   }
 
   // Get next debater model ID

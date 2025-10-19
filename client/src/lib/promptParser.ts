@@ -36,7 +36,7 @@ export interface DebateFlowTemplates {
 }
 
 export interface DebateInstructions {
-  baseTemplate: string; // contains placeholders like {ROLE},{POSITION},{TOPIC},{INTENSITY}
+  baseTemplate: string; // contains placeholders like {role},{position},{topic},{intensity}
   intensities: Record<number, string>; // 1..4
   topics: DebateTopic[];
   templates: DebateFlowTemplates;

@@ -6,6 +6,15 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.14] - 2025-10-19
+
+### Fixed
+- **Debate Prompt Tokens:** Realigned `useDebatePrompts`, `debateService`, and shared utilities to replace lowercase `{role}`,
+  `{position}`, `{topic}`, and `{intensity}` variables so generated prompts match the refreshed documentation and backend
+  contract.
+- **Rebuttal Assembly:** Added shared prompt helpers and explicit opponent quote formatting to restore rebuttal templates now
+  that `{response}` placeholders are deprecated.
+
 ## [Version 0.4.13] - 2025-10-19
 
 ### Changed

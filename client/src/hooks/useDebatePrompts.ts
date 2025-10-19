@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { parseDebatePromptsFromMarkdown, type DebateInstructions } from '@/lib/promptParser';
-import { replaceTemplatePlaceholders } from '@/lib/templateTokens';
+import { applyTemplateReplacements } from '@/lib/debatePromptUtils';
 
 export interface DebatePromptsState {
   debateData: DebateInstructions | null;
@@ -65,8 +65,7 @@ export function useDebatePrompts(): DebatePromptsState {
       ? customTopic
       : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || '');
 
-    const baseTemplate = debateData?.baseTemplate || '';
-    const baseWithContext = replaceTemplatePlaceholders(baseTemplate, {
+    const baseTemplate = applyTemplateReplacements(debateData?.baseTemplate || '', {
       topic: topicText,
       intensity: String(adversarialLevel),
     });
@@ -74,29 +73,34 @@ export function useDebatePrompts(): DebatePromptsState {
     const intensityText = debateData?.intensities?.[adversarialLevel] || '';
 
     const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') => {
-      const withRole = replaceTemplatePlaceholders(baseWithContext, {
+      const resolved = applyTemplateReplacements(baseTemplate, {
         role,
         position,
       });
-      return intensityText ? `${withRole}\n\n${intensityText}` : withRole;
+      return intensityText ? `${resolved}\n\n${intensityText}` : resolved;
     };
 
-    const rebuttalTemplate = debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
+    const fallbackRebuttal = `You are responding to your opponent as the {role} debater arguing {position} the proposition: "{topic}".
 
-Respond as the {ROLE} debater following Robert's Rules of Order:
-1. Address your opponent's specific points
-2. Refute their arguments with evidence and logic
-3. Strengthen your own position
-4. Use the adversarial intensity level: {INTENSITY}`;
-    const rebuttalBase = replaceTemplatePlaceholders(rebuttalTemplate, {
+Debate intensity: {intensity}
+
+Structure your rebuttal by:
+1. Identifying the key weaknesses in your opponent's argument
+2. Presenting three strong counter-arguments with evidence
+3. Reinforcing your original position with additional supporting evidence
+4. Challenging their main claims with factual rebuttals`;
+
+    const rebuttalBase = applyTemplateReplacements(debateData?.templates.rebuttal || fallbackRebuttal, {
+      topic: topicText,
       intensity: String(adversarialLevel),
     });
-    const finalRebuttal = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
+
+    const rebuttalTemplate = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
 
     return {
       affirmativePrompt: roleBlock('AFFIRMATIVE', 'FOR'),
       negativePrompt: roleBlock('NEGATIVE', 'AGAINST'),
-      rebuttalTemplate: finalRebuttal,
+      rebuttalTemplate,
       topicText,
     };
   };
