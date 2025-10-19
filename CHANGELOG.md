@@ -6,6 +6,15 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.17] - 2025-10-19 03:18 UTC
+
+### Fixed
+- **Debate Prompts Path:** Updated `server/routes/debate.routes.ts` to resolve `client/public/docs/debate-prompts.md` from the process working directory so production bundles continue loading intensity descriptors after moving to `dist/`.
+- **Error Visibility:** Expanded debate prompt load logging to include the resolved path for faster diagnosis when assets are missing.
+
+### Documentation
+- Captured the remediation strategy in `docs/2025-10-19-plan-debate-prompts-path.md`.
+
 ## [Version 0.4.16] - 2025-10-19 01:10 UTC
 
 ### Changed

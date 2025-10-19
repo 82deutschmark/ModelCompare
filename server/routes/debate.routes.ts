@@ -1,15 +1,15 @@
 /*
  * Author: GPT-5 Codex
- * Date: 2025-10-18 00:55 UTC
+ * Date: 2025-10-19 03:17 UTC
  * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
- *          SSE dispatcher, shared streaming logic, and heartbeat keepalives so modern React clients can
- *          consume Responses API streams without premature proxy disconnects while persisting debate turns.
+ *          SSE dispatcher, shared streaming logic, heartbeat keepalives, and resilient asset loading so
+ *          modern React clients can consume Responses API streams without premature proxy disconnects while
+ *          persisting debate turns.
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
- *                across init and SSE entry points.
+ *                across init and SSE entry points, including prompt asset resolution.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Router } from "express";
 import {
   extractDebateInstructions,
@@ -25,12 +25,8 @@ import { StreamHarness } from "../streaming/stream-harness.js";
 
 const router = Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const DEBATE_PROMPTS_PATH = path.resolve(
-  __dirname,
-  "..",
-  "..",
+  process.cwd(),
   "client",
   "public",
   "docs",
@@ -51,7 +47,10 @@ function loadDebateInstructions(): DebateInstructions | null {
     return cachedDebateInstructions;
   } catch (error) {
     if (!debateInstructionsLoadErrorLogged) {
-      console.error("Failed to load debate prompts markdown:", error);
+      console.error(
+        `Failed to load debate prompts markdown at ${DEBATE_PROMPTS_PATH}:`,
+        error,
+      );
       debateInstructionsLoadErrorLogged = true;
     }
     return null;
