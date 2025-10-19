@@ -311,6 +311,24 @@ export default function Debate() {
 
   useEffect(() => {
     if (!sessionDetailsQuery.data || models.length === 0) return;
+
+    const incomingTurnCount = sessionDetailsQuery.data.turnHistory?.length ?? 0;
+    const localMessageCount = debateSession.messages.length;
+    const localTurnCount = debateSession.turnHistory.length;
+    const isSameSession = sessionDetailsQuery.data.id === debateSession.debateSessionId;
+
+    if (
+      isSameSession &&
+      incomingTurnCount > 0 &&
+      incomingTurnCount < Math.max(localMessageCount, localTurnCount)
+    ) {
+      return;
+    }
+
+    if (isSameSession && incomingTurnCount === 0 && (localMessageCount > 0 || localTurnCount > 0)) {
+      return;
+    }
+
     const modelLookup = new Map(models.map(model => [model.id, { name: model.name, provider: model.provider }]));
     debateSession.hydrateFromSession(sessionDetailsQuery.data, modelLookup);
 
@@ -321,7 +339,13 @@ export default function Debate() {
     debateSetup.setSelectedTopic('custom');
     debateSetup.setAdversarialLevel(sessionDetailsQuery.data.adversarialLevel);
     debateSetup.setShowSetup(false);
-  }, [sessionDetailsQuery.data, models]);
+  }, [
+    sessionDetailsQuery.data,
+    models,
+    debateSession.debateSessionId,
+    debateSession.messages.length,
+    debateSession.turnHistory.length,
+  ]);
 
   useEffect(() => {
     if (!debateStreaming.responseId || !debateSession.debateSessionId) return;
