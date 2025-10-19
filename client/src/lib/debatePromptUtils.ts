@@ -5,7 +5,7 @@
  * SRP/DRY check: Pass - Centralizes prompt token handling without duplicating business logic in hooks or services.
  */
 
-import { replaceTemplatePlaceholders } from "./templateTokens";
+import { replaceTemplatePlaceholders } from "@shared/template-tokens.ts";
 
 export type DebateTemplateReplacements = Record<string, string>;
 

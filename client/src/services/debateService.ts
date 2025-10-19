@@ -10,6 +10,7 @@
 import type { DebateInstructions } from '@/lib/promptParser';
 import type { AIModel } from '@/types/ai-models';
 import { applyTemplateReplacements, formatOpponentQuote } from '@/lib/debatePromptUtils';
+import { getDebateIntensityDescriptor } from '@shared/debate-instructions.ts';
 
 export interface DebateServiceConfig {
   debateData: DebateInstructions | null;
@@ -54,16 +55,22 @@ export class DebateService {
       ? this.customTopic
       : (this.debateData?.topics.find(t => t.id === this.selectedTopic)?.proposition || "");
 
+    const intensityDescriptor = getDebateIntensityDescriptor(this.debateData, this.adversarialLevel);
+    const intensityFullText = intensityDescriptor?.fullText || `Level ${this.adversarialLevel}`;
+    const intensityLabel = intensityDescriptor?.label || `Level ${this.adversarialLevel}`;
+    const intensitySummary = intensityDescriptor?.summary || "";
+
     const baseTemplate = applyTemplateReplacements(this.debateData?.baseTemplate || "", {
       topic: topicText,
-      intensity: String(this.adversarialLevel),
+      intensity: intensityFullText,
+      intensity_level: String(this.adversarialLevel),
+      intensity_label: intensityLabel,
+      intensity_summary: intensitySummary,
     });
-
-    const intensityText = this.debateData?.intensities?.[this.adversarialLevel] || "";
 
     const roleBlock = (role: "AFFIRMATIVE" | "NEGATIVE", position: "FOR" | "AGAINST") => {
       const resolved = applyTemplateReplacements(baseTemplate, { role, position });
-      return intensityText ? `${resolved}\n\n${intensityText}` : resolved;
+      return resolved;
     };
 
     const fallbackRebuttal = `You are responding to your opponent as the {role} debater arguing {position} the proposition: "{topic}".
@@ -76,12 +83,13 @@ Structure your rebuttal by:
 3. Reinforcing your original position with additional supporting evidence
 4. Challenging their main claims with factual rebuttals`;
 
-    const rebuttalBase = applyTemplateReplacements(this.debateData?.templates.rebuttal || fallbackRebuttal, {
+    const rebuttalTemplate = applyTemplateReplacements(this.debateData?.templates.rebuttal || fallbackRebuttal, {
       topic: topicText,
-      intensity: String(this.adversarialLevel),
+      intensity: intensityFullText,
+      intensity_level: String(this.adversarialLevel),
+      intensity_label: intensityLabel,
+      intensity_summary: intensitySummary,
     });
-
-    const rebuttalTemplate = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
 
     return {
       affirmativePrompt: roleBlock("AFFIRMATIVE", "FOR"),
@@ -98,11 +106,19 @@ Structure your rebuttal by:
 
     const opponentQuote = formatOpponentQuote(lastMessage);
 
+    const intensityDescriptor = getDebateIntensityDescriptor(this.debateData, this.adversarialLevel);
+    const intensityFullText = intensityDescriptor?.fullText || `Level ${this.adversarialLevel}`;
+    const intensityLabel = intensityDescriptor?.label || `Level ${this.adversarialLevel}`;
+    const intensitySummary = intensityDescriptor?.summary || '';
+
     const resolvedTemplate = applyTemplateReplacements(prompts.rebuttalTemplate, {
       role,
       position,
       topic: currentTopic,
-      intensity: String(this.adversarialLevel),
+      intensity: intensityFullText,
+      intensity_level: String(this.adversarialLevel),
+      intensity_label: intensityLabel,
+      intensity_summary: intensitySummary,
       response: lastMessage,
     });
 

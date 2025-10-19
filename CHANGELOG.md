@@ -6,6 +6,17 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.16] - 2025-10-19 01:10 UTC
+
+### Changed
+- **Debate Prompt Context:** Refactored `server/routes/debate.routes.ts` to load shared debate instructions, send developer/system/user
+  messages without redundancy, and forward textual adversarial guidance in `prompt.variables`.
+- **Shared Prompt Utilities:** Moved debate prompt parsing and template token replacement into `shared/` so both the client hook
+  and server streaming route reuse the same intensity descriptors and placeholder handling.
+
+### Documentation
+- Logged the debate intensity alignment plan in `docs/2025-10-19-plan-debate-intensity-alignment.md` for traceability.
+
 ## [Version 0.4.15] - 2025-10-18 22:20 UTC
 
 ### Fixed
