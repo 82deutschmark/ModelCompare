@@ -52,7 +52,7 @@ const streamSessionRegistry = new StreamSessionRegistry<DebateStreamPayload>(STR
 
 const STORED_DEBATE_PROMPT: { id: string; version: string } = {
   id: "pmpt_6856e018a02c8196aa1ccd7eac56ee020cbd4441b7c750b1",
-  version: "2"
+  version: "4"
 };
 
 const VALID_ROLES: DebateRole[] = ["AFFIRMATIVE", "NEGATIVE"];

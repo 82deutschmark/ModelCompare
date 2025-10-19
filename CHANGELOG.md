@@ -6,6 +6,14 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.15] - 2025-10-18 22:20 UTC
+
+### Fixed
+- **Debate Prompt Version:** Updated `server/routes/debate.routes.ts` to reference OpenAI prompt version 4 so debate streams send `{role}`, `{topic}`, `{position}`, and `{intensity}` variables without triggering 400 `prompt_variable_unknown` errors.
+
+### Documentation
+- Logged the remediation approach in `docs/2025-10-18-plan-debate-prompt-version-alignment.md` for follow-up visibility.
+
 ## [Version 0.4.14] - 2025-10-19
 
 ### Fixed
