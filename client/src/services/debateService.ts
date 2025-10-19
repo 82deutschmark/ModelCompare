@@ -8,6 +8,7 @@
  */
 
 import type { DebateInstructions } from '@/lib/promptParser';
+import { replaceTemplatePlaceholders } from '@/lib/templateTokens';
 import type { AIModel } from '@/types/ai-models';
 import { applyTemplateReplacements, formatOpponentQuote } from '@/lib/debatePromptUtils';
 

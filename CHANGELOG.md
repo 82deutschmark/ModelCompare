@@ -26,6 +26,15 @@
 - **Planning Artifact:** Extended `docs/2025-10-18-plan-debate-variables.md` to cover documentation and
   changelog follow-ups for traceability.
 
+## [Version 0.4.13] - 2025-10-19 01:18 UTC
+
+### Fixed
+- **Debate Boot Flow:** Guarded the debate page’s next-speaker lookups so the component no longer dereferences `debateService` before prompts/models load, restoring initial render stability.
+- **Prompt Template Replacement:** Updated `DebateService` and `useDebatePrompts` to replace debate placeholders case-insensitively, aligning with the lowercase variables shipped in `debate-prompts.md` and keeping fallback templates intact.
+
+### Documentation
+- Captured the regression response in `docs/2025-10-19-plan-debate-regression-hotfix.md`, outlining remediation tasks and validation steps.
+
 ## [Version 0.4.12] - 2025-10-18
 
 ### Changed

@@ -597,6 +597,13 @@ export default function Debate() {
     return activeSpeakers.find(speaker => speaker.modelId === nextSpeakerId) ?? null;
   }, [activeSpeakers, nextSpeakerId, stageSpeakers]);
 
+  const nextSpeakerModel = useMemo(() => {
+    if (!nextSpeakerId || !debateService) {
+      return null;
+    }
+    return debateService.getModel(nextSpeakerId) ?? null;
+  }, [debateService, nextSpeakerId]);
+
   const rebuttalQueue = useMemo(() => {
     const queueSource = activeSpeakers.length > 0 ? activeSpeakers : stageSpeakers;
     if (!floorOpen) {
@@ -701,24 +708,22 @@ export default function Debate() {
 
             {debateSession.messages.length > 0 && (
               <Card className="p-3">
-                <DebateControls
-                  currentRound={debateSession.currentRound}
-                  totalCost={totalCost}
-                  messagesCount={debateSession.messages.length}
-                  showSetup={debateSetup.showSetup}
-                  setShowSetup={debateSetup.setShowSetup}
-                  onExportMarkdown={handleExportMarkdown}
-                  onCopyToClipboard={handleCopyToClipboard}
-                  onResetDebate={handleResetDebate}
-                  isPending={debateStreaming.isStreaming}
-                  nextModelName={debateService?.getModel(
-                    debateService.getNextDebater(debateSession.currentRound)
-                  )?.name}
-                  currentPhase={currentPhase}
-                  onAdvancePhase={handleAdvancePhase}
-                  isFloorOpen={floorOpen}
-                  onToggleFloor={debateSession.toggleFloor}
-                  hasJuryPending={juryPending}
+            <DebateControls
+              currentRound={debateSession.currentRound}
+              totalCost={totalCost}
+              messagesCount={debateSession.messages.length}
+              showSetup={debateSetup.showSetup}
+              setShowSetup={debateSetup.setShowSetup}
+              onExportMarkdown={handleExportMarkdown}
+              onCopyToClipboard={handleCopyToClipboard}
+              onResetDebate={handleResetDebate}
+              isPending={debateStreaming.isStreaming}
+              nextModelName={nextSpeakerModel?.name}
+              currentPhase={currentPhase}
+              onAdvancePhase={handleAdvancePhase}
+              isFloorOpen={floorOpen}
+              onToggleFloor={debateSession.toggleFloor}
+              hasJuryPending={juryPending}
                 />
               </Card>
             )}
@@ -742,12 +747,8 @@ export default function Debate() {
                 content={debateStreaming.content}
                 isStreaming={debateStreaming.isStreaming}
                 error={debateStreaming.error}
-                modelName={debateService?.getModel(
-                  debateService.getNextDebater(debateSession.currentRound)
-                )?.name}
-                modelProvider={debateService?.getModel(
-                  debateService.getNextDebater(debateSession.currentRound)
-                )?.provider}
+                modelName={nextSpeakerModel?.name}
+                modelProvider={nextSpeakerModel?.provider}
                 progress={debateStreaming.progress}
                 estimatedCost={debateStreaming.estimatedCost}
                 disableAutoScroll
