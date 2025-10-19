@@ -1,15 +1,16 @@
 /*
  * Author: gpt-5-codex
- * Date: 2025-10-19 01:18 UTC
- * PURPOSE: Provide case-insensitive placeholder replacement for debate templates while preserving unmatched tokens.
- * SRP/DRY check: Pass - Dedicated utility for placeholder substitution; avoids duplication across hooks/services.
+ * Date: 2025-10-19 00:00 UTC
+ * PURPOSE: Provide case-insensitive placeholder replacement helpers that can be
+ *          shared across client and server modules for debate prompt assembly.
+ * SRP/DRY check: Pass - Focused utility for template substitution only.
  */
 
 const PLACEHOLDER_PATTERN = /{([a-z0-9_]+)}/gi;
 
 export function replaceTemplatePlaceholders(template: string, variables: Record<string, string>): string {
   if (!template) {
-    return '';
+    return "";
   }
 
   if (!variables || Object.keys(variables).length === 0) {

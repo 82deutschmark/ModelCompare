@@ -45,23 +45,31 @@ export function AdversarialLevelSelector({
       </div>
 
       <div className="space-y-3">
-        {adversarialLevels.map((level) => (
-          <div key={level.id} className="flex items-center space-x-2">
-            <input
-              type="radio"
-              id={`level-${level.id}`}
-              checked={adversarialLevel === level.id}
-              onChange={() => setAdversarialLevel(level.id)}
-              disabled={disabled}
-            />
-            <label htmlFor={`level-${level.id}`} className="flex-1">
-              <div className="text-sm font-medium">{level.name}</div>
-              <div className="text-xs text-gray-500 line-clamp-2">
-                {debateData?.intensities?.[level.id] || ''}
-              </div>
-            </label>
-          </div>
-        ))}
+        {adversarialLevels.map((level) => {
+          const descriptor = debateData?.intensities?.[level.id];
+          const levelName = descriptor?.label || level.name;
+          const levelGuidance = descriptor?.summary
+            ? `${descriptor.summary}`
+            : descriptor?.guidance || '';
+
+          return (
+            <div key={level.id} className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id={`level-${level.id}`}
+                checked={adversarialLevel === level.id}
+                onChange={() => setAdversarialLevel(level.id)}
+                disabled={disabled}
+              />
+              <label htmlFor={`level-${level.id}`} className="flex-1">
+                <div className="text-sm font-medium">{levelName}</div>
+                <div className="text-xs text-gray-500 line-clamp-2">
+                  {levelGuidance}
+                </div>
+              </label>
+            </div>
+          );
+        })}
       </div>
 
       <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">

@@ -7,7 +7,16 @@
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
  *                across init and SSE entry points.
  */
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Router } from "express";
+import {
+  extractDebateInstructions,
+  formatDebateTemplate,
+  getDebateIntensityDescriptor,
+  type DebateInstructions,
+} from "@shared/debate-instructions.ts";
 import { getProviderForModel } from "../providers/index.js";
 import { storage } from "../storage.js";
 import { StreamSessionRegistry } from "../streaming/session-registry.js";
@@ -15,6 +24,39 @@ import { SseStreamManager } from "../streaming/sse-manager.js";
 import { StreamHarness } from "../streaming/stream-harness.js";
 
 const router = Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DEBATE_PROMPTS_PATH = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "client",
+  "public",
+  "docs",
+  "debate-prompts.md",
+);
+
+let cachedDebateInstructions: DebateInstructions | null = null;
+let debateInstructionsLoadErrorLogged = false;
+
+function loadDebateInstructions(): DebateInstructions | null {
+  if (cachedDebateInstructions) {
+    return cachedDebateInstructions;
+  }
+
+  try {
+    const markdown = readFileSync(DEBATE_PROMPTS_PATH, "utf-8");
+    cachedDebateInstructions = extractDebateInstructions(markdown);
+    return cachedDebateInstructions;
+  } catch (error) {
+    if (!debateInstructionsLoadErrorLogged) {
+      console.error("Failed to load debate prompts markdown:", error);
+      debateInstructionsLoadErrorLogged = true;
+    }
+    return null;
+  }
+}
 
 class HttpError extends Error {
   statusCode: number;
@@ -253,25 +295,96 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   };
 }
 
-function buildInputMessages(payload: DebateStreamPayload): Array<{ role: string; content: string }> {
-  const { turnNumber, role, position, topic, intensity, opponentMessage } = payload;
+interface DebatePromptContext {
+  messages: Array<{ role: string; content: string }>;
+  intensityValue: string;
+  intensityHeading: string;
+  intensityLabel: string;
+  intensityLevel: string;
+  intensitySummary: string;
+}
 
-  if (turnNumber === 1 || turnNumber === 2) {
-    const systemPrompt = `You are the ${role} debater ${position} the proposition: "${topic}".
-Present your opening argument following Robert's Rules of Order.
-Adversarial intensity level: ${intensity}.`;
-    return [{ role: "user", content: systemPrompt }];
+function formatOpponentQuote(message: string | null): string {
+  const trimmed = message?.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return `Opponent's latest statement:\n"""\n${trimmed}\n"""\n\n`;
+}
+
+function describeSupport(position: "FOR" | "AGAINST"): { verb: string; outcome: string } {
+  if (position === "FOR") {
+    return { verb: "support", outcome: "should be adopted" };
+  }
+  return { verb: "oppose", outcome: "should be rejected" };
+}
+
+function buildOpeningInstruction(payload: DebateStreamPayload, intensityHeading: string): string {
+  const { verb } = describeSupport(payload.position);
+  return `Present your opening argument following Robert's Rules of Order. Explain why the proposition "${payload.topic}" should ${verb}. Maintain the ${intensityHeading} adversarial guidance provided in the developer message.`;
+}
+
+function buildRebuttalInstruction(payload: DebateStreamPayload, intensityHeading: string): string {
+  const { outcome } = describeSupport(payload.position);
+  const opponentSection = formatOpponentQuote(payload.opponentMessage);
+  return `${opponentSection}Deliver a rebuttal that:
+1. Addresses your opponent's specific claims.
+2. Refutes their arguments with evidence and logic.
+3. Reinforces why the proposition "${payload.topic}" ${outcome}.
+4. Maintains the ${intensityHeading} adversarial guidance provided in the developer message.`;
+}
+
+function buildPromptContext(
+  payload: DebateStreamPayload,
+  instructions: DebateInstructions | null,
+): DebatePromptContext {
+  const intensityDescriptor = getDebateIntensityDescriptor(instructions, payload.intensity);
+  const intensityLevel = String(payload.intensity);
+  const intensityHeading = intensityDescriptor?.heading ?? `Level ${intensityLevel}`;
+  const intensityLabel = intensityDescriptor?.label ?? intensityHeading;
+  const intensitySummary = intensityDescriptor?.summary ?? "";
+  const intensityValue = intensityDescriptor?.fullText ?? intensityHeading;
+
+  const developerSections = [
+    "You are engaged in a debate with another LLM. The debate follows standard parliamentary procedure. You are ethically obligated to provide the best defense for your position. Your opponent will attempt to sway you and the jury; you must stick to your position and convictions.",
+  ];
+
+  if (intensityDescriptor) {
+    developerSections.push(`Adversarial intensity guidance:\n${intensityDescriptor.fullText}`);
+  } else {
+    developerSections.push(`Adversarial intensity level: ${intensityLevel}`);
   }
 
-  const rebuttalPrompt = `Your opponent just argued: "${opponentMessage ?? ""}"
+  const baseTemplate = instructions?.baseTemplate?.trim() ||
+    `You are the {role} debater arguing {position} the proposition: "{topic}". Maintain the adversarial guidance provided: {intensity}.`;
 
-Respond as the ${role} debater:
-1. Address your opponent's specific points
-2. Refute their arguments with evidence and logic
-3. Strengthen your own position
-4. Use adversarial intensity level: ${intensity}`;
+  const systemMessage = formatDebateTemplate(baseTemplate, {
+    role: payload.role,
+    position: payload.position,
+    topic: payload.topic,
+    intensity: intensityValue,
+    intensity_level: intensityLevel,
+    intensity_label: intensityLabel,
+    intensity_heading: intensityHeading,
+    intensity_summary: intensitySummary,
+  }).trim();
 
-  return [{ role: "user", content: rebuttalPrompt }];
+  const userMessage = payload.turnNumber <= 2
+    ? buildOpeningInstruction(payload, intensityHeading)
+    : buildRebuttalInstruction(payload, intensityHeading);
+
+  return {
+    messages: [
+      { role: "developer", content: developerSections.join("\n\n") },
+      { role: "system", content: systemMessage },
+      { role: "user", content: userMessage },
+    ],
+    intensityValue,
+    intensityHeading,
+    intensityLabel,
+    intensityLevel,
+    intensitySummary,
+  };
 }
 
 async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPayload): Promise<void> {
@@ -297,9 +410,15 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
       actualPreviousResponseId = responseIds[responseIds.length - 1] || null;
     }
 
-    const inputMessages = buildInputMessages(payload);
+    const debateInstructions = loadDebateInstructions();
+    const promptContext = buildPromptContext(payload, debateInstructions);
+    const inputMessages = promptContext.messages;
     const promptVariables: Record<string, string> = {
-      intensity: String(payload.intensity),
+      intensity: promptContext.intensityValue,
+      intensity_level: promptContext.intensityLevel,
+      intensity_label: promptContext.intensityLabel,
+      intensity_heading: promptContext.intensityHeading,
+      intensity_summary: promptContext.intensitySummary,
       position: payload.position,
       topic: payload.topic,
       role: payload.role,
