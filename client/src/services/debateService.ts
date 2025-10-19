@@ -8,6 +8,7 @@
  */
 
 import type { DebateInstructions } from '@/lib/promptParser';
+import { replaceTemplatePlaceholders } from '@/lib/templateTokens';
 import type { AIModel } from '@/types/ai-models';
 
 export interface DebateServiceConfig {
@@ -53,32 +54,38 @@ export class DebateService {
       ? this.customTopic
       : (this.debateData?.topics.find(t => t.id === this.selectedTopic)?.proposition || '');
 
-    const base = (this.debateData?.baseTemplate || '')
-      .replace('{TOPIC}', topicText)
-      .replace('{INTENSITY}', String(this.adversarialLevel));
+    const baseTemplate = this.debateData?.baseTemplate || '';
+    const baseWithContext = replaceTemplatePlaceholders(baseTemplate, {
+      topic: topicText,
+      intensity: String(this.adversarialLevel),
+    });
 
     const intensityText = this.debateData?.intensities?.[this.adversarialLevel] || '';
 
-    const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') =>
-      base
-        .replace('{ROLE}', role)
-        .replace('{POSITION}', position)
-      + (intensityText ? `\n\n${intensityText}` : '');
+    const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') => {
+      const withRole = replaceTemplatePlaceholders(baseWithContext, {
+        role,
+        position,
+      });
+      return intensityText ? `${withRole}\n\n${intensityText}` : withRole;
+    };
 
-    const rebuttalBase = (this.debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
+    const rebuttalTemplate = this.debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
 
 Respond as the {ROLE} debater following Robert's Rules of Order:
 1. Address your opponent's specific points
 2. Refute their arguments with evidence and logic
 3. Strengthen your own position
-4. Use the adversarial intensity level: {INTENSITY}`)
-      .replace('{INTENSITY}', String(this.adversarialLevel))
-      + (intensityText ? `\n\n${intensityText}` : '');
+4. Use the adversarial intensity level: {INTENSITY}`;
+    const rebuttalBase = replaceTemplatePlaceholders(rebuttalTemplate, {
+      intensity: String(this.adversarialLevel),
+    });
+    const finalRebuttal = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
 
     return {
       affirmativePrompt: roleBlock('AFFIRMATIVE', 'FOR'),
       negativePrompt: roleBlock('NEGATIVE', 'AGAINST'),
-      rebuttalTemplate: rebuttalBase,
+      rebuttalTemplate: finalRebuttal,
       topicText,
     };
   }
@@ -88,12 +95,13 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     const prompts = this.generatePrompts();
     const currentTopic = prompts.topicText;
 
-    return (prompts.rebuttalTemplate)
-      .replace('{RESPONSE}', lastMessage)
-      .replace('{ROLE}', role)
-      .replace('{POSITION}', position)
-      .replace('{ORIGINAL_PROMPT}', currentTopic)
-      .replace('{TOPIC}', currentTopic);
+    return replaceTemplatePlaceholders(prompts.rebuttalTemplate, {
+      response: lastMessage,
+      role,
+      position,
+      original_prompt: currentTopic,
+      topic: currentTopic,
+    });
   }
 
   // Get next debater model ID
