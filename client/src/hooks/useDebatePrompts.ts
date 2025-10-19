@@ -9,7 +9,11 @@
 
 import { useState, useEffect } from 'react';
 import { parseDebatePromptsFromMarkdown, type DebateInstructions } from '@/lib/promptParser';
+<<<<<<< Updated upstream
 import { applyTemplateReplacements } from '@/lib/debatePromptUtils';
+=======
+import { replaceTemplatePlaceholders } from '@/lib/templateTokens';
+>>>>>>> Stashed changes
 
 export interface DebatePromptsState {
   debateData: DebateInstructions | null;
@@ -65,7 +69,12 @@ export function useDebatePrompts(): DebatePromptsState {
       ? customTopic
       : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || '');
 
+<<<<<<< Updated upstream
     const baseTemplate = applyTemplateReplacements(debateData?.baseTemplate || '', {
+=======
+    const baseTemplate = debateData?.baseTemplate || '';
+    const baseWithContext = replaceTemplatePlaceholders(baseTemplate, {
+>>>>>>> Stashed changes
       topic: topicText,
       intensity: String(adversarialLevel),
     });
@@ -73,6 +82,7 @@ export function useDebatePrompts(): DebatePromptsState {
     const intensityText = debateData?.intensities?.[adversarialLevel] || '';
 
     const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') => {
+<<<<<<< Updated upstream
       const resolved = applyTemplateReplacements(baseTemplate, {
         role,
         position,
@@ -96,11 +106,35 @@ Structure your rebuttal by:
     });
 
     const rebuttalTemplate = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
+=======
+      const withRole = replaceTemplatePlaceholders(baseWithContext, {
+        role,
+        position,
+      });
+      return intensityText ? `${withRole}\n\n${intensityText}` : withRole;
+    };
+
+    const rebuttalTemplate = debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
+
+Respond as the {ROLE} debater following Robert's Rules of Order:
+1. Address your opponent's specific points
+2. Refute their arguments with evidence and logic
+3. Strengthen your own position
+4. Use the adversarial intensity level: {INTENSITY}`;
+    const rebuttalBase = replaceTemplatePlaceholders(rebuttalTemplate, {
+      intensity: String(adversarialLevel),
+    });
+    const finalRebuttal = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
+>>>>>>> Stashed changes
 
     return {
       affirmativePrompt: roleBlock('AFFIRMATIVE', 'FOR'),
       negativePrompt: roleBlock('NEGATIVE', 'AGAINST'),
+<<<<<<< Updated upstream
       rebuttalTemplate,
+=======
+      rebuttalTemplate: finalRebuttal,
+>>>>>>> Stashed changes
       topicText,
     };
   };

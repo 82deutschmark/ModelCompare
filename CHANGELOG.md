@@ -31,6 +31,10 @@
 ### Fixed
 - **Debate Boot Flow:** Guarded the debate page’s next-speaker lookups so the component no longer dereferences `debateService` before prompts/models load, restoring initial render stability.
 - **Prompt Template Replacement:** Updated `DebateService` and `useDebatePrompts` to replace debate placeholders case-insensitively, aligning with the lowercase variables shipped in `debate-prompts.md` and keeping fallback templates intact.
+<<<<<<< Updated upstream
+=======
+- **MutationObserver Safety:** Patched the client bootstrap to ignore invalid MutationObserver targets so third-party browser extensions cannot crash the debate page during initialization.
+>>>>>>> Stashed changes
 
 ### Documentation
 - Captured the regression response in `docs/2025-10-19-plan-debate-regression-hotfix.md`, outlining remediation tasks and validation steps.
