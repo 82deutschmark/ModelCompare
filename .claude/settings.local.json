@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)",
+      "Bash(git restore client/src/pages/debate.tsx)",
+      "Bash(git merge --abort)",
+      "Bash(findstr \"node\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":5000\")",
       "Bash(npm run dev:*)",
       "Bash(node:*)",
       "Bash(mv:*)",
