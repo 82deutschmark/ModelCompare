@@ -52,13 +52,25 @@ export function getModelById(modelId: string): ModelConfig | undefined {
   return undefined;
 }
 
-export function getProviderByModelId(modelId: string): BaseProvider | undefined {
-  for (const provider of providers) {
-    if (provider.getModel(modelId)) {
-      return provider;
-    }
+export function getProviderForModel(modelId: string): BaseProvider {
+  const allModels = getAllModels();
+  const modelConfig = allModels.find(m => m.id === modelId);
+
+  if (!modelConfig) {
+    throw new Error(`Model not found: ${modelId}`);
   }
-  return undefined;
+
+  switch (modelConfig.provider.toLowerCase()) {
+    case 'openai':
+      return new OpenAIProvider();
+    case 'anthropic':
+      return new AnthropicProvider();
+    case 'google':
+      return new GoogleProvider();
+    // ... other providers
+    default:
+      throw new Error(`Provider not found: ${modelConfig.provider}`);
+  }
 }
 
 export function getModelsByCapability(capability: keyof ModelConfig['capabilities']): ModelConfig[] {
@@ -90,7 +102,7 @@ export async function callModel(prompt: string, modelId: string): Promise<ModelR
  * @returns Promise resolving to model response with config
  */
 export async function callModelWithMessages(messages: ModelMessage[], modelId: string, options?: CallOptions): Promise<ModelResponse & { modelConfig: ModelConfig }> {
-  const provider = getProviderByModelId(modelId);
+  const provider = getProviderForModel(modelId);
   const modelConfig = getModelById(modelId);
   
   if (!provider || !modelConfig) {

@@ -1,13 +1,268 @@
 # Changelog
 <!--
-File: CHANGELOG.md
-Purpose: Human-readable history of notable changes.
-How the project uses it: Source for release notes and audit of major updates.
-Author: Cascade (AI assistant)
-Date: 2025-08-17
+ * Author: GPT-5 Codex
+ * Date: 2025-10-19 00:34 UTC
+ * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
+ * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
-All notable changes to this project will be documented in this file.
+## [Version 0.4.15] - 2025-10-18 22:20 UTC
+
+### Fixed
+- **Debate Prompt Version:** Updated `server/routes/debate.routes.ts` to reference OpenAI prompt version 4 so debate streams send `{role}`, `{topic}`, `{position}`, and `{intensity}` variables without triggering 400 `prompt_variable_unknown` errors.
+
+### Documentation
+- Logged the remediation approach in `docs/2025-10-18-plan-debate-prompt-version-alignment.md` for follow-up visibility.
+
+## [Version 0.4.14] - 2025-10-19
+
+### Fixed
+- **Debate Prompt Tokens:** Realigned `useDebatePrompts`, `debateService`, and shared utilities to replace lowercase `{role}`,
+  `{position}`, `{topic}`, and `{intensity}` variables so generated prompts match the refreshed documentation and backend
+  contract.
+- **Rebuttal Assembly:** Added shared prompt helpers and explicit opponent quote formatting to restore rebuttal templates now
+  that `{response}` placeholders are deprecated.
+
+## [Version 0.4.13] - 2025-10-19
+
+### Changed
+- **Debate Prompt Variables:** Propagated the debate role through streaming provider prompts and updated
+  `tests/server/debate-handshake.test.ts` to assert the role metadata reaches providers.
+- **Documentation Sync:** Refreshed `client/public/docs/debate-prompts.md` so the documented prompt
+  variables (role, position, topic, intensity) match the server contract and clarified rebuttal message
+  handling.
+- **Planning Artifact:** Extended `docs/2025-10-18-plan-debate-variables.md` to cover documentation and
+  changelog follow-ups for traceability.
+
+### Fixed
+- **Debate Boot Flow:** Guarded the debate page’s next-speaker lookups so the component no longer dereferences `debateService` before prompts/models load, restoring initial render stability.
+- **Prompt Template Replacement:** Updated `DebateService` and `useDebatePrompts` to replace debate placeholders case-insensitively, aligning with the lowercase variables shipped in `debate-prompts.md` and keeping fallback templates intact.
+- **MutationObserver Safety:** Patched the client bootstrap to ignore invalid MutationObserver targets so third-party browser extensions cannot crash the debate page during initialization.
+
+### Documentation
+- Captured the regression response in `docs/2025-10-19-plan-debate-regression-hotfix.md`, outlining remediation tasks and validation steps.
+
+## [Version 0.4.12] - 2025-10-18
+
+### Changed
+- **Debate Prompt Integration:** Updated `server/routes/debate.routes.ts` and `server/providers/openai.ts` to send debate turns
+  through the stored OpenAI prompt `pmpt_6856e018a02c8196aa1ccd7eac56ee020cbd4441b7c750b1`, forwarding topic, position, and
+  intensity variables as strings while preserving cross-provider streaming fallbacks.
+- **Provider Prompt Options:** Extended `server/providers/base.ts` prompt typings so both streaming and non-streaming calls can
+  share the stored prompt reference contract across providers.
+
+## [Version 0.4.11] - 2025-10-17
+
+### Changed
+- **Debate Jury Workflow:** Updated `client/src/pages/debate.tsx` and `client/src/components/debate/DebateControls.tsx` so debate continuations and phase controls no longer block on jury review, while keeping the reminder copy non-blocking.
+- **Messaging Tone:** Softened jury-related alerts in `DebateControls` to frame annotations as optional follow-ups instead of hard requirements.
+
+## [Version 0.4.10] - 2025-10-18
+
+### Added
+- **Debate Handshake Regression Test:** Added `tests/server/debate-handshake.test.ts` to boot the debate router with mocked
+  providers, assert the POST→GET handshake, parse SSE chunks, and verify debate turn persistence through the shared storage
+  layer.
+
+### Changed
+- **Legacy Debate Endpoint Hardening:** Updated `server/routes/debate.routes.ts` so direct `POST /api/debate/stream` calls return
+  `410 Gone` with upgrade guidance, ensuring no caller silently reverts to the retired single-request flow.
+- **Debate QA Defaults:** Preselected GPT-5 Mini (affirmative), GPT-5 Nano (negative), and the preset Topic 13 inside `useDebateSetup` so the debate
+  page boots with the streaming regression fixture without extra clicks.
+- **OpenAI Temperature Guardrails:** Updated `server/providers/openai.ts` to omit the `temperature` parameter for GPT-5 Responses API models while
+  preserving the knob for providers that still honour it.
+
+### Documentation
+- **Streaming Validation Plan:** Captured regression goals and verification steps in
+  `docs/2025-10-18-plan-debate-streaming-validation.md` for future release audits.
+
+## [Version 0.4.9] - 2025-10-17
+
+### Added
+- **Streaming Infrastructure Modules:** Introduced `server/streaming/session-registry.ts`, `sse-manager.ts`, and `stream-harness.ts` to manage POST→GET handshakes, enrich SSE payloads with task/model metadata, and buffer reasoning/text/json deltas for final persistence.
+- **Streaming Plan Artifact:** Documented the end-to-end retrofit in `docs/2025-10-17-plan-streaming-modal-alignment.md`, detailing responsibilities, SSR/DRY checks, and TODO coverage.
+
+### Changed
+- **Debate Streaming Contract:** Refactored `server/routes/debate.routes.ts` to validate payloads during `/stream/init`, verify task/model/session triads on the SSE GET route, and run OpenAI streams through the shared harness while persisting token usage, structured output, and reasoning summaries.
+- **OpenAI Streaming Normalization:** Updated `server/providers/openai.ts` to route every `response.*` event through `handleResponsesStreamEvent`, accumulate structured outputs, emit status updates, and supply enriched completion metadata back to the harness.
+- **Client Handshake & SSE Consumption:** Rebuilt `client/src/hooks/useAdvancedStreaming.ts` to POST the analysis payload, open an `EventSource`, aggregate reasoning/text/json buffers, expose session metadata, and surface status phases plus rich error handling to `useDebateStreaming`.
+- **Storage Turn History:** Extended `server/storage.ts` debate updates to capture cost breakdowns, token usage, structured output blobs, and turn summaries while keeping in-memory totals consistent with persisted numeric strings.
+
+### Fixed
+- **Changelog Alignment:** Bumped the documented release to capture the streaming retrofit and ensure downstream audit trails remain accurate.
+
+### Removed
+- **Legacy Debate Streaming Contract:** Deleted `client/src/hooks/useDebateStream.ts` and the fallback `POST /api/debate/stream` route so the two-phase init + SSE handshake is the only supported debate streaming path.
+
+## [Version 0.4.8] - 2025-10-17
+
+### Fixed
+- **Debate Session State Recovery:** Consolidated `useDebateSession` after conflicted merges, restored streaming bootstrap in `client/src/pages/debate.tsx`, and ensured turn history, resume context, and exports stay aligned with live streams.
+- **Jury Annotation Review Enforcement:** Reinstated review gating so jury tasks remain pending until explicitly cleared, preventing debate continuations with unresolved annotations.
+
+### Documentation
+- Logged the build recovery steps in `docs/2025-10-17-plan-build-recovery.md` and outlined changelog alignment follow-up in `docs/2025-10-17-plan-changelog-alignment.md` for auditability.
+
+## [Version 0.4.7] - 2025-10-17
+
+### Added
+- **Claude Haiku 4.5 Availability:** Registered Anthropic's Claude Haiku 4.5 across the model catalog with pricing, context window, and reasoning capability metadata.
+
+### Changed
+- **Anthropic Token Limits:** Updated `server/providers/anthropic.ts` to enforce model-specific token ceilings while respecting user overrides within documented bounds.
+
+### Fixed
+- **Debate Jury Flow Corrections:** Repaired review toggles so jurors must explicitly clear pending flags, blocked continuations while the floor is closed, and surfaced clearer gating cues in controls.
+- **Export Metadata Integrity:** Propagated resolved topic text and jury annotations into markdown exports and clipboard copies for accurate transcripts.
+
+## [Version 0.4.6] - 2025-10-17
+
+### Fixed
+- **Debate Streaming Stability:** Refactored `client/src/hooks/useAdvancedStreaming.ts` to buffer SSE reasoning/content in refs, throttle UI updates via animation frames, and harden error cleanup so React no longer drops streamed chunks during long debates.
+- **SSE Heartbeats:** Added guarded writes and 15-second `stream.keepalive` heartbeats in `server/routes/debate.routes.ts` to keep reverse proxies from closing idle debate streams while preserving session persistence.
+
+## [Version 0.4.5] - 2025-10-17
+
+### Fixed
+- **🚨 CRITICAL: Comprehensive Browser Extension Compatibility:** Fixed application crashes caused by browser extension interference (LastPass, Grammarly, etc.) across ALL streaming and chat interfaces
+  - **Root Cause:** Browser extensions inject content scripts using MutationObserver to watch DOM changes. During rapid streaming updates, these observers fail when trying to observe nodes being removed/updated, causing crashes with: `"Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'"`
+  - **Comprehensive Solution:** Applied defensive programming pattern across all streaming/chat interfaces:
+    - **Debate Mode** (`StreamingDisplay.tsx`, `debate.tsx`) - Streaming display + auto-scroll protection
+    - **Battle Chat Mode** (`battle-chat.tsx`) - Message container + auto-scroll protection
+    - **Vixra Mode** (`SectionResultsStream.tsx`) - Section generation + auto-scroll protection
+    - **Luigi Mode** (`LuigiConversationLog.tsx`) - Conversation log + auto-scroll protection
+  - **Defensive Pattern Applied:**
+    1. Null checks before all `scrollIntoView` calls
+    2. Try-catch blocks with debug logging (no error propagation)
+    3. Browser extension data attributes on all dynamic content containers:
+       - Grammarly: `data-gramm="false"`, `data-gramm_editor="false"`, `data-enable-grammarly="false"`
+       - LastPass: `data-lpignore="true"`, `data-form-type="other"`
+  - **Impact:** All streaming and chat interfaces now gracefully handle browser extension interference without crashes. Pattern is consistent and reusable for future streaming components.
+  - **Commits:** 202ca41 (initial), 2c67972 (LastPass support), b67b83c (comprehensive coverage)
+
+## [Version 0.4.4] - 2025-10-17
+
+### Fixed
+- **Debate Streaming Contract Alignment:** Added `/api/debate/stream/init` plus SSE GET handler, consolidated streaming logic, and temporarily retained the legacy POST endpoint for compatibility (subsequently removed in v0.4.9).
+
+## [Version 0.4.3] - 2025-10-16
+
+### Fixed
+- **OpenAI Responses API Compliance:** Defaulted GPT-5 reasoning requests to detailed summaries with high verbosity, kept o-series models within supported parameters, and aligned debate streaming defaults with the richer configuration surface.
+- **Streaming Lifecycle Overhaul:** Adopted the SDK's `responses.stream` helper, handled reasoning summary deltas, and finalized streams via `finalResponse()` so callbacks receive complete content, reasoning, and token usage.
+- **Output Extraction Reliability:** Normalized non-streaming and streaming completions to read from `output_text`, `output_parsed`, or `output[]`, preventing empty transcripts when models emit structured results.
+
+## [Version 0.4.2] - 2025-10-16
+
+### Documentation
+- Added a maintainer guide for running the OpenAI health check locally with private credentials and sharing sanitized results. (See `docs/2025-10-16-openai-credential-testing-guide.md`).
+- Captured the credential-handling plan so contributors know why tests remain manual when API keys cannot be shared in chat.
+
+## [Version 0.4.1] - 2025-10-15
+
+### Fixed
+- **🚨 CRITICAL: Debate Streaming Content Persistence:** Fixed fundamental bug where streamed debate content and reasoning were never saved to database
+  - **Root Cause:** `updateDebateSession` was called with empty strings instead of accumulated streaming content
+  - **Solution:** Updated `StreamingCallOptions` interface and OpenAIProvider to pass final content and reasoning to `onComplete` callback
+  - **Impact:** Debate transcripts now properly populate with both reasoning and content from all turns
+- **🚨 CRITICAL: Missing Route Import:** Fixed deployment failure from undefined `creativeRoutes` reference
+  - **Root Cause:** `routes.ts` referenced `creativeRoutes` but never imported it
+  - **Solution:** Added missing import statement for creative routes module
+  - **Impact:** Server now starts successfully without ReferenceError during route registration
+
+## [Version 0.4.0] - 2025-10-15
+
+### Refactored
+- **Complete Debate Mode Architecture Overhaul:** Major refactoring for improved maintainability and modularity
+  - **Custom Hooks Architecture:** Extracted state management into `useDebateState`, `useDebatePrompts`, and `useDebateExport` hooks
+ - **Service Layer Implementation:** Created `DebateService` class for centralized business logic (prompt generation, rebuttal building, cost calculation)
+ - **Modular Component System:** Split monolithic debate.tsx into focused components:
+    - `DebateTopicSelector` - Topic selection UI
+    - `ModelSelector` - Model selection and configuration
+    - `AdversarialLevelSelector` - Intensity selection
+    - `DebateControls` - Progress display and action buttons
+    - `DebateMessageList` - Message rendering with continue functionality
+    - `DebateSetupPanel` - Composed setup interface
+  - **Single Responsibility Principle:** Each component/hook has one clear purpose
+  - **DRY Compliance:** Eliminated code duplication through reusable components
+  - **Type Safety:** Full TypeScript support with proper interfaces
+  - **Clean Architecture:** Separation of concerns between UI, business logic, and state management
+
+### Improved
+- **Senior Developer Feedback Implementation:** Addressed all architectural concerns for production readiness
+  - **Granular State Management:** Split monolithic `useDebateState` into focused hooks:
+    - `useDebateSetup` - Topic selection, model configuration, UI state
+    - `useDebateSession` - Messages, rounds, response tracking, session management
+    - `useDebateStreaming` - Streaming state integration with `useAdvancedStreaming`
+  - **Race Condition Fix:** Moved streaming logic into mutation `onSuccess` callback, eliminating timing issues
+  - **Missing Features Completed:** Implemented `loadDebateSessionsMutation` and complete session management
+  - **Service Layer Refactoring:** `DebateService` now focuses on pure business logic, not React state mirroring
+  - **Prop-Drilling Elimination:** Direct hook access pattern eliminates unnecessary prop passing
+
+### Technical Details
+- **File Structure:** Organized code into logical directories (`hooks/`, `services/`, `components/debate/`)
+- **Maintainability:** Reduced main component complexity while preserving all functionality
+- **Performance:** Better selective re-rendering with granular state management
+- **Testing Ready:** Modular design enables easier unit testing of individual components
+- **Future Extensions:** Architecture supports easy addition of new debate features
+
+### Fixed
+- **🚨 CRITICAL: Debate Streaming Race Conditions:** Fixed fundamental bugs where streamed responses never appeared in session logs
+  - **Root Cause:** Checking `responseId` immediately after `startStream` resolves, but `responseId` only becomes available when streaming completes
+  - **Solution:** Implemented proper `useEffect` hooks to handle streaming completion and message recording
+  - **Impact:** Opening statements and all subsequent turns now properly recorded in debate transcript
+- **🚨 CRITICAL: Session Loading Bug:** `loadDebateSessionsMutation` was defined but never invoked
+  - **Solution:** Added `useEffect` to automatically load sessions on component mount
+  - **Impact:** Session history now properly loads and `existingDebateSessions` state is populated
+
+## [Unreleased]
+
+### Added
+- **Advanced Debate UI with Real-Time Streaming:** Comprehensive enhancement of the debate interface with advanced model configuration and live streaming capabilities
+  - **ModelConfigurationPanel Component:** Advanced model settings with reasoning controls (effort, summary, verbosity), temperature, max tokens, and structured output options
+  - **StreamingDisplay Component:** Real-time rendering of AI reasoning and content as they stream in, with progress indicators and error handling
+  - **StreamingControls Component:** Comprehensive playback controls (start, pause, resume, cancel, restart) with visual feedback and status indicators
+  - **useAdvancedStreaming Hook:** Proper Server-Sent Events (SSE) implementation using EventSource instead of manual fetch parsing
+  - **Enhanced Debate Session Management:** Database integration for creating, saving, and resuming debate sessions with proper conversation chaining
+  - **Model-Specific Configuration:** Each model can have independent settings optimized for debate performance
+
+### Technical Details
+- **Proper SSE Implementation:** Replaced manual fetch-based streaming with EventSource for reliable real-time updates
+- **Database Session Persistence:** Debates are now saved to database with turn history and response ID tracking for conversation chaining
+
+### Fixed
+- **Debate Session Bootstrap Failure:** Extended the legacy `ensureTablesExist` fallback in `server/db.ts` to create the `debate_sessions` table so fresh PostgreSQL deployments no longer return 500 errors when creating debate sessions.
+- **Advanced Reasoning Controls:** Full implementation of OpenAI Responses API reasoning configuration (effort, summary, verbosity)
+- **Real-Time UI Updates:** Live progress bars, cost estimation, and streaming content display during debates
+- **Conversation Chaining:** Proper handling of model conversation history with database-stored response IDs
+
+### Notes
+- **DRY Violations Identified:** Current debate.tsx implementation contains significant code duplication and SRP violations that should be addressed in future refactoring
+- **Session Management:** Complete database integration for debate persistence and conversation chaining across sessions
+
+### Fixed
+- **Google OAuth Callback Configuration:** Documented fix ensuring production (`https://compare.gptpluspro.com/`) and staging (`https://modelcompare-staging.up.railway.app/`) deployments use environment-specific Google OAuth redirect URIs instead of the localhost default.
+
+## [Version 0.3.0] - 2025-10-14
+
+### Added
+- **Streaming Debate Mode with Reasoning Support:** Complete implementation of real-time streaming for debate mode
+  - `/api/debate/stream` endpoint with Server-Sent Events (SSE) for real-time streaming
+  - OpenAI Responses API integration with `callModelStreaming` method supporting conversation chaining
+  - `useDebateStream` React hook for managing streaming state and real-time UI updates
+  - Updated `Debate.tsx` with response ID tracking for conversation chaining and streaming UI components
+  - Database schema for `debate_sessions` table with turn history and response ID persistence
+  - Storage layer methods for debate session management in both PostgreSQL and in-memory backends
+
+### Technical Details
+- **Conversation Chaining:** Each model maintains separate conversation chains using `previous_response_id`
+- **Real-time UI:** Users see reasoning and content streaming in real-time during debate turns
+- **Error Handling:** Comprehensive retry logic and graceful error handling for streaming failures
+- **Type Safety:** Full TypeScript support with proper interfaces for streaming callbacks and options
+
+### Notes
+- Routes file (`server/routes.ts`) has syntax issues that need refactoring in a future update
+- Implementation follows the architectural plan in `docs/14102025-debate-streaming-reasoning-implementation.md`
 
 ## [Version 0.2.1] - 2025-10-04
 

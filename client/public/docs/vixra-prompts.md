@@ -7,18 +7,10 @@
  * Each stage has specific prompts for different aspects of paper generation.
  * 
  * Variable placeholders:
- * - {ResearcherName}: Name of the fictional researcher
  * - {Title}: Paper title
  * - {ScienceCategory}: Scientific field/category
  * - {Authors}: Paper authors
- * - {Abstract}: Paper abstract
- * - {Keywords}: Research keywords
- * - {Institution}: Academic institution
- * - {Funding}: Funding source
- * - {Methodology}: Research methodology
- * - {PaperLength}: Target paper length
- * - {ToneIntensity}: Satirical tone intensity (1-5)
- * - {SpecialRequests}: Additional user requirements
+ * - {Abstract}: Paper abstract (generated content from previous section)
  * - {response}: Previous stage output for multi-stage prompts
  * 
  * Author: Cascade Code with Claude 4 Sonnet Thinking BYOK 
@@ -29,13 +21,11 @@
 
 <!-- SECTION_START:abstract -->
 ### Abstract Generation
-You are writing the abstract for a satirical research paper for Vixra (in the style of arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous. Be sure to include the following and use the variables provided, if no variable is provided, use your own value:
+You are writing the abstract for a satirical research paper for Vixra (in the style of arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous.
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
 Authors: "{Authors}"
-Institution: "{Institution}"
-Keywords: "{Keywords}"
 
 Write a 2400-3000 word abstract that:
 - Uses excessive technical jargon and complex terminology from the chosen {ScienceCategory}
@@ -54,7 +44,6 @@ You are writing the introduction section for a satirical Vixra research paper. T
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
-Research Focus: "{Methodology}"
 
 Write a 1100-1500 word introduction that:
 - Begins with sweeping statements about the current state of the field
@@ -72,8 +61,7 @@ Make it sound like the author believes they are writing the most important paper
 You are writing the methodology section for a satirical Vixra research paper. Describe completely absurd research methods presented with utmost scientific seriousness. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
-Methodology Approach: "{Methodology}"
-Special Focus: "{SpecialRequests}"
+Science Category: "{ScienceCategory}"
 
 Write a 1000-2000 word methodology section that:
 - Describes impossible or nonsensical experimental procedures
@@ -96,7 +84,6 @@ You are writing the results section for a satirical Vixra research paper. Presen
 
 Paper Title: "{Title}"
 Abstract Context: "{Abstract}"
-Methodology Used: "{Methodology}"
 
 Write a 1400-2000 word results section that:
 - Presents impossible or contradictory findings as groundbreaking discoveries

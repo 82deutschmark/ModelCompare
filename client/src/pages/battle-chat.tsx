@@ -204,8 +204,15 @@ export default function BattleChat() {
   }, [selectedPromptCategory, selectedPromptId, battlePromptCategories]);
 
   // Auto-scroll to bottom of chat
+  // Add defensive guard to prevent browser extension MutationObserver errors
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!chatEndRef.current) return;
+    try {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      // Silently ignore scroll errors (browser extensions can interfere)
+      console.debug('Chat scroll error:', error);
+    }
   }, [messages]);
 
   // Fetch available models
@@ -589,7 +596,14 @@ export default function BattleChat() {
               )}
 
               {/* Chat Messages */}
-              <CardContent className="flex-1 overflow-y-auto p-0">
+              <CardContent
+                className="flex-1 overflow-y-auto p-0"
+                data-gramm="false"
+                data-gramm_editor="false"
+                data-enable-grammarly="false"
+                data-lpignore="true"
+                data-form-type="other"
+              >
                 <div className="space-y-1 p-2">
                   {messages.length === 0 ? (
                     <div className="text-center py-12">

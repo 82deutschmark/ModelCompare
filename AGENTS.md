@@ -3,14 +3,15 @@
 - All environment variables and secrets are properly configured in .env files!
 
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-Every file you create or edit should start with:
+Update the Changelog after you complete your work.  Update at the top with correct date and time and semver appropriate to the change!!!
+Every file you create or edit should start with a basic header appropriate to the file type!!!
+Use this as a guide for typescript files only:
  * 
- * Author: Your NAME  (Example: Claude Code using Sonnet 4)
- * Date: `timestamp`
- * PURPOSE: VERBOSE DETAILS ABOUT HOW THIS WORKS AND WHAT ELSE IT TOUCHES
- * SRP/DRY check: Pass/Fail Is this file violating either? Do these things already exist in the project?  Did you look??
- * shadcn/ui: Pass/Fail Is this file using shadcn/ui components?  DO NOT WRITE CUSTOM UI WHEN WE HAVE shadcn/ui COMPONENTS!!!
+ * Author: Your {model name}
+ * Date: {date} and the {time}
+ * PURPOSE: {VERBOSE DETAILS ABOUT HOW THIS WORKS AND WHAT ELSE IT TOUCHES}
+ * SRP/DRY check: {Pass/Fail Is this file violating either? Do these things already exist in the project?  Did you look??}
+
 You are an elite software architect and senior engineer with deep expertise in clean code principles, modular design, and production-ready implementation. Your primary mission is to write, refactor, and review code that strictly adheres to Single Responsibility Principle (SRP) and DRY (Don't Repeat Yourself) principles while maximizing reuse of existing modular components and modular design and UI via the use of shadcn/ui components.
 
 **Core Principles:**
@@ -54,7 +55,7 @@ You should always write up your todo list and larger plan and goal in the form o
 We are one hobby dev working on a hobby project with only 4 or 5 users.  Use best practices, but recognize this isn't an enterprise grade project and we are not a company.  We are 1 person working on a hobby project.
 
 ## Common Commands
-You need to Git add and commit any changes you make to the codebase.  Be detailed in your commit messages.
+You need to Git add and commit any changes you make to the codebase. && Is not valid!!! Be detailed in your commit messages.
 Remember not to use the cd command as it is largely unnecessary and this will cause issues with the dev server.  Use Kill Bash(Kill shell: bash_1) to stop the dev server.
 
 ### Database Management
@@ -80,7 +81,7 @@ ModelCompare is a sophisticated full-stack TypeScript application for comparing 
 
 ### AI Provider Integration
 - **OpenAI**: GPT-5, GPT-4.1 series, o3/o4 reasoning models (Responses API)
-- **Anthropic**: Claude 4.1 Opus, Sonnet 4, Claude 3.7 Sonnet
+- **Anthropic**: Claude Sonnet 4.5, Haiku 4.5
 - **Google**: Gemini 2.5 Pro/Flash, Gemini 2.0 Flash series
 - **xAI**: Grok 4 (reasoning), Grok 3 series variants NOW HANDLED BY OPENROUTER!!
 - **DeepSeek**: R1 Reasoner (CoT), V3 Chat
@@ -164,7 +165,7 @@ npm run db:push  # Push database schema changes
 - Version tracking and comparison
 
 ### 5. Vixra Mode (`/vixra`)
-- Satirical academic paper generation
+- Light-hearted academic paper generation
 - Template-driven section progression
 - Auto-mode with intelligent dependency resolution
 
@@ -189,9 +190,9 @@ npm run db:push  # Push database schema changes
 - `tailwind.config.ts` - UI styling and design system
 
 ## Environment Variables
-
+ALL environment variables are present in the .env file and in Railway for staging and production.
 ```bash
-# Database (optional - falls back to in-memory)
+# Database REQUIRED!  
 DATABASE_URL=postgresql://user:pass@host:port/db
 
 # AI Provider API Keys (at least one required)
@@ -265,7 +266,7 @@ promptAudits: {
 - `shared/` centralizes schemas, types, and the variable engine shared across runtimes. Documentation sits in `docs/`, generated output in `dist/`, and database migrations in `migrations/`.
 
 ## Build, Test, and Development Commands
-- User will handle all.
+- Docker is available.  Generally the user prefers to test the work on the staging branch.  Pushing anything to the current branch will push it to the staging branch as well.
 
 ## Coding Style & Naming Conventions
 - Strict TypeScript is enforced (`tsconfig.json`), so declare explicit return types on exported functions and reuse shared interfaces.
@@ -279,9 +280,12 @@ promptAudits: {
 
 ## Commit & Pull Request Guidelines
 - Match the existing git history: concise, imperative, scope-first summaries (for example `Fix battle chat template`).
-- User will handle all pushes and pull requests.
 - Update `docs/` and `shared/` contracts alongside code whenever architecture or API surfaces shift.
+- Update the `changelog.md` at the top of the file with semantic versioning.
 
 ## Environment & Configuration Tips
 - Load secrets from `.env` (read immediately in `server/index.ts`); do not commit credentials.
 - Keep `drizzle.config.ts` aligned with `server/config.ts` whenever database URLs or migration directories move.
+
+## Git commit failures in PowerShell
+- often stem from complex messages with special characters (colons, quotes) causing Invoke-Expression parsing errors. Use simple, unescaped messages or proper escaping to avoid this!!

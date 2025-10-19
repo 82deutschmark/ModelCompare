@@ -40,20 +40,26 @@ export function SectionResultsStream({
   const hasCompletedSections = completedSections.length > 0;
 
   // Auto-scroll to newly completed section
+  // Add defensive guard to prevent browser extension MutationObserver errors
   useEffect(() => {
     const latestCompleted = completedSections[completedSections.length - 1];
     if (latestCompleted && latestCompleted.id !== lastCompletedRef.current) {
       lastCompletedRef.current = latestCompleted.id;
-      
+
       // Small delay to ensure DOM is updated
       setTimeout(() => {
         const element = document.getElementById(`section-${latestCompleted.id}`);
         if (element) {
-          element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-            inline: 'nearest'
-          });
+          try {
+            element.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start',
+              inline: 'nearest'
+            });
+          } catch (error) {
+            // Silently ignore scroll errors (browser extensions can interfere)
+            console.debug('Section scroll error:', error);
+          }
         }
       }, 300);
     }
@@ -175,7 +181,13 @@ export function SectionResultsStream({
                     </div>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent
+                  data-gramm="false"
+                  data-gramm_editor="false"
+                  data-enable-grammarly="false"
+                  data-lpignore="true"
+                  data-form-type="other"
+                >
                   <div className="prose dark:prose-invert max-w-none mb-4">
                     <div className="whitespace-pre-wrap text-sm leading-relaxed">
                       {section.content}

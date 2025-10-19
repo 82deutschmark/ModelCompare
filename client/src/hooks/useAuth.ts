@@ -14,9 +14,29 @@ import { useToast } from '@/hooks/use-toast';
 import { getDeviceId } from '@/lib/deviceId';
 import type { User } from '@shared/schema';
 
+type OAuthUserFields = {
+  id: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  profileImageUrl?: string | null;
+  credits?: number | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+};
+
+type AuthUser = User | (User & OAuthUserFields) | OAuthUserFields;
+
+function hasEmailField(user: AuthUser | null): user is AuthUser & { email: string | null } {
+  return Boolean(user && typeof (user as { email?: unknown }).email !== 'undefined');
+}
+
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
+  isOAuthUser: boolean; // true only for Google OAuth users (email !== null)
   isLoading: boolean;
   error: string | null;
 }
@@ -54,7 +74,7 @@ export function useAuth(): AuthState & AuthActions {
         }
 
         const userData = await response.json();
-        return userData as User;
+        return userData as AuthUser;
       } catch (err) {
         console.error('Auth fetch error:', err);
         throw err;
@@ -122,10 +142,14 @@ export function useAuth(): AuthState & AuthActions {
     }
   }, [queryError]);
 
+  const authUser = user ?? null;
+  const isOAuthUser = hasEmailField(authUser) && !!authUser.email;
+
   return {
     // State
-    user: user || null,
-    isAuthenticated: !!user,
+    user: authUser,
+    isAuthenticated: !!authUser,
+    isOAuthUser,
     isLoading,
     error,
 

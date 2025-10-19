@@ -1,179 +1,61 @@
-/**
- * Debate Mode - Structured, Robert's Rules AI Model Debate Interface
- *
- * This component provides a streamlined interface for setting up and running
- * structured, user-controlled debates between AI models following Robert's Rules.
- * Features include:
- * - Topic presets or custom topic with explicit Pro/Con roles
- * - Adversarial intensity control (respectful → combative)
- * - Manual step control with visual progress tracking
- * - Real-time cost calculation and reasoning log display
- * - Clean debate-focused UI distinct from Battle and Compare modes
- * - Modular prompt loading from docs/debate-prompts.md (no hardcoded topics/instructions)
- *
- * Author: Cascade
- * Date: August 16, 2025
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-02-14 00:12 UTC
+ * PURPOSE: Orchestrate debate mode, hydrate persisted history, manage streaming, and ensure setup defaults select a valid topic.
+ * SRP/DRY check: Pass - Component composes specialized hooks/services without overlapping their responsibilities.
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Button } from '@/components/ui/button';
+import { MessageSquare, Settings } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { cn } from '@/lib/utils';
-import { apiRequest } from "@/lib/queryClient";
-import { formatCost } from "@/lib/formatUtils";
-import { useTheme } from "@/components/ThemeProvider";
-import { generateMarkdownExport, generateTextExport, downloadFile, generateSafeFilename, copyToClipboard, type ExportData } from '@/lib/exportUtils';
-import type { AIModel, ModelResponse } from '@/types/ai-models';
-import { parseDebatePromptsFromMarkdown, type DebateInstructions } from "@/lib/promptParser";
-import { MessageCard, type MessageCardData } from "@/components/MessageCard";
+import { StreamingDisplay } from "@/components/StreamingDisplay";
+import { StreamingControls } from "@/components/StreamingControls";
 import { AppNavigation } from "@/components/AppNavigation";
-import { 
-  ChevronLeft, ChevronUp, ChevronDown, Loader2, Play, Settings, Clock, DollarSign, Zap, AlertTriangle, Download, Copy,
-  MessageSquare, Square, Brain, RotateCcw, Sword, Palette, Moon, Sun, Gavel, Users, Target
-} from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import type { AIModel } from '@/types/ai-models';
+import { useDebateSetup } from "@/hooks/useDebateSetup";
+import {
+  useDebateSession,
+  ROBERTS_RULES_PHASES,
+  type DebatePhase,
+  type DebateSessionSummary,
+  type DebateSessionHydration,
+} from "@/hooks/useDebateSession";
+import { useDebateStreaming } from "@/hooks/useDebateStreaming";
+import { useDebatePrompts } from "@/hooks/useDebatePrompts";
+import { useDebateExport } from "@/hooks/useDebateExport";
+import { DebateService } from "@/services/debateService";
+import { DebateSetupPanel } from "@/components/debate/DebateSetupPanel";
+import { DebateControls } from "@/components/debate/DebateControls";
+import { DebateMessageList } from "@/components/debate/DebateMessageList";
+import { DebateHistoryDrawer } from "@/components/debate/DebateHistoryDrawer";
 
-interface DebateMessage {
+interface CreateDebateSessionResponse {
   id: string;
-  modelId: string;
-  modelName: string;
-  content: string;
-  timestamp: number;
-  round: number;
-  reasoning?: string;
-  systemPrompt?: string;
-  responseTime: number;
-  tokenUsage?: {
-    input: number;
-    output: number;
-    reasoning?: number;
-  };
-  cost?: {
-    input: number;
-    output: number;
-    reasoning?: number;
-    total: number;
-  };
-  modelConfig?: {
-    capabilities: {
-      reasoning: boolean;
-      multimodal: boolean;
-      functionCalling: boolean;
-      streaming: boolean;
-    };
-    pricing: {
-      inputPerMillion: number;
-      outputPerMillion: number;
-      reasoningPerMillion?: number;
-    };
-  };
+  topic: string;
+  model1Id: string;
+  model2Id: string;
+  adversarialLevel: number;
 }
 
 export default function Debate() {
   const { toast } = useToast();
-  const { theme, toggleTheme } = useTheme();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Debate instructions and topics loaded from docs/debate-prompts.md
-  const [debateData, setDebateData] = useState<DebateInstructions | null>(null);
-  const [debateLoading, setDebateLoading] = useState(true);
-  const [debateError, setDebateError] = useState<string | null>(null);
+  const debateSetup = useDebateSetup();
+  const debateSession = useDebateSession();
+  const debateStreaming = useDebateStreaming();
 
-  const adversarialLevels = [
-    { id: 1, name: 'Respectful' },
-    { id: 2, name: 'Assertive' },
-    { id: 3, name: 'Aggressive' },
-    { id: 4, name: 'Combative' }
-  ];
+  const { debateData, loading: debateLoading, error: debateError, generateDebatePrompts } = useDebatePrompts();
+  const { exportMarkdown, copyToClipboard } = useDebateExport();
 
-  // State management
-  const [selectedTopic, setSelectedTopic] = useState('');
-  const [customTopic, setCustomTopic] = useState('');
-  const [useCustomTopic, setUseCustomTopic] = useState(false);
-  const [adversarialLevel, setAdversarialLevel] = useState(3);
+  const setupSelectedTopic = debateSetup.selectedTopic;
+  const setupUseCustomTopic = debateSetup.useCustomTopic;
+  const setSetupSelectedTopic = debateSetup.setSelectedTopic;
 
-  const [model1Id, setModel1Id] = useState('');
-  const [model2Id, setModel2Id] = useState('');
-  const [messages, setMessages] = useState<DebateMessage[]>([]);
-  const [currentRound, setCurrentRound] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [showSetup, setShowSetup] = useState(true);
-  const [showSystemPrompts, setShowSystemPrompts] = useState(false);
-
-  // Load debate instructions/topics from docs
-  useEffect(() => {
-    const loadDebate = async () => {
-      setDebateLoading(true);
-      setDebateError(null);
-      try {
-        const data = await parseDebatePromptsFromMarkdown();
-        if (!data) throw new Error('Failed to parse debate prompts');
-        setDebateData(data);
-        // Default to first topic if available
-        if (data.topics.length > 0) {
-          setSelectedTopic(data.topics[0].id);
-        }
-      } catch (e: any) {
-        console.error(e);
-        setDebateError(e.message || 'Failed to load debate prompts');
-      } finally {
-        setDebateLoading(false);
-      }
-    };
-    loadDebate();
-  }, []);
-
-  // Generate Robert's Rules debate prompts using parsed templates
-  const generateDebatePrompts = () => {
-    const topicText = useCustomTopic
-      ? customTopic
-      : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || '');
-
-    const base = (debateData?.baseTemplate || '')
-      .replace('{TOPIC}', topicText)
-      .replace('{INTENSITY}', String(adversarialLevel));
-
-    const intensityText = debateData?.intensities?.[adversarialLevel] || '';
-
-    const roleBlock = (role: 'AFFIRMATIVE' | 'NEGATIVE', position: 'FOR' | 'AGAINST') =>
-      base
-        .replace('{ROLE}', role)
-        .replace('{POSITION}', position)
-      + (intensityText ? `\n\n${intensityText}` : '');
-
-    const rebuttalBase = (debateData?.templates.rebuttal || `You are continuing your formal debate role. Your opponent just argued: "{RESPONSE}"
-
-Respond as the {ROLE} debater following Robert's Rules of Order:
-1. Address your opponent's specific points
-2. Refute their arguments with evidence and logic
-3. Strengthen your own position
-4. Use the adversarial intensity level: {INTENSITY}`)
-      .replace('{INTENSITY}', String(adversarialLevel))
-      + (intensityText ? `\n\n${intensityText}` : '');
-
-    return {
-      affirmativePrompt: roleBlock('AFFIRMATIVE', 'FOR'),
-      negativePrompt: roleBlock('NEGATIVE', 'AGAINST'),
-      rebuttalTemplate: rebuttalBase,
-      topicText,
-    } as const;
-  };
-
-  // Auto-scroll to bottom of chat
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Fetch available models
   const { data: models = [] } = useQuery({
     queryKey: ['/api/models'],
     queryFn: async () => {
@@ -183,133 +65,317 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
     },
   });
 
-  // Start debate mutation - get the first model's (Affirmative) opening statement
-  const startDebateMutation = useMutation({
-    mutationFn: async (data: { model1Id: string; model2Id: string }) => {
-      const prompts = generateDebatePrompts();
-      const response = await apiRequest('POST', '/api/models/respond', {
-        modelId: data.model1Id,
-        prompt: prompts.affirmativePrompt
-      });
+  const debateService = useMemo(() => {
+    if (!debateData || models.length === 0) return null;
+    return new DebateService({
+      debateData,
+      models,
+      selectedTopic: debateSetup.selectedTopic,
+      customTopic: debateSetup.customTopic,
+      useCustomTopic: debateSetup.useCustomTopic,
+      adversarialLevel: debateSetup.adversarialLevel,
+      model1Id: debateSetup.model1Id,
+      model2Id: debateSetup.model2Id,
+    });
+  }, [
+    debateData,
+    models,
+    debateSetup.selectedTopic,
+    debateSetup.customTopic,
+    debateSetup.useCustomTopic,
+    debateSetup.adversarialLevel,
+    debateSetup.model1Id,
+    debateSetup.model2Id,
+  ]);
 
-      return response.json() as Promise<ModelResponse>;
+  // Create debate session mutation; streaming kickoff happens in handleStartDebate to leverage latest dependencies
+  const createDebateSessionMutation = useMutation({
+    mutationFn: async (data: { topic: string; model1Id: string; model2Id: string; adversarialLevel: number }) => {
+      const response = await apiRequest('POST', '/api/debate/session', data);
+      return response.json() as Promise<CreateDebateSessionResponse>;
     },
-    onSuccess: (data) => {
-      const model1 = models.find(m => m.id === model1Id);
-      
-      // Start with just Model 1's initial statement
-      setMessages([
-        {
-          id: `msg-1`,
-          modelId: model1Id,
-          modelName: model1?.name || "Model 1",
-          content: data.content,
-          timestamp: Date.now(),
-          round: 1,
-          responseTime: data.responseTime,
-          reasoning: data.reasoning,
-          tokenUsage: data.tokenUsage,
-          cost: data.cost,
-          modelConfig: data.modelConfig,
+  });
+
+  const normalizeSummary = (session: any): DebateSessionSummary => {
+    const totalCostNumber = typeof session.totalCost === 'number'
+      ? session.totalCost
+      : Number(session.totalCost ?? 0);
+
+    const jurySource = session.jurySummary || session.juryVerdict || session.jury || null;
+    const jury = jurySource
+      ? {
+          verdict: jurySource.verdict ?? jurySource.label ?? undefined,
+          summary: jurySource.summary ?? jurySource.reason ?? (typeof jurySource === 'string' ? jurySource : undefined),
+          winnerModelId: jurySource.winnerModelId ?? jurySource.winner ?? undefined,
+          score: typeof jurySource.score === 'number' ? jurySource.score : undefined,
+          confidence: typeof jurySource.confidence === 'number' ? jurySource.confidence : undefined,
         }
-      ]);
-      setCurrentRound(1);
-      setShowSetup(false);
-      
-      toast({
-        title: "Debate Started!",
-        description: `${model1?.name} has made their opening statement. Click Continue to get ${models.find(m => m.id === model2Id)?.name}'s rebuttal.`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Debate Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+      : undefined;
 
-  // Continue debate mutation with structured rebuttals
-  const continueDebateMutation = useMutation({
-    mutationFn: async (data: { battleHistory: DebateMessage[]; nextModelId: string }) => {
-      const prompts = generateDebatePrompts();
-      const isNegativeDebater = data.nextModelId === model2Id;
-      const role = isNegativeDebater ? 'NEGATIVE' : 'AFFIRMATIVE';
-      const position = isNegativeDebater ? 'AGAINST' : 'FOR';
-      const currentTopic = prompts.topicText;
-      
-      // Get the most recent opponent message
-      const lastMessage = data.battleHistory[data.battleHistory.length - 1];
-      
-      const rebuttalPrompt = (prompts.rebuttalTemplate)
-        .replace('{RESPONSE}', lastMessage.content)
-        .replace('{ROLE}', role)
-        .replace('{POSITION}', position)
-        .replace('{ORIGINAL_PROMPT}', currentTopic)
-        .replace('{TOPIC}', currentTopic);
-      
-      const response = await apiRequest('POST', '/api/models/respond', {
-        modelId: data.nextModelId,
-        prompt: rebuttalPrompt
-      });
-      
-      return { response: await response.json() as ModelResponse, modelId: data.nextModelId };
+    const turnCount = Array.isArray(session.turnHistory)
+      ? session.turnHistory.length
+      : typeof session.turnCount === 'number'
+        ? session.turnCount
+        : undefined;
+
+    return {
+      id: session.id,
+      topic: session.topic ?? session.topicText ?? 'Debate',
+      model1Id: session.model1Id,
+      model2Id: session.model2Id,
+      adversarialLevel: session.adversarialLevel,
+      totalCost: Number.isNaN(totalCostNumber) ? 0 : totalCostNumber,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+      durationMs: session.durationMs,
+      turnCount,
+      jury,
+    };
+  };
+
+  const loadDebateSessionsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/debate/sessions');
+      if (!response.ok) throw new Error('Failed to load debate sessions');
+      return response.json();
     },
     onSuccess: (data) => {
-      const model = models.find(m => m.id === data.modelId);
-      const nextRound = currentRound + 1;
-      
-      setMessages(prev => [...prev, {
-        id: `msg-${nextRound}`,
-        modelId: data.modelId,
-        modelName: model?.name || "Model",
-        content: data.response.content,
-        timestamp: Date.now(),
-        round: Math.ceil(nextRound / 2),
-        responseTime: data.response.responseTime,
-        reasoning: data.response.reasoning,
-        systemPrompt: data.response.systemPrompt,
-        tokenUsage: data.response.tokenUsage,
-        cost: data.response.cost,
-        modelConfig: data.response.modelConfig,
-      }]);
-      
-      setCurrentRound(nextRound);
-
-      const nextModel = models.find(m => m.id === (nextRound % 2 === 1 ? model2Id : model1Id));
-      toast({
-        title: "Response Added!",
-        description: `${model?.name} has responded. Click Continue for ${nextModel?.name}'s turn.`,
-      });
+      const sessionsArray = Array.isArray(data) ? data : [];
+      const normalized = sessionsArray.map(normalizeSummary);
+      debateSession.setExistingDebateSessions(normalized);
     },
     onError: (error) => {
-      setIsRunning(false);
       toast({
-        title: "Debate Continuation Failed",
+        title: "Failed to Load Sessions",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Function to manually continue the debate
-  const continueDebate = () => {
-    if (!model1Id || !model2Id) {
+  const sessionDetailsQuery = useQuery({
+    queryKey: ['/api/debate/session', debateSession.debateSessionId],
+    enabled: Boolean(debateSession.debateSessionId),
+    refetchOnWindowFocus: false,
+    queryFn: async (): Promise<DebateSessionHydration> => {
+      if (!debateSession.debateSessionId) {
+        throw new Error('No debate session selected');
+      }
+      const response = await fetch(`/api/debate/session/${debateSession.debateSessionId}`);
+      if (!response.ok) throw new Error('Failed to fetch debate session');
+      return response.json();
+    },
+  });
+
+  useEffect(() => {
+    loadDebateSessionsMutation.mutate();
+  }, []);
+
+  useEffect(() => {
+    if (!debateData?.topics.length) {
+      return;
+    }
+    if (setupUseCustomTopic) {
+      return;
+    }
+    const hasValidSelection = debateData.topics.some(topic => topic.id === setupSelectedTopic);
+    if (!hasValidSelection) {
+      setSetupSelectedTopic(debateData.topics[0].id);
+    }
+  }, [debateData, setupSelectedTopic, setupUseCustomTopic, setSetupSelectedTopic]);
+
+
+
+  useEffect(() => {
+    if (
+      debateStreaming.responseId &&
+      debateStreaming.content &&
+      debateSession.messages.length === 0
+    ) {
+      const model1 = debateService?.getModel(debateSetup.model1Id);
+      const initialMessage = {
+        id: "msg-1",
+        modelId: debateSetup.model1Id,
+        modelName: model1?.name ?? "Model 1",
+        content: debateStreaming.content,
+        reasoning: debateStreaming.reasoning,
+        reasoningChunks: debateStreaming.reasoningChunks.map(chunk => ({ ...chunk })),
+        contentChunks: debateStreaming.contentChunks.map(chunk => ({ ...chunk })),
+        timestamp: Date.now(),
+        round: 1,
+        turnNumber: 1,
+        responseId: debateStreaming.responseId,
+        responseTime: 0,
+        tokenUsage: debateStreaming.tokenUsage,
+        cost: debateStreaming.cost,
+        modelConfig: {
+          capabilities: {
+            reasoning: Boolean(debateSetup.model1Config.enableReasoning),
+            multimodal: false,
+            functionCalling: false,
+            streaming: true,
+          },
+          pricing: {
+            inputPerMillion: 0,
+            outputPerMillion: 0,
+          },
+        },
+      };
+
+      debateSession.addMessage(initialMessage);
+      debateSession.setModelALastResponseId(debateStreaming.responseId);
+      debateSession.setCurrentRound(1);
+      debateSetup.setShowSetup(false);
+    }
+  }, [
+    debateStreaming.responseId,
+    debateStreaming.content,
+    debateStreaming.reasoning,
+    debateStreaming.reasoningChunks,
+    debateStreaming.contentChunks,
+    debateStreaming.tokenUsage,
+    debateStreaming.cost,
+    debateSession.messages.length,
+    debateSession.addMessage,
+    debateSession.setModelALastResponseId,
+    debateSession.setCurrentRound,
+    debateSetup.setShowSetup,
+    debateService,
+    debateSetup.model1Id,
+    debateSetup.model1Config.enableReasoning,
+    debateSetup.model1Config.maxTokens
+  ]);
+
+  useEffect(() => {
+    if (
+      debateStreaming.responseId &&
+      debateStreaming.content &&
+      debateSession.messages.length > 0 &&
+      debateStreaming.responseId !== debateSession.modelALastResponseId &&
+      debateStreaming.responseId !== debateSession.modelBLastResponseId
+    ) {
+      const isModelBTurn = debateSession.currentRound % 2 === 1;
+      const nextModelId = isModelBTurn ? debateSetup.model2Id : debateSetup.model1Id;
+      const nextModelConfig = isModelBTurn ? debateSetup.model2Config : debateSetup.model1Config;
+      const model = debateService?.getModel(nextModelId);
+      const nextTurn = debateSession.currentRound + 1;
+
+      debateSession.addMessage({
+        id: `msg-${nextTurn}`,
+        modelId: nextModelId,
+        modelName: model?.name || "Model",
+        content: debateStreaming.content,
+        reasoning: debateStreaming.reasoning,
+        reasoningChunks: debateStreaming.reasoningChunks.map(chunk => ({ ...chunk })),
+        contentChunks: debateStreaming.contentChunks.map(chunk => ({ ...chunk })),
+        timestamp: Date.now(),
+        round: Math.ceil(nextTurn / 2),
+        turnNumber: nextTurn,
+        responseId: debateStreaming.responseId,
+        responseTime: 0,
+        tokenUsage: debateStreaming.tokenUsage,
+        cost: debateStreaming.cost,
+        modelConfig: {
+          capabilities: nextModelConfig.enableReasoning
+            ? { reasoning: true, multimodal: false, functionCalling: false, streaming: true }
+            : { reasoning: false, multimodal: false, functionCalling: false, streaming: true },
+          pricing: { inputPerMillion: 0, outputPerMillion: 0 },
+        },
+      });
+
+      if (isModelBTurn) {
+        debateSession.setModelBLastResponseId(debateStreaming.responseId);
+      } else {
+        debateSession.setModelALastResponseId(debateStreaming.responseId);
+      }
+
+      debateSession.setCurrentRound(nextTurn);
+    }
+  }, [
+    debateStreaming.responseId,
+    debateStreaming.content,
+    debateStreaming.reasoning,
+    debateStreaming.reasoningChunks,
+    debateStreaming.contentChunks,
+    debateStreaming.tokenUsage,
+    debateStreaming.cost,
+    debateSession.messages.length,
+    debateSession.currentRound,
+    debateService,
+    debateSetup.model1Id,
+    debateSetup.model2Id,
+    debateSetup.model1Config.enableReasoning,
+    debateSetup.model2Config.enableReasoning,
+    debateSetup.model2Config.enableReasoning
+  ]);
+
+  useEffect(() => {
+    if (!sessionDetailsQuery.data || models.length === 0) return;
+    const modelLookup = new Map(models.map(model => [model.id, { name: model.name, provider: model.provider }]));
+    debateSession.hydrateFromSession(sessionDetailsQuery.data, modelLookup);
+
+    debateSetup.setModel1Id(sessionDetailsQuery.data.model1Id);
+    debateSetup.setModel2Id(sessionDetailsQuery.data.model2Id);
+    debateSetup.setUseCustomTopic(true);
+    debateSetup.setCustomTopic(sessionDetailsQuery.data.topic);
+    debateSetup.setSelectedTopic('custom');
+    debateSetup.setAdversarialLevel(sessionDetailsQuery.data.adversarialLevel);
+    debateSetup.setShowSetup(false);
+  }, [sessionDetailsQuery.data, models]);
+
+  useEffect(() => {
+    if (!debateStreaming.responseId || !debateSession.debateSessionId) return;
+    sessionDetailsQuery.refetch();
+    loadDebateSessionsMutation.mutate();
+  }, [
+    debateStreaming.responseId,
+    debateSession.debateSessionId,
+    sessionDetailsQuery.refetch,
+    loadDebateSessionsMutation.mutate,
+  ]);
+
+  const continueDebate = async () => {
+    if (!debateSession.isFloorOpen()) {
+      toast({
+        title: "Floor Closed",
+        description: "Reopen the debate floor before continuing to the next turn.",
+        variant: "destructive",
+      });
       return;
     }
 
-    // Determine which model should respond next (alternate between them)
-    const nextModelId = currentRound % 2 === 1 ? model2Id : model1Id;
+    if (!debateSetup.model1Id || !debateSetup.model2Id || !debateService) return;
+    if (debateSession.messages.length === 0) return;
 
-    continueDebateMutation.mutate({
-      battleHistory: messages,
-      nextModelId: nextModelId
+    const resume = debateSession.getResumeContext({
+      model1Id: debateSetup.model1Id,
+      model2Id: debateSetup.model2Id,
+    });
+
+    const lastMessage = debateSession.messages[debateSession.messages.length - 1];
+    const nextModelConfig = resume.isModelBTurn ? debateSetup.model2Config : debateSetup.model1Config;
+
+    await debateStreaming.startStream({
+      modelId: resume.nextModelId,
+      topic: debateService.getTopicText(),
+      role: resume.isModelBTurn ? 'NEGATIVE' : 'AFFIRMATIVE',
+      intensity: debateSetup.adversarialLevel,
+      opponentMessage: lastMessage.content,
+      previousResponseId: resume.previousResponseId,
+      turnNumber: resume.nextTurnNumber,
+      sessionId: debateSession.debateSessionId ?? undefined,
+      model1Id: debateSetup.model1Id,
+      model2Id: debateSetup.model2Id,
+      reasoningEffort: nextModelConfig.reasoningEffort,
+      reasoningSummary: nextModelConfig.reasoningSummary,
+      textVerbosity: nextModelConfig.textVerbosity,
+      temperature: nextModelConfig.temperature,
+      maxTokens: nextModelConfig.maxTokens,
     });
   };
 
-  const handleStartDebate = () => {
-    if (!model1Id || !model2Id) {
+  const handleStartDebate = async () => {
+    if (!debateService?.canStartDebate()) {
       toast({
         title: "Select Both Models",
         description: "Please select two models for the debate.",
@@ -318,372 +384,308 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
       return;
     }
 
+    const prompts = debateService.generatePrompts();
 
-    startDebateMutation.mutate({
-      model1Id: model1Id,
-      model2Id: model2Id,
+    debateSession.setSessionMetadata({
+      topic: prompts.topicText,
+      model1Id: debateSetup.model1Id,
+      model2Id: debateSetup.model2Id,
+      adversarialLevel: debateSetup.adversarialLevel,
     });
-  };
 
-  const handleStopDebate = () => {
-    setIsRunning(false);
-    toast({
-      title: "Debate Stopped",
-      description: "Automatic debate has been halted.",
-    });
-  };
-
-  const handleResetDebate = () => {
-    setModel1Id("");
-    setModel2Id("");
-    setMessages([]);
-    setCurrentRound(0);
-    setIsRunning(false);
-    setShowSetup(true);
-  };
-
-
-
-  // Convert DebateMessage to MessageCardData format
-  const convertToMessageCardData = (message: DebateMessage): MessageCardData => {
-    const model = models.find(m => m.id === message.modelId);
-    
-    return {
-      id: message.id,
-      modelName: message.modelName,
-      modelId: message.modelId,
-      content: message.content,
-      reasoning: message.reasoning,
-      systemPrompt: message.systemPrompt,
-      responseTime: message.responseTime,
-      round: message.round,
-      timestamp: message.timestamp,
-      type: 'debate',
-      tokenUsage: message.tokenUsage,
-      cost: message.cost,
-      modelConfig: {
-        provider: model?.provider,
-        capabilities: message.modelConfig?.capabilities || {
-          reasoning: !!message.reasoning,
-          multimodal: false,
-          functionCalling: false,
-          streaming: false
-        },
-        pricing: message.modelConfig?.pricing
-      }
-    };
-  };
-
-  const totalCost = messages.reduce((sum, msg) => sum + (msg.cost?.total || 0), 0);
-  // Current prompts preview reflecting current selections
-  const promptsPreview = debateData ? generateDebatePrompts() : null;
-
-  // Export handlers
-  const handleExportMarkdown = () => {
-    if (messages.length === 0) return;
-
-    const topicText = useCustomTopic 
-      ? customTopic 
-      : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Custom Topic');
-
-    const exportData: ExportData = {
-      prompt: `Debate Topic: ${topicText}`,
-      timestamp: new Date(),
-      models: messages.map(msg => ({
-        model: models.find(m => m.id === msg.modelId) as AIModel,
-        response: {
-          status: 'success' as const,
-          content: msg.content,
-          reasoning: msg.reasoning,
-          responseTime: msg.responseTime,
-          tokenUsage: msg.tokenUsage,
-          cost: msg.cost,
-        }
-      })).filter(item => item.model)
-    };
-
-    const markdown = generateMarkdownExport(exportData);
-    const filename = generateSafeFilename(`debate-${topicText}`, 'md');
-    downloadFile(markdown, filename, 'text/markdown');
-    
-    toast({
-      title: "Debate Exported",
-      description: "Downloaded as markdown file",
-    });
-  };
-
-  const handleCopyToClipboard = async () => {
-    if (messages.length === 0) return;
-
-    const topicText = useCustomTopic 
-      ? customTopic 
-      : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Custom Topic');
-
-    const exportData: ExportData = {
-      prompt: `Debate Topic: ${topicText}`,
-      timestamp: new Date(),
-      models: messages.map(msg => ({
-        model: models.find(m => m.id === msg.modelId) as AIModel,
-        response: {
-          status: 'success' as const,
-          content: msg.content,
-          reasoning: msg.reasoning,
-          responseTime: msg.responseTime,
-          tokenUsage: msg.tokenUsage,
-          cost: msg.cost,
-        }
-      })).filter(item => item.model)
-    };
-
-    const markdown = generateMarkdownExport(exportData);
-    const success = await copyToClipboard(markdown);
-    
-    if (success) {
-      toast({
-        title: "Copied to Clipboard",
-        description: "Debate exported as markdown",
+    try {
+      const sessionData = await createDebateSessionMutation.mutateAsync({
+        topic: prompts.topicText,
+        model1Id: debateSetup.model1Id,
+        model2Id: debateSetup.model2Id,
+        adversarialLevel: debateSetup.adversarialLevel,
       });
-    } else {
+
+      debateSession.setDebateSessionId(sessionData.id);
+      debateSession.setSessionMetadata({
+        topic: sessionData.topic,
+        model1Id: sessionData.model1Id,
+        model2Id: sessionData.model2Id,
+        adversarialLevel: sessionData.adversarialLevel,
+      });
+      debateSession.updateJurySummary(null);
+
       toast({
-        title: "Copy Failed",
-        description: "Could not copy to clipboard",
+        title: "Debate Session Created",
+        description: "Starting debate with session tracking",
+      });
+
+      await debateStreaming.startStream({
+        modelId: debateSetup.model1Id,
+        topic: prompts.topicText,
+        role: 'AFFIRMATIVE',
+        intensity: debateSetup.adversarialLevel,
+        opponentMessage: null,
+        previousResponseId: null,
+        turnNumber: 1,
+        sessionId: sessionData.id,
+        model1Id: debateSetup.model1Id,
+        model2Id: debateSetup.model2Id,
+        reasoningEffort: debateSetup.model1Config.reasoningEffort,
+        reasoningSummary: debateSetup.model1Config.reasoningSummary,
+        textVerbosity: debateSetup.model1Config.textVerbosity,
+        temperature: debateSetup.model1Config.temperature,
+        maxTokens: debateSetup.model1Config.maxTokens,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create debate session';
+      toast({
+        title: "Failed to Create Session",
+        description: message,
         variant: "destructive",
       });
     }
   };
 
+  const handleResetDebate = () => {
+    debateSetup.resetSetup();
+    debateSession.resetSession();
+    toast({
+      title: "Debate Reset",
+      description: "All debate data has been cleared.",
+    });
+  };
+
+  const handleExportMarkdown = () => {
+    exportMarkdown({
+      turnHistory: debateSession.turnHistory,
+      models,
+      selectedTopic: debateSetup.selectedTopic,
+      customTopic: debateSetup.customTopic,
+      useCustomTopic: debateSetup.useCustomTopic,
+      jurySummary: debateSession.jurySummary,
+    });
+  };
+
+  const handleCopyToClipboard = async () => {
+    await copyToClipboard({
+      turnHistory: debateSession.turnHistory,
+      models,
+      selectedTopic: debateSetup.selectedTopic,
+      customTopic: debateSetup.customTopic,
+      useCustomTopic: debateSetup.useCustomTopic,
+      jurySummary: debateSession.jurySummary,
+    });
+  };
+
+  const handleSelectHistorySession = (session: DebateSessionSummary) => {
+    debateSession.resetSession();
+    debateSession.setSessionMetadata({
+      topic: session.topic,
+      model1Id: session.model1Id,
+      model2Id: session.model2Id,
+      adversarialLevel: session.adversarialLevel ?? debateSetup.adversarialLevel,
+    });
+    debateSession.setDebateSessionId(session.id);
+    debateSession.updateJurySummary(session.jury ?? null);
+
+    debateSetup.setModel1Id(session.model1Id);
+    debateSetup.setModel2Id(session.model2Id);
+    debateSetup.setUseCustomTopic(true);
+    debateSetup.setCustomTopic(session.topic);
+    debateSetup.setSelectedTopic('custom');
+    if (session.adversarialLevel !== undefined) {
+      debateSetup.setAdversarialLevel(session.adversarialLevel);
+    }
+    debateSetup.setShowSetup(false);
+  };
+
+  const totalCost = debateSession.calculateTotalCost();
+
+  const currentPhase = debateSession.getCurrentPhase();
+  const floorOpen = debateSession.isFloorOpen();
+  const juryPending = debateSession.hasUnresolvedJuryTasks();
+  const continueDisabledReason = !floorOpen
+    ? 'The debate floor is closed. Reopen the floor to allow the next speaker.'
+    : undefined;
+
+  const handleAdvancePhase = () => {
+    if (juryPending) {
+      toast({
+        title: "Jury Review Required",
+        description: "Resolve outstanding jury notes before advancing the debate phase.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (debateStreaming.isStreaming) {
+      toast({
+        title: "Streaming In Progress",
+        description: "Wait for the current response to finish before changing phases.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    debateSession.advancePhase();
+  };
+
+  const stageSpeakers = useMemo(() => {
+    const model1 = debateService?.getModel(debateSetup.model1Id ?? '')?.name || 'Affirmative';
+    const model2 = debateService?.getModel(debateSetup.model2Id ?? '')?.name || 'Negative';
+    return [
+      {
+        modelId: debateSetup.model1Id ?? 'affirmative-placeholder',
+        modelName: model1,
+        role: 'Affirmative',
+      },
+      {
+        modelId: debateSetup.model2Id ?? 'negative-placeholder',
+        modelName: model2,
+        role: 'Negative',
+      },
+    ];
+  }, [debateService, debateSetup.model1Id, debateSetup.model2Id]);
+
+  const activeSpeakers = useMemo(
+    () =>
+      stageSpeakers.filter(
+        speaker => speaker.modelId === debateSetup.model1Id || speaker.modelId === debateSetup.model2Id
+      ),
+    [stageSpeakers, debateSetup.model1Id, debateSetup.model2Id]
+  );
+
+  const phaseMetadata: Record<DebatePhase, { label: string; description: string }> = {
+    OPENING_STATEMENTS: {
+      label: 'Opening Statements',
+      description: 'Establishes each model\'s primary case and burden.',
+    },
+    REBUTTALS: {
+      label: 'Rebuttals',
+      description: 'Floor opens for alternating rebuttals and counterpoints.',
+    },
+    CLOSING_ARGUMENTS: {
+      label: 'Closing Arguments',
+      description: 'Final summaries before the jury renders its verdict.',
+    },
+  };
+
+  const stagePhases = useMemo(
+    () =>
+      ROBERTS_RULES_PHASES.map(phase => ({
+        id: phase,
+        label: phaseMetadata[phase].label,
+        description: phaseMetadata[phase].description,
+        speakers: stageSpeakers,
+      })),
+    [stageSpeakers]
+  );
+
+  useEffect(() => {
+    if (activeSpeakers.length > 0) {
+      debateSession.initializeJury(
+        activeSpeakers.map(speaker => ({ modelId: speaker.modelId, modelName: speaker.modelName }))
+      );
+    }
+  }, [activeSpeakers, debateSession.initializeJury]);
+
+  const nextSpeakerId = useMemo(() => {
+    if (!debateService || activeSpeakers.length === 0) return null;
+    return debateService.getNextDebater(debateSession.currentRound);
+  }, [debateService, debateSession.currentRound, activeSpeakers.length]);
+
+  const currentSpeaker = useMemo(() => {
+    if (!nextSpeakerId) {
+      return stageSpeakers[0] ?? null;
+    }
+    return activeSpeakers.find(speaker => speaker.modelId === nextSpeakerId) ?? null;
+  }, [activeSpeakers, nextSpeakerId, stageSpeakers]);
+
+  const nextSpeakerModel = useMemo(() => {
+    if (!nextSpeakerId || !debateService) {
+      return null;
+    }
+    return debateService.getModel(nextSpeakerId) ?? null;
+  }, [debateService, nextSpeakerId]);
+
+  const rebuttalQueue = useMemo(() => {
+    const queueSource = activeSpeakers.length > 0 ? activeSpeakers : stageSpeakers;
+    if (!floorOpen) {
+      return [];
+    }
+    if (!currentSpeaker) {
+      return queueSource;
+    }
+    return queueSource.filter(speaker => speaker.modelId !== currentSpeaker.modelId);
+  }, [activeSpeakers, currentSpeaker, floorOpen, stageSpeakers]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <AppNavigation 
-        title="AI Model Debate Mode" 
+      <AppNavigation
+        title="AI Model Debate Mode"
         subtitle="Structured, user-controlled debates (Robert's Rules)"
         icon={MessageSquare}
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Setup Panel */}
-        {showSetup && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MessageSquare className="w-5 h-5" />
-                <span>Debate Setup</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Debate Topic Selection */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Gavel className="w-4 h-4" />
-                    <label className="text-sm font-medium">Debate Topic</label>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="preset-topic"
-                        checked={!useCustomTopic}
-                        onChange={() => setUseCustomTopic(false)}
-                      />
-                      <label htmlFor="preset-topic" className="text-sm">Select from presets</label>
-                    </div>
-                    
-                    {!useCustomTopic && (
-                      <Select value={selectedTopic} onValueChange={setSelectedTopic}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose debate topic" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {debateData?.topics.map((topic) => (
-                            <SelectItem key={topic.id} value={topic.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{topic.title}</span>
-                                <span className="text-xs text-gray-500 truncate max-w-48">
-                                  {topic.proposition}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="custom-topic"
-                        checked={useCustomTopic}
-                        onChange={() => setUseCustomTopic(true)}
-                      />
-                      <label htmlFor="custom-topic" className="text-sm">Custom topic</label>
-                    </div>
-                    
-                    {useCustomTopic && (
-                      <Textarea
-                        value={customTopic}
-                        onChange={(e) => setCustomTopic(e.target.value)}
-                        placeholder="Enter your debate proposition..."
-                        className="min-h-[80px]"
-                      />
-                    )}
-                  </div>
-                  
-                  {/* Current Topic Display */}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Current Topic:</div>
-                    <div className="text-sm font-medium">
-                      {useCustomTopic
-                        ? (customTopic || 'Enter custom topic above')
-                        : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Select a topic')}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Model Selection */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Users className="w-4 h-4" />
-                    <label className="text-sm font-medium">Debaters</label>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Affirmative (Pro) - {models.find(m => m.id === model1Id)?.name || 'Select Model'}
-                    </label>
-                    <Select value={model1Id} onValueChange={setModel1Id}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Pro debater" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {models.map((model) => (
-                          <SelectItem key={model.id} value={model.id}>
-                            <div className="flex items-center space-x-2">
-                              <span>{model.name}</span>
-                              <Badge variant="outline" className="text-xs">{model.provider}</Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Negative (Con) - {models.find(m => m.id === model2Id)?.name || 'Select Model'}
-                    </label>
-                    <Select value={model2Id} onValueChange={setModel2Id}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Con debater" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {models.map((model) => (
-                          <SelectItem key={model.id} value={model.id}>
-                            <div className="flex items-center space-x-2">
-                              <span>{model.name}</span>
-                              <Badge variant="outline" className="text-xs">{model.provider}</Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Adversarial Intensity */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Target className="w-4 h-4" />
-                    <label className="text-sm font-medium">Debate Intensity</label>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {adversarialLevels.map((level) => (
-                      <div key={level.id} className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id={`level-${level.id}`}
-                          checked={adversarialLevel === level.id}
-                          onChange={() => setAdversarialLevel(level.id)}
-                        />
-                        <label htmlFor={`level-${level.id}`} className="flex-1">
-                          <div className="text-sm font-medium">{level.name}</div>
-                          <div className="text-xs text-gray-500 line-clamp-2">{debateData?.intensities?.[level.id] || ''}</div>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <div className="text-xs text-amber-700 dark:text-amber-300">
-                      Higher intensity levels lead to more forceful rhetoric. Choose appropriately.
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <Button
-                      onClick={handleStartDebate}
-                      disabled={startDebateMutation.isPending || !model1Id || !model2Id || debateLoading || !!debateError || (!useCustomTopic && !selectedTopic)}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                    >
-                      {startDebateMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Getting Opening Statement...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          Start Debate ({models.find(m => m.id === model1Id)?.name} goes first)
-                        </>
-                      )}
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowSystemPrompts(!showSystemPrompts)}
-                      className="w-full"
-                    >
-                      {showSystemPrompts ? 'Hide' : 'Show'} System Prompts
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
+        {debateSetup.showSetup && (
+          <DebateSetupPanel
+            debateData={debateData}
+            debateLoading={debateLoading}
+            debateError={debateError}
+            models={models}
+            selectedTopic={debateSetup.selectedTopic}
+            setSelectedTopic={debateSetup.setSelectedTopic}
+            customTopic={debateSetup.customTopic}
+            setCustomTopic={debateSetup.setCustomTopic}
+            useCustomTopic={debateSetup.useCustomTopic}
+            setUseCustomTopic={debateSetup.setUseCustomTopic}
+            adversarialLevel={debateSetup.adversarialLevel}
+            setAdversarialLevel={debateSetup.setAdversarialLevel}
+            model1Id={debateSetup.model1Id}
+            setModel1Id={debateSetup.setModel1Id}
+            model2Id={debateSetup.model2Id}
+            setModel2Id={debateSetup.setModel2Id}
+            model1Config={debateSetup.model1Config}
+            setModel1Config={debateSetup.setModel1Config}
+            model2Config={debateSetup.model2Config}
+            setModel2Config={debateSetup.setModel2Config}
+            onStartDebate={handleStartDebate}
+            isStreaming={debateStreaming.isStreaming}
+          />
         )}
 
-        {/* System Prompts Preview */}
-        {showSystemPrompts && (model1Id || model2Id) && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Settings className="w-5 h-5" />
+        {debateSetup.showSystemPrompts && (debateSetup.model1Id || debateSetup.model2Id) && (
+          <Card className="mb-3">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center space-x-2 text-sm">
+                <Settings className="w-4 h-4" />
                 <span>System Prompts Preview</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 {(() => {
-                  const prompts = generateDebatePrompts();
+                  const prompts = generateDebatePrompts({
+                    selectedTopic: debateSetup.selectedTopic,
+                    customTopic: debateSetup.customTopic,
+                    useCustomTopic: debateSetup.useCustomTopic,
+                    adversarialLevel: debateSetup.adversarialLevel,
+                  });
                   return (
                     <>
                       <div>
-                        <h4 className="font-medium mb-2">Opening Statement (Model 1 - Affirmative):</h4>
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                        <h4 className="text-xs font-medium mb-1">Opening (Model 1):</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded border overflow-x-auto whitespace-pre-wrap">
                           {prompts.affirmativePrompt}
                         </pre>
                       </div>
                       <div>
-                        <h4 className="font-medium mb-2">Opening Statement (Model 2 - Negative):</h4>
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                        <h4 className="text-xs font-medium mb-1">Opening (Model 2):</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded border overflow-x-auto whitespace-pre-wrap">
                           {prompts.negativePrompt}
                         </pre>
                       </div>
                       <div>
-                        <h4 className="font-medium mb-2">Rebuttal Template:</h4>
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
-                          {prompts.rebuttalTemplate.replace('{RESPONSE}', '[Previous opponent message will appear here]')}
+                        <h4 className="text-xs font-medium mb-1">Rebuttal Template:</h4>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded border overflow-x-auto whitespace-pre-wrap">
+                          {prompts.rebuttalTemplate.replace('{RESPONSE}', '[Previous opponent message]')}
                         </pre>
                       </div>
                     </>
@@ -694,142 +696,96 @@ Respond as the {ROLE} debater following Robert's Rules of Order:
           </Card>
         )}
 
-        {/* Debate Progress and Controls */}
-        {messages.length > 0 && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm font-medium">
-                    {currentRound} exchanges • Manual control
-                  </div>
-                  {totalCost > 0 && (
-                    <div className="text-sm font-medium text-green-600">
-                      Total Cost: {formatCost(totalCost)}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button
-                    onClick={handleExportMarkdown}
-                    variant="outline"
-                    size="sm"
-                    disabled={messages.length === 0}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
-                  
-                  <Button
-                    onClick={handleCopyToClipboard}
-                    variant="outline"
-                    size="sm"
-                    disabled={messages.length === 0}
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy
-                  </Button>
-                  
-                  <Button
-                    onClick={handleResetDebate}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    New Debate
-                  </Button>
-                  
-                  <Button
-                    onClick={() => setShowSetup(!showSetup)}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    {showSetup ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-              
-              {continueDebateMutation.isPending && (
-                <div className="flex items-center space-x-2 text-sm text-blue-600">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  <span>Waiting for {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
+          <div className="xl:col-span-1 space-y-3">
+            <DebateHistoryDrawer
+              sessions={debateSession.existingDebateSessions}
+              onRefresh={() => loadDebateSessionsMutation.mutate()}
+              isRefreshing={loadDebateSessionsMutation.isPending}
+              onSelectSession={handleSelectHistorySession}
+              activeSessionId={debateSession.debateSessionId}
+            />
 
-        {/* Messages */}
-        {messages.length > 0 && (
-          <div className="space-y-4">
-            {messages.map((message, index) => (
-              <div key={message.id} className={`${
-                message.modelId === model1Id ? 'ml-0 mr-8' : 'ml-8 mr-0'
-              }`}>
-                {/* Debate side indicator */}
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className={`w-3 h-3 rounded-full ${
-                    message.modelId === model1Id ? 'bg-blue-500' : 'bg-green-500'
-                  }`} />
-                  <Badge variant="outline" className="text-xs">
-                    {message.modelId === model1Id ? 'Pro' : 'Con'} - Round {message.round}
-                  </Badge>
-                </div>
-                
-                <MessageCard 
-                  message={convertToMessageCardData(message)}
-                  variant="detailed"
-                  showHeader={true}
-                  showFooter={true}
-                  className="shadow-sm"
+            {debateSession.messages.length > 0 && (
+              <Card className="p-3">
+            <DebateControls
+              currentRound={debateSession.currentRound}
+              totalCost={totalCost}
+              messagesCount={debateSession.messages.length}
+              showSetup={debateSetup.showSetup}
+              setShowSetup={debateSetup.setShowSetup}
+              onExportMarkdown={handleExportMarkdown}
+              onCopyToClipboard={handleCopyToClipboard}
+              onResetDebate={handleResetDebate}
+              isPending={debateStreaming.isStreaming}
+              nextModelName={nextSpeakerModel?.name}
+              currentPhase={currentPhase}
+              onAdvancePhase={handleAdvancePhase}
+              isFloorOpen={floorOpen}
+              onToggleFloor={debateSession.toggleFloor}
+              hasJuryPending={juryPending}
                 />
-                
-                {/* Continue Button - Only show on the last message */}
-                {index === messages.length - 1 && currentRound > 0 && (
-                  <div className="mt-4">
-                    <Button
-                      onClick={continueDebate}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 w-full"
-                      disabled={continueDebateMutation.isPending}
-                    >
-                      {continueDebateMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Getting {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s response...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          Continue - {models.find(m => m.id === (currentRound % 2 === 1 ? model2Id : model1Id))?.name}'s turn
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
+              </Card>
+            )}
+
+            {debateStreaming.isStreaming && (
+              <Card className="p-3">
+                <StreamingControls
+                  isStreaming={debateStreaming.isStreaming}
+                  error={debateStreaming.error}
+                  progress={debateStreaming.progress}
+                  estimatedCost={debateStreaming.estimatedCost}
+                />
+              </Card>
+            )}
+          </div>
+
+          <div className="xl:col-span-3 space-y-3">
+            {debateStreaming.isStreaming && (
+              <StreamingDisplay
+                reasoning={debateStreaming.reasoning}
+                content={debateStreaming.content}
+                isStreaming={debateStreaming.isStreaming}
+                error={debateStreaming.error}
+                modelName={nextSpeakerModel?.name}
+                modelProvider={nextSpeakerModel?.provider}
+                progress={debateStreaming.progress}
+                estimatedCost={debateStreaming.estimatedCost}
+                disableAutoScroll
+              />
+            )}
+
+            {debateSession.messages.length > 0 && (
+              <DebateMessageList
+                messages={debateSession.messages}
+                models={models}
+                model1Id={debateSetup.model1Id}
+                model2Id={debateSetup.model2Id}
+                currentRound={debateSession.currentRound}
+                isStreaming={debateStreaming.isStreaming}
+                onContinueDebate={continueDebate}
+              />
+            )}
+
+            {debateSession.messages.length === 0 && !debateSetup.showSetup && (
+              <Card className="p-8">
+                <CardContent className="text-center py-8">
+                  <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">Ready for Debate</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Configure your debate setup and start a 10-round AI model debate.
+                  </p>
+                  <Button onClick={() => debateSetup.setShowSetup(true)} variant="outline" size="sm">
+                    Show Setup Panel
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <div ref={chatEndRef} />
           </div>
-        )}
-
-        {/* Empty State */}
-        {messages.length === 0 && !showSetup && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Ready for Debate</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Configure your debate setup above and start a 10-round AI model debate.
-              </p>
-              <Button onClick={() => setShowSetup(true)} variant="outline">
-                Show Setup Panel
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        </div>
       </div>
     </div>
   );
-}
+}

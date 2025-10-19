@@ -30,8 +30,15 @@ const ROLE_COLORS: Record<LuigiMessagePayload['role'], string> = {
 export function LuigiConversationLog({ messages, className }: LuigiConversationLogProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  // Add defensive guard to prevent browser extension MutationObserver errors
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!bottomRef.current) return;
+    try {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      // Silently ignore scroll errors (browser extensions can interfere)
+      console.debug('Luigi conversation scroll error:', error);
+    }
   }, [messages]);
 
   return (
@@ -41,7 +48,14 @@ export function LuigiConversationLog({ messages, className }: LuigiConversationL
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[420px]">
-          <div className="space-y-4 p-4">
+          <div
+            className="space-y-4 p-4"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            data-lpignore="true"
+            data-form-type="other"
+          >
             {messages.length === 0 && (
               <p className="text-sm text-muted-foreground">No activity yet. Launch a Luigi run to begin.</p>
             )}

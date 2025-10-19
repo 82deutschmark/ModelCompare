@@ -12,6 +12,28 @@ import type { LuigiRun, LuigiMessage, LuigiArtifact } from "@shared/schema";
 import type { LuigiRunStatus, LuigiStageId, LuigiStageStatus } from "@shared/luigi-types";
 import { LUIGI_STAGES } from "@shared/luigi-types";
 
+const VALID_STAGE_IDS = new Set<string>(LUIGI_STAGES.map((stage) => stage.id));
+const DEFAULT_STAGE_ID = (LUIGI_STAGES[0]?.id ?? 'start-time-task') as LuigiStageId;
+
+function asLuigiStageId(value: unknown): LuigiStageId | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  return VALID_STAGE_IDS.has(value) ? (value as LuigiStageId) : null;
+}
+
+function normalizeArtifactData(data: unknown): Record<string, unknown> | undefined {
+  if (data === null || typeof data === 'undefined') {
+    return undefined;
+  }
+
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    return data as Record<string, unknown>;
+  }
+
+  return { value: data };
+}
+
 export interface LuigiRunParams {
   missionName: string;
   objective: string;
@@ -143,13 +165,17 @@ export class LuigiExecutor {
 
     const stageSnapshots: StageMap | undefined = response.stageSnapshots as StageMap | undefined;
 
+    const nextStageId = asLuigiStageId(response.currentStageId)
+      ?? asLuigiStageId(run.currentStageId)
+      ?? null;
+
     await storage.updateLuigiRun(runId, {
       status,
       updatedAt: new Date(),
       completedAt: status === "completed" ? new Date() : undefined,
       totalCostCents: response.costCents ?? run.totalCostCents ?? null,
       stages: stageSnapshots ?? run.stages,
-      currentStageId: response.currentStageId ?? run.currentStageId,
+      currentStageId: nextStageId,
     });
 
     if (response.messages) {
@@ -158,7 +184,7 @@ export class LuigiExecutor {
           runId,
           role: message.role,
           agentId: message.agentId,
-          stageId: message.stageId as LuigiStageId | undefined,
+          stageId: asLuigiStageId(message.stageId) ?? undefined,
           content: message.content,
           reasoning: message.reasoning,
         });
@@ -167,13 +193,16 @@ export class LuigiExecutor {
 
     if (response.artifacts) {
       for (const artifact of response.artifacts) {
+        const stageId = asLuigiStageId(artifact.stageId)
+          ?? asLuigiStageId(run.currentStageId)
+          ?? DEFAULT_STAGE_ID;
         await storage.saveLuigiArtifact({
           runId,
-          stageId: artifact.stageId as LuigiStageId,
+          stageId,
           type: artifact.type,
           title: artifact.title,
           description: artifact.description,
-          data: artifact.data,
+          data: normalizeArtifactData(artifact.data),
         });
       }
     }

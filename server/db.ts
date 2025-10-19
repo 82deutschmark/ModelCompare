@@ -1,16 +1,22 @@
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-10-16 and 15:52 UTC
+ * PURPOSE: Database bootstrap utilities responsible for establishing Postgres connections and ensuring critical tables exist so application storage can operate across modes including debate sessions.
+ * SRP/DRY check: Pass - handles database initialization concerns exclusively without duplicating storage logic handled in storage.ts.
+ */
+
 /**
  * Database Connection Setup with Enhanced Connection Management
- * 
+ *
  * Provides both legacy compatibility and modern database management.
  * Uses DatabaseManager for new implementations while maintaining backward compatibility.
- * 
+ *
  * Author: Cascade using Claude Sonnet 4
  * Date: 2025-10-04
  * PURPOSE: Manages database connections to PostgreSQL with automatic fallback to in-memory storage.
  *          Loads environment variables at module initialization to ensure DATABASE_URL is available.
  * SRP/DRY check: Pass - Single responsibility for database connection management
  */
-
 // Load environment variables FIRST before checking DATABASE_URL
 import 'dotenv/config';
 
@@ -60,13 +66,29 @@ export async function ensureTablesExist() {
         "created_at" timestamp DEFAULT now()
       );
     `);
-    
+
     await db.execute(`
       CREATE TABLE IF NOT EXISTS "vixra_sessions" (
         "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
         "variables" jsonb NOT NULL,
         "template" text NOT NULL,
         "responses" jsonb NOT NULL,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
+      );
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS "debate_sessions" (
+        "id" text PRIMARY KEY,
+        "topic_text" text NOT NULL,
+        "model1_id" text NOT NULL,
+        "model2_id" text NOT NULL,
+        "adversarial_level" integer NOT NULL,
+        "turn_history" jsonb NOT NULL DEFAULT '[]'::jsonb,
+        "model1_response_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
+        "model2_response_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
+        "total_cost" numeric DEFAULT '0',
         "created_at" timestamp DEFAULT now(),
         "updated_at" timestamp DEFAULT now()
       );

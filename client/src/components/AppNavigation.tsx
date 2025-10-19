@@ -120,7 +120,7 @@ interface AppNavigationProps {
 
 export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigationProps) {
   const { theme, toggleTheme } = useTheme();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isOAuthUser, isLoading: authLoading } = useAuth();
   const [location] = useLocation();
 
   const currentMode = navigationModes.find(mode => mode.path === location);
@@ -190,8 +190,8 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
 
           {/* Compact Authentication & Theme */}
           <div className="flex items-center space-x-1">
-            {/* Credit Balance - only show if authenticated */}
-            {isAuthenticated && user && (
+            {/* Credit Balance - only show if OAuth authenticated */}
+            {isOAuthUser && user && (
               <div className="hidden lg:block">
               </div>
             )}
@@ -204,10 +204,10 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
               className="scale-75"
             />
 
-            {/* Authentication */}
+            {/* Authentication - Show Google Login for device users, UserMenu for OAuth */}
             {authLoading ? (
               <div className="w-7 h-7 rounded-full bg-muted animate-pulse" />
-            ) : isAuthenticated ? (
+            ) : isOAuthUser ? (
               <UserMenu />
             ) : (
               <GoogleSignInButton size="sm" variant="outline" />

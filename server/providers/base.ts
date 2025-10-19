@@ -1,9 +1,12 @@
-/**
- * Base Provider Interface
- * 
- * Defines the common interface for all AI providers
- * Author: Replit Agent
- * Date: August 9, 2025
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-10-16 18:34 UTC
+ * PURPOSE: Declares shared provider contracts, including model metadata, message roles, and
+ *          invocation option shapes leveraged by all providers. Updated to expose the developer
+ *          role, instructions steering, conversation chaining, and reasoning configuration options
+ *          required for the Responses API fixes.
+ * SRP/DRY check: Pass - File centralizes provider type definitions without duplicating logic from
+ *                concrete provider implementations.
  */
 
 export interface ModelConfig {
@@ -66,11 +69,17 @@ export interface ModelResponse {
  */
 export interface ModelMessage {
   /** Message role - system for instructions, user for queries, context for additional info */
-  role: 'system' | 'user' | 'assistant' | 'context';
+  role: 'system' | 'user' | 'assistant' | 'context' | 'developer';
   /** The actual message content */
   content: string;
   /** Optional metadata for message tracking and processing */
   metadata?: Record<string, any>;
+}
+
+export interface PromptReference {
+  id: string;
+  version: string;
+  variables?: Record<string, string>;
 }
 
 /**
@@ -84,6 +93,67 @@ export interface CallOptions {
   maxTokens?: number;
   /** Legacy system prompt (prefer structured messages) */
   systemPrompt?: string;
+  /** Responses API instructions field for high-priority steering */
+  instructions?: string;
+  /** Continue a stored conversation by referencing the previous response id */
+  previousResponseId?: string;
+  /** Fine-grained reasoning configuration for capable models */
+  reasoningConfig?: {
+    effort?: 'low' | 'medium' | 'high';
+    summary?: 'auto' | 'detailed';
+    verbosity?: 'low' | 'medium' | 'high';
+  };
+  /** Optional stored prompt reference with variable payload */
+  prompt?: PromptReference;
+}
+
+export interface StreamingCompleteExtras {
+  content?: string;
+  reasoning?: string;
+  structuredOutput?: unknown;
+}
+
+export interface StreamingCallbacks {
+  onReasoningChunk: (chunk: string) => void;
+  onContentChunk: (chunk: string) => void;
+  onJsonChunk?: (chunk: unknown) => void;
+  onStatus?: (phase: string, data?: Record<string, unknown>) => void;
+  onComplete: (
+    responseId: string,
+    tokenUsage: any,
+    cost: any,
+    extras?: StreamingCompleteExtras
+  ) => void;
+  onError: (error: Error) => void;
+}
+
+export interface StreamingCallOptions {
+  modelId: string;
+  messages: Array<{ role: string; content: string }>;
+  previousResponseId?: string; // For conversation chaining
+  temperature?: number;
+  maxTokens?: number;
+  // Reasoning configuration for advanced models
+  reasoningConfig?: {
+    effort?: 'low' | 'medium' | 'high';
+    summary?: 'auto' | 'detailed';
+    verbosity?: 'low' | 'medium' | 'high';
+  };
+  /** Optional Responses API instructions steering */
+  instructions?: string;
+  /** Optional stored prompt reference with variable payload */
+  prompt?: PromptReference;
+  onReasoningChunk: (chunk: string) => void;
+  onContentChunk: (chunk: string) => void;
+  onJsonChunk?: (chunk: unknown) => void;
+  onStatus?: (phase: string, data?: Record<string, unknown>) => void;
+  onComplete: (
+    responseId: string,
+    tokenUsage: any,
+    cost: any,
+    extras?: StreamingCompleteExtras
+  ) => void;
+  onError: (error: Error) => void;
 }
 
 export abstract class BaseProvider {
@@ -99,6 +169,12 @@ export abstract class BaseProvider {
    * @returns Promise resolving to model response with content, reasoning, timing, and costs
    */
   abstract callModel(messages: ModelMessage[], model: string, options?: CallOptions): Promise<ModelResponse>;
+  
+  /** 
+   * Streaming call with reasoning support
+   * Providers that support streaming can override this optional method.
+   */
+  callModelStreaming?(options: StreamingCallOptions): Promise<void>;
   
   getModel(modelId: string): ModelConfig | undefined {
     return this.models.find(m => m.id === modelId);
