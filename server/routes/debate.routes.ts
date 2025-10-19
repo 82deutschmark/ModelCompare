@@ -1,15 +1,15 @@
 /*
  * Author: GPT-5 Codex
- * Date: 2025-10-18 00:55 UTC
+ * Date: 2025-10-19 03:17 UTC
  * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
- *          SSE dispatcher, shared streaming logic, and heartbeat keepalives so modern React clients can
- *          consume Responses API streams without premature proxy disconnects while persisting debate turns.
+ *          SSE dispatcher, shared streaming logic, heartbeat keepalives, and resilient asset loading so
+ *          modern React clients can consume Responses API streams without premature proxy disconnects while
+ *          persisting debate turns.
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
- *                across init and SSE entry points.
+ *                across init and SSE entry points, including prompt asset resolution.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Router } from "express";
 import {
   extractDebateInstructions,
@@ -25,35 +25,134 @@ import { StreamHarness } from "../streaming/stream-harness.js";
 
 const router = Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DEBATE_PROMPTS_PATH = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "client",
-  "public",
-  "docs",
-  "debate-prompts.md",
-);
-
 let cachedDebateInstructions: DebateInstructions | null = null;
 let debateInstructionsLoadErrorLogged = false;
+
+const DEBATE_PROMPTS_SEGMENTS = ["client", "public", "docs", "debate-prompts.md"];
+
+const FALLBACK_PROMPT_SEGMENTS: string[][] = [
+  DEBATE_PROMPTS_SEGMENTS,
+  ["dist", "client", "docs", "debate-prompts.md"],
+  ["public", "docs", "debate-prompts.md"],
+  ["docs", "debate-prompts.md"],
+];
+
+let cachedDebatePromptsPath: string | null = null;
+
+interface DebatePromptsResolution {
+  path: string | null;
+  attempts: string[];
+}
+
+function normalizeBasePath(base: string): string {
+  if (base.endsWith(".md")) {
+    return path.dirname(base);
+  }
+  return base;
+}
+
+function searchFromBase(base: string, attempts: Set<string>): string | null {
+  let current = base;
+  for (let depth = 0; depth < 6; depth += 1) {
+    for (const suffix of FALLBACK_PROMPT_SEGMENTS) {
+      const candidate = path.resolve(current, ...suffix);
+      if (!attempts.has(candidate)) {
+        attempts.add(candidate);
+      }
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+
+  return null;
+}
+
+function resolveDebatePromptsPath(): DebatePromptsResolution {
+  const attempts = new Set<string>();
+
+  if (cachedDebatePromptsPath && existsSync(cachedDebatePromptsPath)) {
+    attempts.add(cachedDebatePromptsPath);
+    return { path: cachedDebatePromptsPath, attempts: Array.from(attempts) };
+  }
+
+  const searchBases = new Set<string>();
+
+  const envOverrideRaw = process.env.DEBATE_PROMPTS_PATH?.trim();
+  if (envOverrideRaw) {
+    const absoluteOverride = path.resolve(envOverrideRaw);
+    attempts.add(absoluteOverride);
+    if (existsSync(absoluteOverride) && absoluteOverride.endsWith("debate-prompts.md")) {
+      cachedDebatePromptsPath = absoluteOverride;
+      return { path: absoluteOverride, attempts: Array.from(attempts) };
+    }
+    searchBases.add(normalizeBasePath(absoluteOverride));
+  }
+
+  const cwd = process.cwd();
+  if (cwd) {
+    searchBases.add(normalizeBasePath(path.resolve(cwd)));
+  }
+
+  const execArg = process.argv[1];
+  if (execArg) {
+    searchBases.add(normalizeBasePath(path.dirname(path.resolve(execArg))));
+  }
+
+  if (typeof __dirname === "string" && __dirname.length > 0) {
+    searchBases.add(normalizeBasePath(path.resolve(__dirname)));
+  }
+
+  for (const base of searchBases) {
+    const found = searchFromBase(base, attempts);
+    if (found) {
+      cachedDebatePromptsPath = found;
+      return { path: found, attempts: Array.from(attempts) };
+    }
+  }
+
+  cachedDebatePromptsPath = null;
+  return { path: null, attempts: Array.from(attempts) };
+}
 
 function loadDebateInstructions(): DebateInstructions | null {
   if (cachedDebateInstructions) {
     return cachedDebateInstructions;
   }
 
+  const { path: promptsPath, attempts } = resolveDebatePromptsPath();
+
+  if (!promptsPath) {
+    if (!debateInstructionsLoadErrorLogged) {
+      const attemptedList = attempts.length > 0 ? attempts.join(", ") : "<no paths attempted>";
+      console.error(
+        "Failed to locate debate prompts markdown. Attempted locations:",
+        attemptedList,
+      );
+      debateInstructionsLoadErrorLogged = true;
+    }
+    return null;
+  }
+
   try {
-    const markdown = readFileSync(DEBATE_PROMPTS_PATH, "utf-8");
+    const markdown = readFileSync(promptsPath, "utf-8");
     cachedDebateInstructions = extractDebateInstructions(markdown);
     return cachedDebateInstructions;
   } catch (error) {
     if (!debateInstructionsLoadErrorLogged) {
-      console.error("Failed to load debate prompts markdown:", error);
+      console.error(
+        `Failed to load debate prompts markdown at ${promptsPath}.`,
+        error,
+      );
       debateInstructionsLoadErrorLogged = true;
     }
+    cachedDebatePromptsPath = null;
     return null;
   }
 }
