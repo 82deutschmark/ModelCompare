@@ -6,6 +6,16 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.19] - 2025-10-20 18:55 UTC
+
+### Added
+- **Debate Session Listings:** Introduced `listDebateSessions` in the storage layer and wired `/api/debate/sessions` to return
+  ordered session metadata (turn counts, costs, timestamps, optional jury notes) for both database and in-memory drivers.
+
+### Frontend
+- **Debate History Normalization:** Confirmed the debate page summary mapper continues to hydrate jury summaries, turn counts,
+  and costs from the enriched API payload.
+
 ## [Version 0.4.18] - 2025-10-19 03:58 UTC
 
 ### Fixed

@@ -1,22 +1,28 @@
 /**
  * Storage Layer - Data Persistence and Database Management
- * 
+ *
+ * Author: gpt-5-codex
+ * Date: 2025-10-20 18:46 UTC
+ * PURPOSE: Maintain a unified storage abstraction for database and in-memory persistence,
+ *          ensuring debate sessions, comparisons, prompts, and auth flows share
+ *          consistent CRUD operations while surfacing fallbacks when PostgreSQL
+ *          is unavailable.
+ * SRP/DRY check: Pass - Module centralizes persistence logic, delegating higher-level
+ *                orchestration to callers without duplicating query implementations.
+ *
  * This module provides a unified storage interface that supports both PostgreSQL
  * and in-memory storage with automatic fallback capabilities. It manages:
- * 
+ *
  * - Database connections with Neon PostgreSQL (primary) and in-memory (fallback)
  * - CRUD operations for comparison results and session data
  * - Schema validation using Drizzle ORM with TypeScript safety
  * - Session management for user state persistence
  * - Automatic failover between storage backends
  * - Connection pooling and error recovery
- * 
+ *
  * The storage interface abstracts database operations from the application logic,
  * allowing seamless switching between persistence layers based on configuration
  * and availability.
- * 
- * Author: Cascade
- * Date: August 20, 2025
  */
 
 import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, luigiRuns, luigiMessages, luigiArtifacts, debateSessions } from "@shared/schema";
@@ -104,6 +110,7 @@ export interface IStorage {
     metadata?: Record<string, unknown>;
   }): Promise<void>;
   getDebateSession(id: string): Promise<DebateSession | undefined>;
+  listDebateSessions(): Promise<DebateSession[]>;
 
   // User authentication operations
   getUser(id: string): Promise<User | undefined>;
@@ -362,6 +369,13 @@ export class DbStorage implements IStorage {
       .limit(1);
 
     return result || undefined;
+  }
+
+  async listDebateSessions(): Promise<DebateSession[]> {
+    return await requireDb()
+      .select()
+      .from(debateSessions)
+      .orderBy(desc(debateSessions.updatedAt), desc(debateSessions.createdAt));
   }
 
   // User authentication operations
@@ -806,6 +820,19 @@ export class MemStorage implements IStorage {
 
   async getDebateSession(id: string): Promise<DebateSession | undefined> {
     return this.debateSessions.get(id);
+  }
+
+  async listDebateSessions(): Promise<DebateSession[]> {
+    return Array.from(this.debateSessions.values()).sort((a, b) => {
+      const aUpdated = a.updatedAt instanceof Date ? a.updatedAt.getTime() : new Date(a.updatedAt ?? 0).getTime();
+      const bUpdated = b.updatedAt instanceof Date ? b.updatedAt.getTime() : new Date(b.updatedAt ?? 0).getTime();
+      if (Number.isFinite(bUpdated) && Number.isFinite(aUpdated) && bUpdated !== aUpdated) {
+        return bUpdated - aUpdated;
+      }
+      const aCreated = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt ?? 0).getTime();
+      const bCreated = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt ?? 0).getTime();
+      return (Number.isFinite(bCreated) ? bCreated : 0) - (Number.isFinite(aCreated) ? aCreated : 0);
+    });
   }
 
   // User authentication operations

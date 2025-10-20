@@ -112,11 +112,16 @@ export default function Debate() {
         }
       : undefined;
 
-    const turnCount = Array.isArray(session.turnHistory)
+    const rawTurnCount = Array.isArray(session.turnHistory)
       ? session.turnHistory.length
       : typeof session.turnCount === 'number'
         ? session.turnCount
-        : undefined;
+        : typeof session.turnCount === 'string'
+          ? Number.parseInt(session.turnCount, 10)
+          : undefined;
+    const turnCount = typeof rawTurnCount === 'number' && Number.isFinite(rawTurnCount)
+      ? rawTurnCount
+      : undefined;
 
     return {
       id: session.id,
