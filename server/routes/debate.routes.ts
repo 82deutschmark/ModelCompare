@@ -521,9 +521,50 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
 
 router.get("/sessions", async (req, res) => {
   try {
-    // For now, return empty array - in a real implementation, this would list user's debate sessions
-    // const sessions = await storage.getDebateSessions(); // Would need to add this method
-    res.json([]);
+    const sessions = await storage.listDebateSessions();
+
+    const toIsoString = (value: unknown): string | undefined => {
+      if (!value) {
+        return undefined;
+      }
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      if (typeof value === "string") {
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+      }
+      return undefined;
+    };
+
+    const summaries = sessions.map(session => {
+      const turnHistory = Array.isArray(session.turnHistory) ? session.turnHistory : [];
+      const totalCostValue = typeof session.totalCost === "number"
+        ? session.totalCost
+        : Number(session.totalCost ?? 0);
+      const numericCost = Number.isFinite(totalCostValue) ? totalCostValue : 0;
+
+      const payload: Record<string, unknown> = {
+        id: session.id,
+        topic: session.topicText,
+        model1Id: session.model1Id,
+        model2Id: session.model2Id,
+        adversarialLevel: session.adversarialLevel,
+        totalCost: numericCost,
+        turnCount: turnHistory.length,
+        createdAt: toIsoString(session.createdAt),
+        updatedAt: toIsoString(session.updatedAt),
+      };
+
+      const jurySummary = (session as unknown as { jurySummary?: unknown }).jurySummary;
+      if (jurySummary !== undefined && jurySummary !== null) {
+        payload.jurySummary = jurySummary;
+      }
+
+      return payload;
+    });
+
+    res.json(summaries);
   } catch (error) {
     console.error("Failed to get debate sessions:", error);
     res.status(500).json({ error: "Failed to get debate sessions" });
