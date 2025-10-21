@@ -198,7 +198,23 @@ export class DatabaseManager {
           "updated_at" timestamp DEFAULT now()
         );
       `);
-      
+
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS "debate_sessions" (
+          "id" text PRIMARY KEY,
+          "topic_text" text NOT NULL,
+          "model1_id" text NOT NULL,
+          "model2_id" text NOT NULL,
+          "adversarial_level" integer NOT NULL,
+          "turn_history" jsonb NOT NULL DEFAULT '[]'::jsonb,
+          "model1_response_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
+          "model2_response_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
+          "total_cost" numeric DEFAULT '0',
+          "created_at" timestamp DEFAULT now(),
+          "updated_at" timestamp DEFAULT now()
+        );
+      `);
+
       console.log("✅ Database tables ensured");
     } catch (error) {
       console.warn("⚠️ Could not ensure tables exist:", (error as Error).message);
