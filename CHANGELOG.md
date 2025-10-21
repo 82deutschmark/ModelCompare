@@ -1,10 +1,15 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
- * Date: 2025-10-21 02:52 UTC
+ * Date: 2025-10-21 04:30 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.22] - 2025-10-21 04:30 UTC
+
+### Fixed
+- **Debate Session Bootstrap:** Reset active debate state before creating or reopening sessions so persisted history no longer blocks new debates from starting or empties the recent sessions drawer.
 
 ## [Version 0.4.21] - 2025-10-21 02:52 UTC
 

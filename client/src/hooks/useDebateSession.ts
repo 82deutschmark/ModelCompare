@@ -1,5 +1,5 @@
 // * Author: GPT-5 Codex
-// * Date: 2025-10-17 19:47 UTC
+// * Date: 2025-10-21 04:30 UTC
 // * PURPOSE: Consolidated debate session state manager cleaning merge duplicates, preserving turn history, jury workflow, and resume helpers for streaming debate mode.
 // * SRP/DRY check: Pass - Single hook orchestrates debate session state while delegating UI/rendering elsewhere; no duplicate implementations remain.
 
@@ -189,6 +189,7 @@ export interface DebateSessionState {
   ) => void;
   updateJurySummary: (summary: DebateTurnJuryAnnotation | null) => void;
   getResumeContext: (params: { model1Id: string; model2Id: string }) => DebateResumeContext;
+  prepareForNewSession: () => void;
   resetSession: () => void;
   calculateTotalCost: () => number;
 }
@@ -696,25 +697,55 @@ export function useDebateSession(): DebateSessionState {
     [currentRound, findLastResponseId]
   );
 
+  const clearSessionState = useCallback(
+    (options?: { preserveHistoryList?: boolean; preserveSessionId?: boolean }) => {
+      setMessagesState([]);
+      setTurnHistory([]);
+      setJurySummary(null);
+      setSessionMetadataState(INITIAL_METADATA);
+      setCurrentRound(0);
+      setIsRunning(false);
+      setModelALastResponseId(null);
+      setModelBLastResponseId(null);
+      if (!options?.preserveSessionId) {
+        setDebateSessionId(null);
+      }
+      if (!options?.preserveHistoryList) {
+        setExistingDebateSessionsState([]);
+      }
+      setPhaseIndex(0);
+      setPhaseTimestamps({
+        [ROBERTS_RULES_PHASES[0]]: Date.now(),
+      });
+      setFloorOpen(true);
+      setJuryAnnotations({});
+      responseRegistryRef.current.clear();
+    },
+    [
+      setMessagesState,
+      setTurnHistory,
+      setJurySummary,
+      setSessionMetadataState,
+      setCurrentRound,
+      setIsRunning,
+      setModelALastResponseId,
+      setModelBLastResponseId,
+      setDebateSessionId,
+      setExistingDebateSessionsState,
+      setPhaseIndex,
+      setPhaseTimestamps,
+      setFloorOpen,
+      setJuryAnnotations,
+    ],
+  );
+
+  const prepareForNewSession = useCallback(() => {
+    clearSessionState({ preserveHistoryList: true });
+  }, [clearSessionState]);
+
   const resetSession = useCallback(() => {
-    setMessagesState([]);
-    setTurnHistory([]);
-    setJurySummary(null);
-    setSessionMetadataState(INITIAL_METADATA);
-    setCurrentRound(0);
-    setIsRunning(false);
-    setModelALastResponseId(null);
-    setModelBLastResponseId(null);
-    setDebateSessionId(null);
-    setExistingDebateSessionsState([]);
-    setPhaseIndex(0);
-    setPhaseTimestamps({
-      [ROBERTS_RULES_PHASES[0]]: Date.now(),
-    });
-    setFloorOpen(true);
-    setJuryAnnotations({});
-    responseRegistryRef.current.clear();
-  }, []);
+    clearSessionState();
+  }, [clearSessionState]);
 
   const calculateTotalCost = useCallback(() => {
     if (turnHistory.length === 0) {
@@ -777,6 +808,7 @@ export function useDebateSession(): DebateSessionState {
       hydrateFromSession,
       updateJurySummary,
       getResumeContext,
+      prepareForNewSession,
       resetSession,
       calculateTotalCost,
     }),
