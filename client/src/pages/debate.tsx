@@ -1,6 +1,6 @@
 /*
  * Author: gpt-5-codex
- * Date: 2025-02-14 00:12 UTC
+ * Date: 2025-10-21 02:52 UTC
  * PURPOSE: Orchestrate debate mode, hydrate persisted history, manage streaming, and ensure setup defaults select a valid topic.
  * SRP/DRY check: Pass - Component composes specialized hooks/services without overlapping their responsibilities.
  */
@@ -45,6 +45,7 @@ export default function Debate() {
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const lastHydratedSignatureRef = useRef<string | null>(null);
+  const lastDebateSessionIdRef = useRef<string | null>(null);
 
   const debateSetup = useDebateSetup();
   const debateSession = useDebateSession();
@@ -314,6 +315,15 @@ export default function Debate() {
     debateSetup.model2Config.enableReasoning,
     debateSetup.model2Config.enableReasoning
   ]);
+
+  useEffect(() => {
+    const currentSessionId = debateSession.debateSessionId ?? null;
+
+    if (lastDebateSessionIdRef.current !== currentSessionId) {
+      lastHydratedSignatureRef.current = null;
+      lastDebateSessionIdRef.current = currentSessionId;
+    }
+  }, [debateSession.debateSessionId]);
 
   useEffect(() => {
     if (!sessionDetailsQuery.data || models.length === 0) return;

@@ -1,10 +1,15 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
- * Date: 2025-10-19 00:34 UTC
+ * Date: 2025-10-21 02:52 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.21] - 2025-10-21 02:52 UTC
+
+### Fixed
+- **Debate Hydration Reset:** Clear the cached hydration signature whenever the active debate session resets or changes so reselections always repopulate transcripts.
 
 ## [Version 0.4.20] - 2025-10-21 02:40 UTC
 
