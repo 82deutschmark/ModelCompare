@@ -1,10 +1,16 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
- * Date: 2025-10-21 02:52 UTC
+ * Date: 2025-10-21 03:33 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.22] - 2025-10-21 03:33 UTC
+
+### Fixed
+- **Debate Session Bootstrap:** Add the `debate_sessions` table definition to `DatabaseManager.ensureTablesExist` so PostgreSQL
+  environments create the persistence schema and debate streams can start new sessions successfully.
 
 ## [Version 0.4.21] - 2025-10-21 02:52 UTC
 
