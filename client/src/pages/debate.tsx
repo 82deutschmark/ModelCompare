@@ -1,6 +1,6 @@
 /*
  * Author: gpt-5-codex
- * Date: 2025-10-21 02:52 UTC
+ * Date: 2025-10-21 04:30 UTC
  * PURPOSE: Orchestrate debate mode, hydrate persisted history, manage streaming, and ensure setup defaults select a valid topic.
  * SRP/DRY check: Pass - Component composes specialized hooks/services without overlapping their responsibilities.
  */
@@ -439,6 +439,7 @@ export default function Debate() {
 
     const prompts = debateService.generatePrompts();
 
+    debateSession.prepareForNewSession();
     debateSession.setSessionMetadata({
       topic: prompts.topicText,
       model1Id: debateSetup.model1Id,
@@ -497,7 +498,7 @@ export default function Debate() {
 
   const handleResetDebate = () => {
     debateSetup.resetSetup();
-    debateSession.resetSession();
+    debateSession.prepareForNewSession();
     toast({
       title: "Debate Reset",
       description: "All debate data has been cleared.",
@@ -527,7 +528,7 @@ export default function Debate() {
   };
 
   const handleSelectHistorySession = (session: DebateSessionSummary) => {
-    debateSession.resetSession();
+    debateSession.prepareForNewSession();
     debateSession.setSessionMetadata({
       topic: session.topic,
       model1Id: session.model1Id,
