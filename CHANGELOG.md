@@ -6,6 +6,12 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.20] - 2025-10-21 02:40 UTC
+
+### Fixed
+- **Debate Hydration Loop:** Prevented the debate session hydration effect from re-triggering on local transcript updates by
+  caching the last processed payload signature and trimming dependency noise, eliminating the maximum update depth crash.
+
 ## [Version 0.4.19] - 2025-10-20 18:55 UTC
 
 ### Added
