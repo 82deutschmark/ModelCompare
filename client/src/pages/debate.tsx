@@ -44,6 +44,7 @@ interface CreateDebateSessionResponse {
 export default function Debate() {
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const lastHydratedSignatureRef = useRef<string | null>(null);
 
   const debateSetup = useDebateSetup();
   const debateSession = useDebateSession();
@@ -321,6 +322,20 @@ export default function Debate() {
     const localMessageCount = debateSession.messages.length;
     const localTurnCount = debateSession.turnHistory.length;
     const isSameSession = sessionDetailsQuery.data.id === debateSession.debateSessionId;
+    const latestTurn = incomingTurnCount > 0
+      ? sessionDetailsQuery.data.turnHistory?.[incomingTurnCount - 1]
+      : null;
+    const latestResponseId = latestTurn?.responseId ?? '';
+    const hydrationSignature = [
+      sessionDetailsQuery.data.id,
+      incomingTurnCount,
+      latestResponseId,
+      sessionDetailsQuery.data.updatedAt ?? sessionDetailsQuery.data.createdAt ?? '',
+    ].join('|');
+
+    if (lastHydratedSignatureRef.current === hydrationSignature) {
+      return;
+    }
 
     if (
       isSameSession &&
@@ -335,6 +350,7 @@ export default function Debate() {
     }
 
     const modelLookup = new Map(models.map(model => [model.id, { name: model.name, provider: model.provider }]));
+    lastHydratedSignatureRef.current = hydrationSignature;
     debateSession.hydrateFromSession(sessionDetailsQuery.data, modelLookup);
 
     debateSetup.setModel1Id(sessionDetailsQuery.data.model1Id);
@@ -348,8 +364,6 @@ export default function Debate() {
     sessionDetailsQuery.data,
     models,
     debateSession.debateSessionId,
-    debateSession.messages.length,
-    debateSession.turnHistory.length,
   ]);
 
   useEffect(() => {
