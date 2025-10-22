@@ -14,6 +14,7 @@
 
 ### Fixed
 - **🚨 CRITICAL: Debate Streaming Prompt Variables:** Removed extra intensity variables (`intensity_level`, `intensity_label`, `intensity_heading`, `intensity_summary`, `intensity_guidance`) from debate prompt variables that were causing OpenAI 400 errors. OpenAI's stored prompt template only recognizes the original 4 variables: `intensity`, `role`, `position`, `topic`. The parallel commit that added these extra variables broke debate startup with "Unknown prompt variables" errors.
+- **Debate Setup Panel Visibility:** Removed `setShowSetup(false)` calls that were hiding configuration controls when debates started. Users can now adjust reasoning effort, summary, verbosity, temperature, and max tokens settings throughout the debate without losing access to the control panel.
 - **Debate Prompts Caching:** Removed markdown file caching in `server/routes/debate.routes.ts` - file now reads fresh on every debate turn for simplicity and to prevent stale data in production deployments on Railway.
 - **Debate Intensity Descriptions:** Updated all 4 intensity level descriptions in `debate-prompts.md` to use concise, descriptive tone guidance instead of prescriptive instructions with example phrases.
 
