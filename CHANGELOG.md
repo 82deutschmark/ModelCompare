@@ -1,11 +1,17 @@
 # Changelog
 <!--
  * Author: GPT-5 Codex
+ * Date: 2025-10-22 00:50 UTC
  * Date: 2025-10-21 04:30 UTC
  * Date: 2025-10-21 03:33 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.24] - 2025-10-22 00:50 UTC
+
+### Fixed
+- **Debate Main Alignment:** Reverted the debate component and session hook to the proven main branch implementation so sessions stream and hydrate correctly again.
 
 ## [Version 0.4.23] - 2025-10-22 00:01 UTC
 
