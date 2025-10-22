@@ -18,7 +18,7 @@ import {
   getDebateIntensityDescriptor,
   type DebateInstructions,
 } from "@shared/debate-instructions.ts";
-import { getProviderForModel } from "../providers/index.js";
+import { getProviderForModel, type BaseProvider } from "../providers/index.js";
 import { storage } from "../storage.js";
 import { StreamSessionRegistry } from "../streaming/session-registry.js";
 import { SseStreamManager } from "../streaming/sse-manager.js";
@@ -444,7 +444,7 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
     };
 
     harness.status("resolving_provider", undefined, { modelId: payload.modelId });
-    let provider;
+    let provider: BaseProvider;
     try {
       provider = getProviderForModel(payload.modelId);
     } catch (error) {
