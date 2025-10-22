@@ -1,10 +1,11 @@
 /*
- * Author: GPT-5 Codex
- * Date: 2025-10-19 03:17 UTC
+ * Author: Claude Code using Sonnet 4.5
+ * Date: 2025-10-21
  * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
  *          SSE dispatcher, shared streaming logic, heartbeat keepalives, and resilient asset loading so
  *          modern React clients can consume Responses API streams without premature proxy disconnects while
- *          persisting debate turns.
+ *          persisting debate turns. Removed caching of debate prompts - file is read fresh each time for
+ *          simplicity and to avoid stale data in production.
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
  *                across init and SSE entry points, including prompt asset resolution.
  */
@@ -33,26 +34,16 @@ const DEBATE_PROMPTS_PATH = path.resolve(
   "debate-prompts.md",
 );
 
-let cachedDebateInstructions: DebateInstructions | null = null;
-let debateInstructionsLoadErrorLogged = false;
-
 function loadDebateInstructions(): DebateInstructions | null {
-  if (cachedDebateInstructions) {
-    return cachedDebateInstructions;
-  }
-
   try {
+    // Read file fresh every time - no caching for simplicity
     const markdown = readFileSync(DEBATE_PROMPTS_PATH, "utf-8");
-    cachedDebateInstructions = extractDebateInstructions(markdown);
-    return cachedDebateInstructions;
+    return extractDebateInstructions(markdown);
   } catch (error) {
-    if (!debateInstructionsLoadErrorLogged) {
-      console.error(
-        `Failed to load debate prompts markdown at ${DEBATE_PROMPTS_PATH}:`,
-        error,
-      );
-      debateInstructionsLoadErrorLogged = true;
-    }
+    console.error(
+      `Failed to load debate prompts markdown at ${DEBATE_PROMPTS_PATH}:`,
+      error,
+    );
     return null;
   }
 }
