@@ -10,6 +10,22 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Unreleased]
+
+### Changed
+- **Debate Page Layout Refactor**: Complete overhaul of debate setup UI for better usability
+  - Topic selector now appears in full-width bar at top (always visible)
+  - Left sidebar (25%): Model configuration, intensity settings, history, and controls
+  - Right content area (75%): Streaming display and debate messages
+  - Removed collapsible model configs - all settings now fully expanded and visible
+  - Eliminated prop drilling by refactoring components to use hooks directly
+  - Deleted `DebateSetupPanel` wrapper component
+  - Updated color scheme from amber to navy-blue for better accessibility
+
+### Fixed
+- Fixed TypeScript error in debate.routes.ts (missing BaseProvider type import)
+- Fixed debate setup controls visibility - all settings now remain visible during active debates
+
 ## [Version 0.4.26] - 2025-10-21 21:45 UTC
 
 ### Fixed
