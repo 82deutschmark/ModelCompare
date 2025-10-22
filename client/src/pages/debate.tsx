@@ -703,7 +703,7 @@ export default function Debate() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[25%_75%] gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-[35%_65%] gap-3">
           <div className="space-y-3">
             {/* Model Configuration - Always Expanded */}
             {debateSetup.showSetup && (
