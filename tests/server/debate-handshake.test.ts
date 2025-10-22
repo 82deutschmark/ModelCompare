@@ -1,10 +1,8 @@
 /*
- * Author: GPT-5 Codex
- * Date: 2025-10-18 01:05 UTC
- * PURPOSE: Verify the debate streaming handshake persists SSE semantics, rejects legacy routes, and
- *          stores debate turns using the in-memory storage fallback with a mocked provider stream.
- * SRP/DRY check: Pass - Focused on router-level integration; reuses production router and storage modules
- *                while isolating external providers via targeted mocks.
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 01:20 UTC
+ * PURPOSE: Verify the debate streaming handshake persists SSE semantics and propagates intensity guidance into provider calls.
+ * SRP/DRY check: Pass - Focused on router-level integration; reuses production router and storage modules while mocking providers.
  */
 
 import { beforeAll, afterAll, describe, expect, test, vi } from 'vitest';
@@ -106,6 +104,10 @@ describe('Debate streaming handshake', () => {
     const sessionInfo = await createSessionResponse.json();
     expect(sessionInfo).toHaveProperty('id');
 
+    const intensityHeading = 'Level 3 - Aggressive (Fiery Debate)';
+    const intensityGuidance = 'Aggressive-Fiery Debate:\nIntense exchanges erupt with sharp, emotionally charged language and dismissive remarks, often escalating into heated personal critiques despite factual disagreements.';
+    const intensityFullText = `${intensityHeading}\n${intensityGuidance}`;
+
     const initResponse = await fetch(`${baseUrl}/api/debate/stream/init`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -113,7 +115,12 @@ describe('Debate streaming handshake', () => {
         modelId: 'gpt-4o-mini-2024-07-18',
         topic: 'AI ethics in autonomous vehicles',
         role: 'AFFIRMATIVE',
-        intensity: 3,
+        intensityLevel: 3,
+        intensityGuidance,
+        intensityHeading,
+        intensityLabel: 'Aggressive',
+        intensitySummary: '',
+        intensityFullText,
         opponentMessage: null,
         previousResponseId: null,
         turnNumber: 1,
@@ -187,6 +194,7 @@ describe('Debate streaming handshake', () => {
     expect(providerStreamMock).toHaveBeenCalledTimes(1);
     const providerCall = providerStreamMock.mock.calls[0]?.[0];
     expect(providerCall?.prompt?.variables?.role).toBe('AFFIRMATIVE');
+    expect(providerCall?.prompt?.variables?.intensity_guidance).toContain('Aggressive-Fiery Debate');
 
     const persisted = await storage.storage.getDebateSession(sessionInfo.id);
     expect(persisted).toBeTruthy();
