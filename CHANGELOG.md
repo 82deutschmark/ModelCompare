@@ -1,6 +1,7 @@
 # Changelog
 <!--
- * Author: gpt-5-codex
+ * Author: Claude Code using Sonnet 4.5
+ * Date: 2025-10-21 21:45 UTC
  * Date: 2025-10-22 01:21 UTC
  * Date: 2025-10-22 00:50 UTC
  * Date: 2025-10-21 04:30 UTC
@@ -8,6 +9,13 @@
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.26] - 2025-10-21 21:45 UTC
+
+### Fixed
+- **🚨 CRITICAL: Debate Streaming Prompt Variables:** Removed extra intensity variables (`intensity_level`, `intensity_label`, `intensity_heading`, `intensity_summary`, `intensity_guidance`) from debate prompt variables that were causing OpenAI 400 errors. OpenAI's stored prompt template only recognizes the original 4 variables: `intensity`, `role`, `position`, `topic`. The parallel commit that added these extra variables broke debate startup with "Unknown prompt variables" errors.
+- **Debate Prompts Caching:** Removed markdown file caching in `server/routes/debate.routes.ts` - file now reads fresh on every debate turn for simplicity and to prevent stale data in production deployments on Railway.
+- **Debate Intensity Descriptions:** Updated all 4 intensity level descriptions in `debate-prompts.md` to use concise, descriptive tone guidance instead of prescriptive instructions with example phrases.
 
 ## [Version 0.4.25] - 2025-10-22 01:21 UTC
 
