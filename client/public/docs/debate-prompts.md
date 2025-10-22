@@ -1,7 +1,8 @@
 * Author: gpt-5-codex
 * Date: 2025-10-22 01:12 UTC
 * PURPOSE: Document the active debate prompt templates, variable contract, and intensity guidance for
-*          debate streaming so provider templates remain in sync with server expectations.
+*          debate streaming. Updated intensity descriptors to use concise, tone-based descriptions
+*          instead of prescriptive instructions. File is read fresh on each debate turn (no caching).
 * SRP/DRY check: Pass - Markdown strictly tracks debate prompt guidance without overlapping other docs.
 
 # Debate Mode Prompts - Robert's Rules of Order
