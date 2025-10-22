@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git restore client/src/pages/debate.tsx)",
+      "Bash(npm run check:*)",
       "Bash(git merge --abort)",
       "Bash(findstr \"node\")",
       "Bash(netstat -ano)",
@@ -32,7 +32,8 @@
       "Read(//d/GitHub/openai-sdk-streaming/**)",
       "Read(//d/GitHub/openai-chatkit-advanced-samples/**)",
       "Read(//d/GitHub/openai_responses/**)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []
