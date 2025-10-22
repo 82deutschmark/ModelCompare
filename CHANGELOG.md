@@ -12,6 +12,14 @@
 
 ## [Unreleased]
 
+## [Version 0.4.27] - 2025-10-22 19:40 UTC
+
+### Changed
+- Default OpenAI Prompt Template resolution to the latest version for debate streaming:
+  - In `server/routes/debate.routes.ts`, set the stored prompt reference `version` to `"latest"`.
+  - In `server/providers/openai.ts`, omit the `version` field in the Responses payload when `version` is `"latest"` (or falsy) so OpenAI resolves to the newest published template automatically.
+  - This ensures debates always use the most up-to-date prompt without manual version bumps.
+
 ### Changed
 - **Debate Page Layout Refactor**: Complete overhaul of debate setup UI for better usability
   - Topic selector now appears in full-width bar at top (always visible)

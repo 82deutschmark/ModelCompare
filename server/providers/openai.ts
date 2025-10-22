@@ -258,10 +258,23 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   private buildPromptPayload(reference: PromptReference): Record<string, any> {
+    /*
+     * Author: gpt-5-codex
+     * Date: 2025-10-22 19:40 UTC
+     * PURPOSE: Construct the Responses API prompt payload from our PromptReference.
+     *          When `version` is set to "latest" (or falsy), omit the version field so the API resolves
+     *          to the latest published prompt version. This keeps debate flow always on the newest template.
+     * SRP/DRY check: Pass - Single responsibility for mapping PromptReference to request shape.
+     */
     const payload: Record<string, any> = {
       id: reference.id,
-      version: reference.version,
     };
+
+    // Omit explicit version when caller requests latest so OpenAI uses the newest published version.
+    const normalizedVersion = (reference.version || '').trim().toLowerCase();
+    if (normalizedVersion && normalizedVersion !== 'latest') {
+      payload.version = reference.version;
+    }
 
     const normalizedVariables = this.normalizePromptVariables(reference.variables ?? {});
     if (Object.keys(normalizedVariables).length > 0) {

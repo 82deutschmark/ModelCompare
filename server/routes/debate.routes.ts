@@ -87,9 +87,16 @@ interface DebateStreamPayload {
 const STREAM_SESSION_TTL_MS = 5 * 60 * 1000;
 const streamSessionRegistry = new StreamSessionRegistry<DebateStreamPayload>(STREAM_SESSION_TTL_MS);
 
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 19:40 UTC
+ * PURPOSE: Default debate Prompt Template reference. Use version "latest" and let the provider
+ *          omit the explicit version so OpenAI resolves to the newest published template.
+ * SRP/DRY check: Pass - Centralized default for debate prompt reference only.
+ */
 const STORED_DEBATE_PROMPT: { id: string; version: string } = {
   id: "pmpt_6856e018a02c8196aa1ccd7eac56ee020cbd4441b7c750b1",
-  version: "6"
+  version: "latest"
 };
 
 const VALID_ROLES: DebateRole[] = ["AFFIRMATIVE", "NEGATIVE"];
