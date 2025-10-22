@@ -225,7 +225,7 @@ export default function Debate() {
       debateSession.addMessage(initialMessage);
       debateSession.setModelALastResponseId(debateStreaming.responseId);
       debateSession.setCurrentRound(1);
-      debateSetup.setShowSetup(false);
+      // Keep setup panel visible so users can adjust reasoning/token controls
     }
   }, [
     debateStreaming.responseId,
@@ -320,7 +320,7 @@ export default function Debate() {
     debateSetup.setCustomTopic(sessionDetailsQuery.data.topic);
     debateSetup.setSelectedTopic('custom');
     debateSetup.setAdversarialLevel(sessionDetailsQuery.data.adversarialLevel);
-    debateSetup.setShowSetup(false);
+    // Keep setup panel visible when loading historical session
   }, [sessionDetailsQuery.data, models]);
 
   useEffect(() => {
@@ -509,7 +509,7 @@ export default function Debate() {
     if (session.adversarialLevel !== undefined) {
       debateSetup.setAdversarialLevel(session.adversarialLevel);
     }
-    debateSetup.setShowSetup(false);
+    // Keep setup panel visible when selecting historical session
   };
 
   const totalCost = debateSession.calculateTotalCost();
