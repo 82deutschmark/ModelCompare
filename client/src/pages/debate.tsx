@@ -1,8 +1,8 @@
 /*
  * Author: gpt-5-codex
- * Date: 2025-10-22 00:01 UTC
- * PURPOSE: Orchestrate debate mode, hydrate persisted history, manage streaming, and ensure setup defaults select a valid topic while guarding against stale session hydration after resets.
- * SRP/DRY check: Pass - Component composes specialized hooks/services without overlapping their responsibilities.
+ * Date: 2025-10-22 00:50 UTC
+ * PURPOSE: Restore debate page to main branch baseline, re-enabling reliable session hydration and streaming flow.
+ * SRP/DRY check: Pass - Component mirrors verified main branch behavior without redundant logic.
  */
 
 import { useRef, useEffect, useMemo } from "react";
@@ -44,8 +44,6 @@ interface CreateDebateSessionResponse {
 export default function Debate() {
   const { toast } = useToast();
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const lastHydratedSignatureRef = useRef<string | null>(null);
-  const lastDebateSessionIdRef = useRef<string | null>(null);
 
   const debateSetup = useDebateSetup();
   const debateSession = useDebateSession();
@@ -114,16 +112,11 @@ export default function Debate() {
         }
       : undefined;
 
-    const rawTurnCount = Array.isArray(session.turnHistory)
+    const turnCount = Array.isArray(session.turnHistory)
       ? session.turnHistory.length
       : typeof session.turnCount === 'number'
         ? session.turnCount
-        : typeof session.turnCount === 'string'
-          ? Number.parseInt(session.turnCount, 10)
-          : undefined;
-    const turnCount = typeof rawTurnCount === 'number' && Number.isFinite(rawTurnCount)
-      ? rawTurnCount
-      : undefined;
+        : undefined;
 
     return {
       id: session.id,
@@ -317,59 +310,8 @@ export default function Debate() {
   ]);
 
   useEffect(() => {
-    const currentSessionId = debateSession.debateSessionId ?? null;
-
-    if (lastDebateSessionIdRef.current !== currentSessionId) {
-      lastHydratedSignatureRef.current = null;
-      lastDebateSessionIdRef.current = currentSessionId;
-    }
-  }, [debateSession.debateSessionId]);
-
-  useEffect(() => {
-    const activeSessionId = debateSession.debateSessionId;
-    if (!activeSessionId) {
-      return;
-    }
-
     if (!sessionDetailsQuery.data || models.length === 0) return;
-
-    if (sessionDetailsQuery.data.id !== activeSessionId) {
-      return;
-    }
-
-    const incomingTurnCount = sessionDetailsQuery.data.turnHistory?.length ?? 0;
-    const localMessageCount = debateSession.messages.length;
-    const localTurnCount = debateSession.turnHistory.length;
-    const isSameSession = sessionDetailsQuery.data.id === activeSessionId;
-    const latestTurn = incomingTurnCount > 0
-      ? sessionDetailsQuery.data.turnHistory?.[incomingTurnCount - 1]
-      : null;
-    const latestResponseId = latestTurn?.responseId ?? '';
-    const hydrationSignature = [
-      sessionDetailsQuery.data.id,
-      incomingTurnCount,
-      latestResponseId,
-      sessionDetailsQuery.data.updatedAt ?? sessionDetailsQuery.data.createdAt ?? '',
-    ].join('|');
-
-    if (lastHydratedSignatureRef.current === hydrationSignature) {
-      return;
-    }
-
-    if (
-      isSameSession &&
-      incomingTurnCount > 0 &&
-      incomingTurnCount < Math.max(localMessageCount, localTurnCount)
-    ) {
-      return;
-    }
-
-    if (isSameSession && incomingTurnCount === 0 && (localMessageCount > 0 || localTurnCount > 0)) {
-      return;
-    }
-
     const modelLookup = new Map(models.map(model => [model.id, { name: model.name, provider: model.provider }]));
-    lastHydratedSignatureRef.current = hydrationSignature;
     debateSession.hydrateFromSession(sessionDetailsQuery.data, modelLookup);
 
     debateSetup.setModel1Id(sessionDetailsQuery.data.model1Id);
@@ -379,11 +321,7 @@ export default function Debate() {
     debateSetup.setSelectedTopic('custom');
     debateSetup.setAdversarialLevel(sessionDetailsQuery.data.adversarialLevel);
     debateSetup.setShowSetup(false);
-  }, [
-    sessionDetailsQuery.data,
-    models,
-    debateSession.debateSessionId,
-  ]);
+  }, [sessionDetailsQuery.data, models]);
 
   useEffect(() => {
     if (!debateStreaming.responseId || !debateSession.debateSessionId) return;
@@ -448,7 +386,6 @@ export default function Debate() {
 
     const prompts = debateService.generatePrompts();
 
-    debateSession.prepareForNewSession();
     debateSession.setSessionMetadata({
       topic: prompts.topicText,
       model1Id: debateSetup.model1Id,
@@ -507,7 +444,7 @@ export default function Debate() {
 
   const handleResetDebate = () => {
     debateSetup.resetSetup();
-    debateSession.prepareForNewSession();
+    debateSession.resetSession();
     toast({
       title: "Debate Reset",
       description: "All debate data has been cleared.",
@@ -537,7 +474,7 @@ export default function Debate() {
   };
 
   const handleSelectHistorySession = (session: DebateSessionSummary) => {
-    debateSession.prepareForNewSession();
+    debateSession.resetSession();
     debateSession.setSessionMetadata({
       topic: session.topic,
       model1Id: session.model1Id,
