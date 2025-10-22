@@ -7,6 +7,11 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.23] - 2025-10-22 00:01 UTC
+
+### Fixed
+- **Debate Hydration Guard:** Require an active session identifier match before hydrating stored debate transcripts so clearing state for a new session no longer resurrects the previous transcript.
+
 ## [Version 0.4.22] - 2025-10-21 04:30 UTC
 
 ### Fixed
