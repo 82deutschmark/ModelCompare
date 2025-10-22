@@ -1,7 +1,7 @@
 /*
  * Author: gpt-5-codex
- * Date: 2025-10-21 04:30 UTC
- * PURPOSE: Orchestrate debate mode, hydrate persisted history, manage streaming, and ensure setup defaults select a valid topic.
+ * Date: 2025-10-22 00:01 UTC
+ * PURPOSE: Orchestrate debate mode, hydrate persisted history, manage streaming, and ensure setup defaults select a valid topic while guarding against stale session hydration after resets.
  * SRP/DRY check: Pass - Component composes specialized hooks/services without overlapping their responsibilities.
  */
 
@@ -326,12 +326,21 @@ export default function Debate() {
   }, [debateSession.debateSessionId]);
 
   useEffect(() => {
+    const activeSessionId = debateSession.debateSessionId;
+    if (!activeSessionId) {
+      return;
+    }
+
     if (!sessionDetailsQuery.data || models.length === 0) return;
+
+    if (sessionDetailsQuery.data.id !== activeSessionId) {
+      return;
+    }
 
     const incomingTurnCount = sessionDetailsQuery.data.turnHistory?.length ?? 0;
     const localMessageCount = debateSession.messages.length;
     const localTurnCount = debateSession.turnHistory.length;
-    const isSameSession = sessionDetailsQuery.data.id === debateSession.debateSessionId;
+    const isSameSession = sessionDetailsQuery.data.id === activeSessionId;
     const latestTurn = incomingTurnCount > 0
       ? sessionDetailsQuery.data.turnHistory?.[incomingTurnCount - 1]
       : null;
