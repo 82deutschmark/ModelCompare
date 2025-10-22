@@ -1,12 +1,18 @@
 # Changelog
 <!--
- * Author: GPT-5 Codex
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 01:21 UTC
  * Date: 2025-10-22 00:50 UTC
  * Date: 2025-10-21 04:30 UTC
  * Date: 2025-10-21 03:33 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.25] - 2025-10-22 01:21 UTC
+
+### Changed
+- **Debate Intensity Guidance:** Stream init payloads now include full rhetoric descriptors, updated UI labels, and refreshed prompt documentation so provider prompts reference the correct textual intensity examples instead of numeric levels.
 
 ## [Version 0.4.24] - 2025-10-22 00:50 UTC
 

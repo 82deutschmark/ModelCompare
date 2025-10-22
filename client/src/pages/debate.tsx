@@ -1,8 +1,8 @@
 /*
  * Author: gpt-5-codex
- * Date: 2025-10-22 00:50 UTC
- * PURPOSE: Restore debate page to main branch baseline, re-enabling reliable session hydration and streaming flow.
- * SRP/DRY check: Pass - Component mirrors verified main branch behavior without redundant logic.
+ * Date: 2025-10-22 01:18 UTC
+ * PURPOSE: Maintain debate workflow, enrich intensity payloads with descriptive rhetoric guidance, and preserve session flows.
+ * SRP/DRY check: Pass - Component orchestrates debate UI/state without duplicating service or transport concerns.
  */
 
 import { useRef, useEffect, useMemo } from "react";
@@ -355,11 +355,18 @@ export default function Debate() {
     const lastMessage = debateSession.messages[debateSession.messages.length - 1];
     const nextModelConfig = resume.isModelBTurn ? debateSetup.model2Config : debateSetup.model1Config;
 
+    const intensity = debateService.getIntensityContext();
+
     await debateStreaming.startStream({
       modelId: resume.nextModelId,
       topic: debateService.getTopicText(),
       role: resume.isModelBTurn ? 'NEGATIVE' : 'AFFIRMATIVE',
-      intensity: debateSetup.adversarialLevel,
+      intensityLevel: intensity.level,
+      intensityGuidance: intensity.guidance,
+      intensityHeading: intensity.heading,
+      intensityLabel: intensity.label,
+      intensitySummary: intensity.summary,
+      intensityFullText: intensity.fullText,
       opponentMessage: lastMessage.content,
       previousResponseId: resume.previousResponseId,
       turnNumber: resume.nextTurnNumber,
@@ -384,7 +391,12 @@ export default function Debate() {
       return;
     }
 
+    if (!debateService) {
+      return;
+    }
+
     const prompts = debateService.generatePrompts();
+    const intensity = prompts.intensity ?? debateService.getIntensityContext();
 
     debateSession.setSessionMetadata({
       topic: prompts.topicText,
@@ -419,7 +431,12 @@ export default function Debate() {
         modelId: debateSetup.model1Id,
         topic: prompts.topicText,
         role: 'AFFIRMATIVE',
-        intensity: debateSetup.adversarialLevel,
+        intensityLevel: intensity.level,
+        intensityGuidance: intensity.guidance,
+        intensityHeading: intensity.heading,
+        intensityLabel: intensity.label,
+        intensitySummary: intensity.summary,
+        intensityFullText: intensity.fullText,
         opponentMessage: null,
         previousResponseId: null,
         turnNumber: 1,

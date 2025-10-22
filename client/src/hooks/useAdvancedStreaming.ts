@@ -1,6 +1,6 @@
 /*
- * Author: GPT-5 Codex
- * Date: 2025-10-17 18:14 UTC
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 01:16 UTC
  * PURPOSE: Stream debate responses via SSE using ref-backed buffers to avoid stale closures, throttle React
  *          renders, and maintain accurate OpenAI Responses API metadata propagation to the debate UI.
  * SRP/DRY check: Pass - Hook continues to coordinate debate streaming state only; buffering helpers prevent
@@ -12,7 +12,12 @@ export interface StreamingOptions {
   modelId: string;
   topic: string;
   role: 'AFFIRMATIVE' | 'NEGATIVE';
-  intensity: number;
+  intensityLevel: number;
+  intensityGuidance: string;
+  intensityHeading?: string;
+  intensityLabel?: string;
+  intensitySummary?: string;
+  intensityFullText?: string;
   opponentMessage: string | null;
   previousResponseId: string | null;
   turnNumber: number;

@@ -1,5 +1,5 @@
-* Author: Claude Code using Sonnet 4.5
-* Date: 2025-10-21
+* Author: gpt-5-codex
+* Date: 2025-10-22 01:12 UTC
 * PURPOSE: Document the active debate prompt templates, variable contract, and intensity guidance for
 *          debate streaming. Updated intensity descriptors to use concise, tone-based descriptions
 *          instead of prescriptive instructions. File is read fresh on each debate turn (no caching).
@@ -34,21 +34,25 @@ Adversarial intensity: {intensity}
 
 #### Level 1 - Respectful (Pleasant Exchange)
 ```
-Participants engage in a collaborative discussion, building on each other's points with polite language and mutual acknowledgment of valid perspectives.
+Respectful-Pleasant Exchange:
+Participants engage in a collaborative discussion, building on each other’s points with polite language and mutual acknowledgment of valid perspectives.
 ```
 
 #### Level 2 - Assertive (Standard Debate)
 ```
+Assertive-Standard Debate:
 Debaters present well-researched arguments with confidence, directly challenging opposing views while maintaining professionalism and logical rigor.
 ```
 
 #### Level 3 - Aggressive (Fiery Debate)
 ```
+Aggressive-Fiery Debate:
 Intense exchanges erupt with sharp, emotionally charged language and dismissive remarks, often escalating into heated personal critiques despite factual disagreements.
 ```
 
 #### Level 4 - Combative (Maximum Adversarial)
 ```
+Combative-Maximum Adversarial:
 Parties engage in unrelenting hostility, employing sarcasm, personal attacks, and deliberate obfuscation to undermine opponents while refusing any compromise.
 ```
 
