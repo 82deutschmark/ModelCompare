@@ -1,8 +1,7 @@
-* Author: Claude Code using Sonnet 4.5
-* Date: 2025-10-21
+* Author: GPT-5 Codex
+* Date: 2025-10-19 00:30 UTC
 * PURPOSE: Document the active debate prompt templates, variable contract, and intensity guidance for
-*          debate streaming. Updated intensity descriptors to use concise, tone-based descriptions
-*          instead of prescriptive instructions. File is read fresh on each debate turn (no caching).
+*          debate streaming so provider templates remain in sync with server expectations.
 * SRP/DRY check: Pass - Markdown strictly tracks debate prompt guidance without overlapping other docs.
 
 # Debate Mode Prompts - Robert's Rules of Order
@@ -32,22 +31,22 @@ Adversarial intensity: {intensity}
 
 ### Adversarial Intensity Levels
 
-#### Level 1 - Respectful (Pleasant Exchange)
+#### Level 1 - Respectful-Pleasant Exchange
 ```
 Participants engage in a collaborative discussion, building on each other's points with polite language and mutual acknowledgment of valid perspectives.
 ```
 
-#### Level 2 - Assertive (Standard Debate)
+#### Level 2 - Assertive-Standard Debate
 ```
 Debaters present well-researched arguments with confidence, directly challenging opposing views while maintaining professionalism and logical rigor.
 ```
 
-#### Level 3 - Aggressive (Fiery Debate)
+#### Level 3 - Aggressive-Fiery Debate
 ```
 Intense exchanges erupt with sharp, emotionally charged language and dismissive remarks, often escalating into heated personal critiques despite factual disagreements.
 ```
 
-#### Level 4 - Combative (Maximum Adversarial)
+#### Level 4 - Combative-Maximum Adversarial
 ```
 Parties engage in unrelenting hostility, employing sarcasm, personal attacks, and deliberate obfuscation to undermine opponents while refusing any compromise.
 ```
@@ -139,7 +138,7 @@ The weight of evidence and logic compels us to {conclusion}.
 ```
 You are responding to your opponent's previous argument as the {role} debater arguing {position} the proposition: "{topic}"
 
-Your opponent's latest statement is quoted above inside the prompt body.
+Your opponent's latest statement is provided for you, read it carefully.  
 
 Structure your rebuttal by:
 1. Identifying the key weaknesses in your opponent's argument
@@ -147,7 +146,7 @@ Structure your rebuttal by:
 3. Reinforcing your original position with additional supporting evidence
 4. Directly challenging their main claims with factual rebuttals
 
-Be forceful in your argumentation while maintaining debate decorum. Address their specific points directly and demonstrate why your position remains superior.
+Be forceful in your argumentation while maintaining the {intensity} level of the debate. Address their specific points directly and demonstrate why your position remains superior.
 ```
 
 ### Closing Argument Template
