@@ -24,74 +24,54 @@ export function DebateTopicSelector() {
     setUseCustomTopic,
   } = useDebateSetup();
 
-  const { debateData, loading: debateLoading, error: debateError } = useDebatePrompts();
+  const { debateData } = useDebatePrompts();
+
+  const handleTopicChange = (value: string) => {
+    if (value === '__custom__') {
+      setUseCustomTopic(true);
+    } else {
+      setUseCustomTopic(false);
+      setSelectedTopic(value);
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2 mb-2">
-        <Gavel className="w-4 h-4" />
-        <label className="text-sm font-semibold">Debate Topic</label>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <input
-            type="radio"
-            id="preset-topic"
-            checked={!useCustomTopic}
-            onChange={() => setUseCustomTopic(false)}
-          />
-          <label htmlFor="preset-topic" className="text-sm">Select from presets</label>
-        </div>
-
-        {!useCustomTopic && (
-          <Select value={selectedTopic} onValueChange={setSelectedTopic}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose debate topic" />
-            </SelectTrigger>
-            <SelectContent>
-              {debateData?.topics.map((topic) => (
-                <SelectItem key={topic.id} value={topic.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{topic.title}</span>
-                    <span className="text-xs text-gray-500 truncate max-w-48">
-                      {topic.proposition}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        <div className="flex items-center space-x-2">
-          <input
-            type="radio"
-            id="custom-topic"
-            checked={useCustomTopic}
-            onChange={() => setUseCustomTopic(true)}
-          />
-          <label htmlFor="custom-topic" className="text-sm">Custom topic</label>
-        </div>
-
-        {useCustomTopic && (
+    <div className="space-y-2">
+      {!useCustomTopic ? (
+        <Select
+          value={selectedTopic}
+          onValueChange={handleTopicChange}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Choose debate topic..." />
+          </SelectTrigger>
+          <SelectContent>
+            {debateData?.topics.map((topic) => (
+              <SelectItem key={topic.id} value={topic.id}>
+                {topic.title}
+              </SelectItem>
+            ))}
+            <SelectItem value="__custom__">
+              <span className="italic">Custom topic...</span>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      ) : (
+        <div className="space-y-1">
           <Textarea
             value={customTopic}
             onChange={(e) => setCustomTopic(e.target.value)}
-            placeholder="Enter your debate proposition..."
-            className="min-h-[80px]"
+            placeholder="Enter custom debate proposition..."
+            className="min-h-[60px] text-sm"
           />
-        )}
-      </div>
-
-      {/* Current Topic Display */}
-      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="text-xs text-gray-500 mb-1">Current Topic:</div>
-        <div className="text-sm font-medium break-words whitespace-normal max-h-24 overflow-y-auto">
-          {useCustomTopic
-            ? (customTopic || 'Enter custom topic above')
-            : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Select a topic')}
+          <button
+            onClick={() => setUseCustomTopic(false)}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            ← Back to presets
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
