@@ -28,7 +28,9 @@ import { useDebateStreaming } from "@/hooks/useDebateStreaming";
 import { useDebatePrompts } from "@/hooks/useDebatePrompts";
 import { useDebateExport } from "@/hooks/useDebateExport";
 import { DebateService } from "@/services/debateService";
-import { DebateSetupPanel } from "@/components/debate/DebateSetupPanel";
+import { DebateTopicSelector } from "@/components/debate/DebateTopicSelector";
+import { ModelSelector } from "@/components/debate/ModelSelector";
+import { AdversarialLevelSelector } from "@/components/debate/AdversarialLevelSelector";
 import { DebateControls } from "@/components/debate/DebateControls";
 import { DebateMessageList } from "@/components/debate/DebateMessageList";
 import { DebateHistoryDrawer } from "@/components/debate/DebateHistoryDrawer";
@@ -641,31 +643,19 @@ export default function Debate() {
       />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
+        {/* Topic Bar - Full Width at Top (Always Visible) */}
         {debateSetup.showSetup && (
-          <DebateSetupPanel
-            debateData={debateData}
-            debateLoading={debateLoading}
-            debateError={debateError}
-            models={models}
-            selectedTopic={debateSetup.selectedTopic}
-            setSelectedTopic={debateSetup.setSelectedTopic}
-            customTopic={debateSetup.customTopic}
-            setCustomTopic={debateSetup.setCustomTopic}
-            useCustomTopic={debateSetup.useCustomTopic}
-            setUseCustomTopic={debateSetup.setUseCustomTopic}
-            adversarialLevel={debateSetup.adversarialLevel}
-            setAdversarialLevel={debateSetup.setAdversarialLevel}
-            model1Id={debateSetup.model1Id}
-            setModel1Id={debateSetup.setModel1Id}
-            model2Id={debateSetup.model2Id}
-            setModel2Id={debateSetup.setModel2Id}
-            model1Config={debateSetup.model1Config}
-            setModel1Config={debateSetup.setModel1Config}
-            model2Config={debateSetup.model2Config}
-            setModel2Config={debateSetup.setModel2Config}
-            onStartDebate={handleStartDebate}
-            isStreaming={debateStreaming.isStreaming}
-          />
+          <Card className="mb-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2 text-base">
+                <MessageSquare className="w-4 h-4" />
+                <span>Debate Topic</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <DebateTopicSelector />
+            </CardContent>
+          </Card>
         )}
 
         {debateSetup.showSystemPrompts && (debateSetup.model1Id || debateSetup.model2Id) && (
@@ -713,8 +703,41 @@ export default function Debate() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
-          <div className="xl:col-span-1 space-y-3">
+        <div className="grid grid-cols-1 xl:grid-cols-[25%_75%] gap-3">
+          <div className="space-y-3">
+            {/* Model Configuration - Always Expanded */}
+            {debateSetup.showSetup && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center space-x-2 text-sm">
+                    <Settings className="w-4 h-4" />
+                    <span>Debaters</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ModelSelector />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Debate Intensity + Start Button */}
+            {debateSetup.showSetup && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center space-x-2 text-sm">
+                    <Settings className="w-4 h-4" />
+                    <span>Debate Intensity</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <AdversarialLevelSelector
+                    onStartDebate={handleStartDebate}
+                    disabled={!debateSetup.model1Id || !debateSetup.model2Id || !debateData || debateLoading || debateError !== null || (!debateSetup.useCustomTopic && !debateSetup.selectedTopic) || (debateSetup.useCustomTopic && !debateSetup.customTopic)}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
             <DebateHistoryDrawer
               sessions={debateSession.existingDebateSessions}
               onRefresh={() => loadDebateSessionsMutation.mutate()}
@@ -757,7 +780,7 @@ export default function Debate() {
             )}
           </div>
 
-          <div className="xl:col-span-3 space-y-3">
+          <div className="space-y-3">
             {debateStreaming.isStreaming && (
               <StreamingDisplay
                 reasoning={debateStreaming.reasoning}

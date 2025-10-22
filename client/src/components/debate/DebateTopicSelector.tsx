@@ -1,45 +1,35 @@
 /**
  * Debate topic selector component
  *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Handles topic selection UI including preset topics and custom topic input
- * SRP/DRY check: Pass - Single responsibility for topic selection, no duplication with other selection components
+ * Author: Claude Code using Sonnet 4.5
+ * Date: 2025-10-22
+ * PURPOSE: Handles topic selection UI including preset topics and custom topic input.
+ *          Refactored to use useDebateSetup hook directly, eliminating prop drilling.
+ * SRP/DRY check: Pass - Single responsibility for topic selection, uses existing hooks
  */
 
 import { Gavel } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { DebateInstructions } from '@/lib/promptParser';
+import { useDebateSetup } from '@/hooks/useDebateSetup';
+import { useDebatePrompts } from '@/hooks/useDebatePrompts';
 
-interface DebateTopicSelectorProps {
-  debateData: DebateInstructions | null;
-  debateLoading: boolean;
-  debateError: string | null;
-  selectedTopic: string;
-  setSelectedTopic: (topic: string) => void;
-  customTopic: string;
-  setCustomTopic: (topic: string) => void;
-  useCustomTopic: boolean;
-  setUseCustomTopic: (useCustom: boolean) => void;
-}
+export function DebateTopicSelector() {
+  const {
+    selectedTopic,
+    setSelectedTopic,
+    customTopic,
+    setCustomTopic,
+    useCustomTopic,
+    setUseCustomTopic,
+  } = useDebateSetup();
 
-export function DebateTopicSelector({
-  debateData,
-  debateLoading,
-  debateError,
-  selectedTopic,
-  setSelectedTopic,
-  customTopic,
-  setCustomTopic,
-  useCustomTopic,
-  setUseCustomTopic,
-}: DebateTopicSelectorProps) {
+  const { debateData, loading: debateLoading, error: debateError } = useDebatePrompts();
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-2 mb-2">
         <Gavel className="w-4 h-4" />
-        <label className="text-sm font-medium">Debate Topic</label>
+        <label className="text-sm font-semibold">Debate Topic</label>
       </div>
 
       <div className="space-y-3">
@@ -96,7 +86,7 @@ export function DebateTopicSelector({
       {/* Current Topic Display */}
       <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="text-xs text-gray-500 mb-1">Current Topic:</div>
-        <div className="text-sm font-medium">
+        <div className="text-sm font-medium break-words whitespace-normal max-h-24 overflow-y-auto">
           {useCustomTopic
             ? (customTopic || 'Enter custom topic above')
             : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || 'Select a topic')}

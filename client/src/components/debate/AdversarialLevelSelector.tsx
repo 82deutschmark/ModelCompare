@@ -1,12 +1,16 @@
 /**
- * Author: gpt-5-codex
- * Date: 2025-10-22 01:17 UTC
- * PURPOSE: Render debate intensity selector with enriched rhetoric descriptors and accessibility affordances.
- * SRP/DRY check: Pass - Component solely manages adversarial level selection UI without duplicating shared logic.
+ * Author: Claude Code using Sonnet 4.5
+ * Date: 2025-10-22
+ * PURPOSE: Render debate intensity selector with enriched rhetoric descriptors.
+ *          Refactored to use useDebateSetup and useDebatePrompts hooks directly.
+ *          Updated color scheme to navy-blue and standardized typography.
+ * SRP/DRY check: Pass - Component solely manages adversarial level selection UI
  */
 
 import { Target } from 'lucide-react';
-import type { DebateInstructions } from '@/lib/promptParser';
+import { Button } from '@/components/ui/button';
+import { useDebateSetup } from '@/hooks/useDebateSetup';
+import { useDebatePrompts } from '@/hooks/useDebatePrompts';
 
 interface AdversarialLevel {
   id: number;
@@ -14,20 +18,16 @@ interface AdversarialLevel {
 }
 
 interface AdversarialLevelSelectorProps {
-  debateData: DebateInstructions | null;
-  adversarialLevel: number;
-  setAdversarialLevel: (level: number) => void;
   onStartDebate?: () => void;
   disabled?: boolean;
 }
 
 export function AdversarialLevelSelector({
-  debateData,
-  adversarialLevel,
-  setAdversarialLevel,
   onStartDebate,
   disabled = false,
-}: AdversarialLevelSelectorProps) {
+}: AdversarialLevelSelectorProps = {}) {
+  const { adversarialLevel, setAdversarialLevel } = useDebateSetup();
+  const { debateData } = useDebatePrompts();
   const adversarialLevels: AdversarialLevel[] = [
     { id: 1, name: 'Respectful · Pleasant Exchange' },
     { id: 2, name: 'Assertive · Standard Debate' },
@@ -39,7 +39,7 @@ export function AdversarialLevelSelector({
     <div className="space-y-4">
       <div className="flex items-center space-x-2 mb-2">
         <Target className="w-4 h-4" />
-        <label className="text-sm font-medium">Debate Intensity</label>
+        <label className="text-sm font-semibold">Debate Intensity</label>
       </div>
 
       <div className="space-y-3">
@@ -56,11 +56,10 @@ export function AdversarialLevelSelector({
                 id={`level-${level.id}`}
                 checked={adversarialLevel === level.id}
                 onChange={() => setAdversarialLevel(level.id)}
-                disabled={disabled}
               />
-              <label htmlFor={`level-${level.id}`} className="flex-1">
+              <label htmlFor={`level-${level.id}`} className="flex-1 cursor-pointer">
                 <div className="text-sm font-medium">{levelName}</div>
-                <div className="text-xs text-gray-500 line-clamp-2">
+                <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                   {levelGuidance}
                 </div>
               </label>
@@ -69,20 +68,21 @@ export function AdversarialLevelSelector({
         })}
       </div>
 
-      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-        <div className="text-xs text-amber-700 dark:text-amber-300">
+      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div className="text-xs text-blue-700 dark:text-blue-300">
           Higher intensity levels lead to more forceful rhetoric. Choose appropriately.
         </div>
       </div>
 
       {onStartDebate && (
-        <button
+        <Button
           onClick={onStartDebate}
           disabled={disabled}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-md font-medium"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+          size="lg"
         >
           Start Debate
-        </button>
+        </Button>
       )}
     </div>
   );
