@@ -438,11 +438,6 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
     const inputMessages = promptContext.messages;
     const promptVariables: Record<string, string> = {
       intensity: promptContext.intensityValue,
-      intensity_level: promptContext.intensityLevel,
-      intensity_label: promptContext.intensityLabel,
-      intensity_heading: promptContext.intensityHeading,
-      intensity_summary: promptContext.intensitySummary,
-      intensity_guidance: promptContext.intensityGuidance,
       position: payload.position,
       topic: payload.topic,
       role: payload.role,
