@@ -1,10 +1,8 @@
 /**
- * Adversarial level selector component for debate mode
- *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Handles debate intensity selection with level descriptions and warnings
- * SRP/DRY check: Pass - Single responsibility for intensity selection, no duplication with other selection components
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 01:17 UTC
+ * PURPOSE: Render debate intensity selector with enriched rhetoric descriptors and accessibility affordances.
+ * SRP/DRY check: Pass - Component solely manages adversarial level selection UI without duplicating shared logic.
  */
 
 import { Target } from 'lucide-react';
@@ -31,10 +29,10 @@ export function AdversarialLevelSelector({
   disabled = false,
 }: AdversarialLevelSelectorProps) {
   const adversarialLevels: AdversarialLevel[] = [
-    { id: 1, name: 'Respectful' },
-    { id: 2, name: 'Assertive' },
-    { id: 3, name: 'Aggressive' },
-    { id: 4, name: 'Combative' }
+    { id: 1, name: 'Respectful · Pleasant Exchange' },
+    { id: 2, name: 'Assertive · Standard Debate' },
+    { id: 3, name: 'Aggressive · Fiery Debate' },
+    { id: 4, name: 'Combative · Maximum Adversarial' }
   ];
 
   return (
@@ -47,10 +45,9 @@ export function AdversarialLevelSelector({
       <div className="space-y-3">
         {adversarialLevels.map((level) => {
           const descriptor = debateData?.intensities?.[level.id];
-          const levelName = descriptor?.label || level.name;
-          const levelGuidance = descriptor?.summary
-            ? `${descriptor.summary}`
-            : descriptor?.guidance || '';
+          const heading = descriptor?.heading?.replace(/^Level\s+\d+\s*-\s*/i, '') ?? null;
+          const levelName = heading || descriptor?.label || level.name;
+          const levelGuidance = descriptor?.guidance || descriptor?.fullText || '';
 
           return (
             <div key={level.id} className="flex items-center space-x-2">

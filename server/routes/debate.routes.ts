@@ -1,6 +1,6 @@
 /*
- * Author: GPT-5 Codex
- * Date: 2025-10-19 03:17 UTC
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 01:19 UTC
  * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
  *          SSE dispatcher, shared streaming logic, heartbeat keepalives, and resilient asset loading so
  *          modern React clients can consume Responses API streams without premature proxy disconnects while
@@ -74,7 +74,12 @@ interface DebateStreamPayload {
   topic: string;
   role: DebateRole;
   position: "FOR" | "AGAINST";
-  intensity: number;
+  intensityLevel: number;
+  intensityGuidance: string;
+  intensityHeading: string;
+  intensityLabel: string;
+  intensitySummary: string;
+  intensityFullText: string;
   opponentMessage: string | null;
   previousResponseId: string | null;
   turnNumber: number;
@@ -209,9 +214,9 @@ async function resolveDebateSessionId(params: {
   topic: string;
   model1Id: string;
   model2Id: string;
-  intensity: number;
+  intensityLevel: number;
 }): Promise<string> {
-  const { sessionId, turnNumber, topic, model1Id, model2Id, intensity } = params;
+  const { sessionId, turnNumber, topic, model1Id, model2Id, intensityLevel } = params;
 
   if (sessionId) {
     const existing = await storage.getDebateSession(sessionId);
@@ -230,7 +235,7 @@ async function resolveDebateSessionId(params: {
       topicText: topic,
       model1Id,
       model2Id,
-      adversarialLevel: intensity,
+      adversarialLevel: intensityLevel,
       turnHistory: [],
       model1ResponseIds: [],
       model2ResponseIds: []
@@ -242,6 +247,13 @@ async function resolveDebateSessionId(params: {
   }
 }
 
+function sanitizeText(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
+}
+
 async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   if (!body) {
     throw new HttpError("Request body is required", 400);
@@ -251,10 +263,16 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   const topic = ensureString(body.topic, "topic");
   const role = normalizeRole(body.role);
   const position: "FOR" | "AGAINST" = role === "AFFIRMATIVE" ? "FOR" : "AGAINST";
-  const intensity = ensureNumber(body.intensity, "intensity");
+  const rawIntensity = body.intensityLevel ?? body.intensity;
+  const intensityLevel = ensureNumber(rawIntensity, "intensityLevel");
   const turnNumber = ensureNumber(body.turnNumber, "turnNumber");
   const model1Id = ensureString(body.model1Id, "model1Id");
   const model2Id = ensureString(body.model2Id, "model2Id");
+  const intensityGuidance = sanitizeText(body.intensityGuidance);
+  const intensityHeading = sanitizeText(body.intensityHeading);
+  const intensityLabel = sanitizeText(body.intensityLabel);
+  const intensitySummary = sanitizeText(body.intensitySummary);
+  const intensityFullText = sanitizeText(body.intensityFullText);
 
   const debateSessionId = await resolveDebateSessionId({
     sessionId: typeof body.sessionId === "string" ? body.sessionId : undefined,
@@ -262,7 +280,7 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
     topic,
     model1Id,
     model2Id,
-    intensity
+    intensityLevel
   });
 
   const opponentMessage =
@@ -279,7 +297,12 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
     topic,
     role,
     position,
-    intensity,
+    intensityLevel,
+    intensityGuidance,
+    intensityHeading,
+    intensityLabel,
+    intensitySummary,
+    intensityFullText,
     opponentMessage,
     previousResponseId,
     turnNumber,
@@ -297,6 +320,7 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
 interface DebatePromptContext {
   messages: Array<{ role: string; content: string }>;
   intensityValue: string;
+  intensityGuidance: string;
   intensityHeading: string;
   intensityLabel: string;
   intensityLevel: string;
@@ -337,19 +361,26 @@ function buildPromptContext(
   payload: DebateStreamPayload,
   instructions: DebateInstructions | null,
 ): DebatePromptContext {
-  const intensityDescriptor = getDebateIntensityDescriptor(instructions, payload.intensity);
-  const intensityLevel = String(payload.intensity);
-  const intensityHeading = intensityDescriptor?.heading ?? `Level ${intensityLevel}`;
-  const intensityLabel = intensityDescriptor?.label ?? intensityHeading;
-  const intensitySummary = intensityDescriptor?.summary ?? "";
-  const intensityValue = intensityDescriptor?.fullText ?? intensityHeading;
+  const descriptor = getDebateIntensityDescriptor(instructions, payload.intensityLevel);
+  const intensityLevel = String(payload.intensityLevel);
+  const intensityHeading = payload.intensityHeading || descriptor?.heading || `Level ${intensityLevel}`;
+  const intensityLabel = payload.intensityLabel || descriptor?.label || intensityHeading;
+  const intensitySummary = payload.intensitySummary || descriptor?.summary || "";
+  const descriptorGuidance = descriptor?.guidance?.trim() ?? "";
+  const providedGuidance = payload.intensityGuidance || "";
+  const intensityGuidance = providedGuidance || descriptorGuidance;
+  const descriptorFullText = descriptor?.fullText ?? (descriptorGuidance ? `${intensityHeading}\n${descriptorGuidance}` : intensityHeading);
+  const providedFullText = payload.intensityFullText || "";
+  const intensityValue = providedFullText || descriptorFullText;
 
   const developerSections = [
     "You are engaged in a debate with another LLM. The debate follows standard parliamentary procedure. You are ethically obligated to provide the best defense for your position. Your opponent will attempt to sway you and the jury; you must stick to your position and convictions.",
   ];
 
-  if (intensityDescriptor) {
-    developerSections.push(`Adversarial intensity guidance:\n${intensityDescriptor.fullText}`);
+  if (intensityGuidance) {
+    developerSections.push(`Adversarial intensity guidance:\n${intensityGuidance}`);
+  } else if (descriptorFullText) {
+    developerSections.push(`Adversarial intensity guidance:\n${descriptorFullText}`);
   } else {
     developerSections.push(`Adversarial intensity level: ${intensityLevel}`);
   }
@@ -366,6 +397,7 @@ function buildPromptContext(
     intensity_label: intensityLabel,
     intensity_heading: intensityHeading,
     intensity_summary: intensitySummary,
+    intensity_guidance: intensityGuidance,
   }).trim();
 
   const userMessage = payload.turnNumber <= 2
@@ -379,6 +411,7 @@ function buildPromptContext(
       { role: "user", content: userMessage },
     ],
     intensityValue,
+    intensityGuidance,
     intensityHeading,
     intensityLabel,
     intensityLevel,
@@ -418,6 +451,7 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
       intensity_label: promptContext.intensityLabel,
       intensity_heading: promptContext.intensityHeading,
       intensity_summary: promptContext.intensitySummary,
+      intensity_guidance: promptContext.intensityGuidance,
       position: payload.position,
       topic: payload.topic,
       role: payload.role,

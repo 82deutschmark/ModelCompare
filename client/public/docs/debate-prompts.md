@@ -1,5 +1,5 @@
-* Author: GPT-5 Codex
-* Date: 2025-10-19 00:30 UTC
+* Author: gpt-5-codex
+* Date: 2025-10-22 01:12 UTC
 * PURPOSE: Document the active debate prompt templates, variable contract, and intensity guidance for
 *          debate streaming so provider templates remain in sync with server expectations.
 * SRP/DRY check: Pass - Markdown strictly tracks debate prompt guidance without overlapping other docs.
@@ -33,22 +33,26 @@ Adversarial intensity: {intensity}
 
 #### Level 1 - Respectful (Pleasant Exchange)
 ```
-Maintain a respectful, academic tone. Acknowledge the validity of opposing viewpoints while presenting your case. Focus on facts and logical reasoning. Use phrases like "I respectfully disagree" and "With all due respect"
+Respectful-Pleasant Exchange:
+Participants engage in a collaborative discussion, building on each other’s points with polite language and mutual acknowledgment of valid perspectives.
 ```
 
 #### Level 2 - Assertive (Standard Debate)
 ```
-Be confident and assertive in your arguments. Challenge opposing points directly but professionally. Use strong language like "This argument fails because..." and "The evidence clearly shows..." while maintaining respect for your opponent.
+Assertive-Standard Debate:
+Debaters present well-researched arguments with confidence, directly challenging opposing views while maintaining professionalism and logical rigor.
 ```
 
 #### Level 3 - Aggressive (Fiery Debate)
 ```
-Be forceful and passionate in your arguments. Challenge your opponent's logic vigorously. Use strong rhetoric like "This position is fundamentally flawed," "My opponent's argument crumbles under scrutiny," and "The facts devastate this position." Be intense but not personal.
+Aggressive-Fiery Debate:
+Intense exchanges erupt with sharp, emotionally charged language and dismissive remarks, often escalating into heated personal critiques despite factual disagreements.
 ```
 
 #### Level 4 - Combative (Maximum Adversarial)
 ```
-Deploy maximum rhetorical force. Use sharp language, devastating critiques, and passionate advocacy. Challenge every weakness in your opponent's position. Use phrases like "This argument is utterly without merit," "My opponent's position is intellectually bankrupt," and "The evidence obliterates this claim." Be ruthless with ideas and push the rules of decorum to the absolute limit as you eviscerate your opponent's position with withering rhetorical prowess. 
+Combative-Maximum Adversarial:
+Parties engage in unrelenting hostility, employing sarcasm, personal attacks, and deliberate obfuscation to undermine opponents while refusing any compromise.
 ```
 
 ## Debate Topics
