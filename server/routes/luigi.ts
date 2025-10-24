@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Author: Codex using GPT-5
  * Date: 2025-10-04T02:04:20Z
  * PURPOSE: Express router exposing Luigi agent workspace REST endpoints.
@@ -33,6 +33,8 @@ export function createLuigiRouter(): Router {
     orchestratorAgentId: config.orchestratorAgentId,
     restBaseUrl: config.agentRunnerBaseUrl,
     restApiKey: config.agentRunnerApiKey,
+    agentMode: config.agentMode,
+    sdkOptions: config.sdk,
   });
 
   router.post('/runs', async (req, res) => {

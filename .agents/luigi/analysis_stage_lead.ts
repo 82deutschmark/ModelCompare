@@ -10,7 +10,7 @@ import type { AgentDefinition } from '../types/agent-definition'
 const definition: AgentDefinition = {
   id: 'analysis-stage-lead',
   displayName: 'Analysis & Gating Stage Lead',
-  model: 'openai/gpt-5',
+  model: 'openai/gpt-5-mini',
   toolNames: ['spawn_agents', 'read_files', 'think_deeply', 'end_turn'],
   spawnableAgents: ['luigi-starttime', 'luigi-setup', 'luigi-redlinegate', 'luigi-premiseattack', 'luigi-identifypurpose', 'luigi-plantype', 'codebuff/file-explorer@0.0.6', 'codebuff/researcher-grok-4-fast@0.0.3'],
   includeMessageHistory: true,

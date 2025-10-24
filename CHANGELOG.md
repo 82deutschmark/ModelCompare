@@ -12,6 +12,14 @@
 
 ## [Unreleased]
 
+## [Version 0.4.28] - 2025-10-24 23:20 UTC
+
+### Added
+- OpenAI Agents SDK evaluation plan documenting Luigi agent inventory, current execution gaps, and phased migration strategy.@docs/2025-10-24-plan-openai-agents-sdk-evaluation.md#1-89
+
+### Changed
+- Introduced an in-process OpenAI Agents SDK runner, Luigi executor wiring, and environment configuration plumbing to toggle between REST and SDK modes for orchestrator execution.@server/luigi/openai-sdk-runner.ts#1-261@server/luigi/executor.ts#1-265@server/config.ts#8-236@server/routes/luigi.ts#26-125
+
 ## [Version 0.4.27] - 2025-10-22 19:40 UTC
 
 ### Changed
