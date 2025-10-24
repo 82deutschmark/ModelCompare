@@ -59,7 +59,7 @@ The Luigi workspace was built to integrate with an **external agent orchestratio
 │  Would execute:                          │
 │  - 72 Luigi agent definitions            │
 │  - 60+ sequential stages                 │
-│  - AI model calls (GPT-5, Claude, etc.) │
+│  - AI model calls (GPT-5-mini) │
 │  - Artifact generation                   │
 └─────────────────────────────────────────┘
                    ↓
@@ -178,7 +178,7 @@ Content-Type: application/json
 **3. Execute Agent Pipeline**
 - Start with `luigi-master-orchestrator`
 - Progress through 60+ stages sequentially
-- Call AI models (OpenAI GPT-5, Claude 4, etc.)
+- Call AI models (OpenAI GPT-5-mini)
 - Execute tools (read_files, think_deeply, etc.)
 - Generate artifacts per stage
 
@@ -339,8 +339,10 @@ The Luigi workspace is **architecturally sound but functionally incomplete**. Th
 It's like they built a complete car except for the engine!!!!
 
 **Your Tasks:**
-1. Build the engine from scratch!
+1. Build the engine from scratch! Make sure it uses the latest GPT-5-Mini model. Our project already has a config with all models. 
 2. NO MOCKS!!!  
 3. Copy the agent runner from Codebuff!!!
 https://www.npmjs.com/package/@codebuff/sdk
 https://github.com/CodebuffAI/codebuff
+
+
