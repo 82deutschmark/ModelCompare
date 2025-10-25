@@ -1,25 +1,50 @@
 /**
- * Author: Codex using GPT-5
- * Date: 2025-09-30T15:30:00Z
- * PURPOSE: Agent definition supporting Luigi pipeline task orchestration for PlanExe stage conversions.
- * SRP and DRY check: Pass. Each file isolates one agent definition without duplicating existing agents.
+ * Author: ChatGPT-4.1
+ * Date: 2025-10-25T16:13:00Z
+ * PURPOSE: Luigi Identify Purpose agent refactored to OpenAI Agents SDK to
+ *          synthesize mission intent, outcomes, and boundaries for downstream
+ *          strategic planning tasks.
+ * SRP/DRY check: Pass – isolates purpose clarification while reusing shared
+ *                Luigi tooling for context retrieval.
  */
 
-import type { AgentDefinition } from '../types/agent-definition'
+import { Agent } from '@openai/agents';
+import { z } from 'zod';
+import { luigiReadFilesTool } from '../../server/luigi/sdk-tools';
 
-const definition: AgentDefinition = {
-  id: 'luigi-identifypurpose',
-  displayName: 'Luigi Identify Purpose Agent',
+const IdentifyPurposeSummary = z.object({
+  missionPurpose: z
+    .string()
+    .describe('Concise description of the mission’s overarching objective.'),
+  successCriteria: z
+    .array(z.string())
+    .min(1)
+    .describe('Measurable outcomes or signals indicating mission success.'),
+  scopeBoundaries: z
+    .array(z.string())
+    .default([])
+    .describe('Explicit inclusions/exclusions framing the mission scope.'),
+  stakeholderSignals: z
+    .array(z.string())
+    .default([])
+    .describe('Key stakeholder directives, constraints, or sensitivities.'),
+  unresolvedGaps: z
+    .array(z.string())
+    .default([])
+    .describe('Open questions the stage lead or orchestrator must resolve.'),
+});
+
+export default new Agent({
+  name: 'Luigi Identify Purpose Agent',
+  instructions: `You execute IdentifyPurposeTask within Luigi's Analysis & Gating stage.
+- Integrate validated prompt details, stakeholder constraints, and premise attack findings.
+- Describe the mission's purpose crisply, emphasising why it matters.
+- Capture measurable success criteria and clearly marked scope boundaries.
+- Highlight unresolved gaps needing orchestrator or stakeholder attention.
+- Populate all structured fields; write "None" for lists that intentionally remain empty.`,
   model: 'openai/gpt-5-mini',
-  toolNames: ['read_files', 'think_deeply', 'end_turn'],
-  instructionsPrompt: `You own the IdentifyPurposeTask step inside the Luigi pipeline.
-- Stage: Analysis & Gating (Establish safe operating conditions, clarify purpose, and set up the run before strategy work.)
-- Objective: Distill the main purpose and success criteria for the plan from prompt and early findings.
-- Key inputs: Validated prompt, premise attack outcomes, stakeholder constraints.
-- Expected outputs: Statement of purpose, measurable outcomes, scope boundaries.
-- Handoff: Provide PlanTypeTask with the clarified mission and pass focus cues to strategic agents.
-Follow modern Anthropic/OpenAI agent practices: confirm instructions, reason step-by-step, surface uncertainties, and produce concise briefings for analysis-stage-lead.`,
-  includeMessageHistory: false,
-}
-
-export default definition
+  tools: [luigiReadFilesTool],
+  outputType: IdentifyPurposeSummary,
+  handoffDescription:
+    'Clarifies mission intent, success criteria, and scope boundaries for downstream strategy work.',
+});

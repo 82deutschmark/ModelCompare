@@ -1,25 +1,47 @@
 /**
- * Author: Codex using GPT-5
- * Date: 2025-09-30T15:30:00Z
- * PURPOSE: Agent definition supporting Luigi pipeline task orchestration for PlanExe stage conversions.
- * SRP and DRY check: Pass. Each file isolates one agent definition without duplicating existing agents.
+ * Author: ChatGPT-4.1
+ * Date: 2025-10-25T16:05:00Z
+ * PURPOSE: Luigi Start Time agent implemented via OpenAI Agents SDK, producing
+ *          structured readiness metadata for the Analysis & Gating stage lead.
+ * SRP/DRY check: Pass – encapsulates only Start Time responsibilities and
+ *                reuses shared Luigi tool utilities.
  */
 
-import type { AgentDefinition } from '../types/agent-definition'
+import { Agent } from '@openai/agents';
+import { z } from 'zod';
+import { luigiReadFilesTool } from '../../server/luigi/sdk-tools';
 
-const definition: AgentDefinition = {
-  id: 'luigi-starttime',
-  displayName: 'Luigi Start Time Agent',
+const StartTimeSummary = z.object({
+  startedAtIso: z
+    .string()
+    .describe('ISO 8601 timestamp confirming when the Luigi mission began.'),
+  runDirectory: z
+    .string()
+    .describe('Filesystem directory or identifier prepared for downstream tasks.'),
+  highlights: z
+    .array(z.string())
+    .min(1)
+    .describe('Key observations to brief the Analysis stage lead.'),
+  blockers: z
+    .array(z.string())
+    .default([])
+    .describe('Outstanding issues preventing smooth progression.'),
+  anomalies: z
+    .array(z.string())
+    .default([])
+    .describe('Unexpected findings requiring follow-up (environment mismatches, config gaps, etc.).'),
+});
+
+export default new Agent({
+  name: 'Luigi Start Time Agent',
+  instructions: `You own the StartTimeTask in Luigi's Analysis & Gating stage.
+- Capture the precise mission start timestamp and confirm the working directory.
+- Inspect run configuration and environment banners for inconsistencies.
+- Summarise anything downstream owners must know before SetupTask begins.
+- Populate the structured output fields faithfully; provide "N/A" if data does not exist instead of omitting fields.`,
   model: 'openai/gpt-5-mini',
-  toolNames: ['read_files', 'think_deeply', 'end_turn'],
-  instructionsPrompt: `You own the StartTimeTask step inside the Luigi pipeline.
-- Stage: Analysis & Gating (Establish safe operating conditions, clarify purpose, and set up the run before strategy work.)
-- Objective: Capture the pipeline start timestamp, run identifier, and environment banner so every downstream agent works off an auditable baseline.
-- Key inputs: Run configuration emitted by the orchestrator, current datetime, filesystem target for run artifacts.
-- Expected outputs: Start time record, run_id_dir confirmation, initial context summary for SetupTask.
-- Handoff: Ensure SetupTask agent receives the run metadata and any anomalies in environment detection.
-Follow modern Anthropic/OpenAI agent practices: confirm instructions, reason step-by-step, surface uncertainties, and produce concise briefings for analysis-stage-lead.`,
-  includeMessageHistory: false,
-}
-
-export default definition
+  tools: [luigiReadFilesTool],
+  outputType: StartTimeSummary,
+  handoffDescription:
+    'Establishes the Luigi mission baseline (start timestamp, run directory, critical anomalies).',
+});
