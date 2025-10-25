@@ -12,6 +12,13 @@
 
 ## [Unreleased]
 
+## [Version 0.4.29] - 2025-10-25 23:35 UTC
+
+### Fixed
+- Restored DeepSeek and OpenRouter availability by reusing initialized provider instances instead of constructing ad hoc objects during lookups.@server/providers/index.ts#1-128
+- Corrected Anthropic Messages API identifiers for Sonnet 4.5 and Haiku 4.5 to stop `model_not_found_error` responses from the service.@server/providers/anthropic.ts#18-126
+- Hardened Express error handling to normalize responses via `formatErrorResponse` and avoid repeated 500 cascades after upstream failures.@server/middleware/error-handler.ts#1-27
+
 ## [Version 0.4.28] - 2025-10-24 23:20 UTC
 
 ### Added

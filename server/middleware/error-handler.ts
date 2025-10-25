@@ -6,14 +6,22 @@
  */
 import { Request, Response, NextFunction } from "express";
 import { contextError } from "../request-context.js";
+import { formatErrorResponse } from "../errors.js";
 
 export const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
-  contextError('Request error:', err);
-  res.status(err.statusCode || 500).json({
-    error: err.message || 'Internal server error'
-  });
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const errorResponse = formatErrorResponse(err instanceof Error ? err : new Error(String(err)));
+
+  if (errorResponse.statusCode >= 500) {
+    contextError('Request error:', err);
+  }
+
+  return res.status(errorResponse.statusCode).json(errorResponse);
 };
