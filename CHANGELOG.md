@@ -18,6 +18,7 @@
 - Restored DeepSeek and OpenRouter availability by reusing initialized provider instances instead of constructing ad hoc objects during lookups.@server/providers/index.ts#1-128
 - Corrected Anthropic Messages API identifiers for Sonnet 4.5 and Haiku 4.5 to stop `model_not_found_error` responses from the service.@server/providers/anthropic.ts#18-126
 - Hardened Express error handling to normalize responses via `formatErrorResponse` and avoid repeated 500 cascades after upstream failures.@server/middleware/error-handler.ts#1-27
+- Synced OpenAI Responses API models by registering `gpt-5-chat-latest` and `o3-mini-2025-01-31` so UI selections map to provider support after the Responses migration.@server/providers/openai.ts#1-218
 
 ## [Version 0.4.28] - 2025-10-24 23:20 UTC
 

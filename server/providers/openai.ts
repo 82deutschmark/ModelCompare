@@ -49,47 +49,47 @@ export class OpenAIProvider extends BaseProvider {
       },
     },
     {
-  id: "gpt-5-mini-2025-08-07",
-  name: "GPT-5 Mini",
-  provider: "OpenAI",
-  model: "gpt-5-mini-2025-08-07",
-  knowledgeCutoff: "October 2024",
-  capabilities: {
-    reasoning: true, // Reasoning token support
-    multimodal: true,
-    functionCalling: true,
-    streaming: true,
-  },
-  pricing: {
-    inputPerMillion: 0.25,
-    outputPerMillion: 2.00,
-  },
-  limits: {
-    maxTokens: 128000,
-    contextWindow: 400000,
-  },
-},
-{
-  id: "gpt-5-nano-2025-08-07",
-  name: "GPT-5 Nano",
-  provider: "OpenAI",
-  model: "gpt-5-nano-2025-08-07",
-  knowledgeCutoff: "May 31, 2024",
-  capabilities: {
-    reasoning: true, // Reasoning token support (fast/low-cost)
-    multimodal: true,
-    functionCalling: true,
-    streaming: true,
-  },
-  pricing: {
-    inputPerMillion: 0.05,
-    outputPerMillion: 0.40,
-  },
-  limits: {
-    maxTokens: 128000,
-    contextWindow: 400000,
-  },
-},
+      id: "gpt-5-mini-2025-08-07",
+      name: "GPT-5 Mini",
+      provider: "OpenAI",
+      model: "gpt-5-mini-2025-08-07",
+      knowledgeCutoff: "October 2024",
+      capabilities: {
+        reasoning: true, // Reasoning token support
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.25,
+        outputPerMillion: 2.00,
+      },
+      limits: {
+        maxTokens: 128000,
+        contextWindow: 400000,
+      },
+    },
+    {
+      id: "gpt-5-nano-2025-08-07",
+      name: "GPT-5 Nano",
+      provider: "OpenAI",
+      model: "gpt-5-nano-2025-08-07",
+      knowledgeCutoff: "May 31, 2024",
+      capabilities: {
+        reasoning: true, // Reasoning token support (fast/low-cost)
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.05,
+        outputPerMillion: 0.40,
+      },
+      limits: {
+        maxTokens: 128000,
+        contextWindow: 400000,
+      },
+    },
     {
       id: "gpt-4.1-nano-2025-04-14",
       name: "GPT-4.1 Nano",
