@@ -17,6 +17,7 @@
 ### Added
 - Hyperbolic "Primary Hyperstate" descriptor card with rotating neon gradients, multi-line pseudo-scientific accolades, and animated pulse overlays to amplify the Arc AGI dashboard parody aesthetic.@client/src/components/dashboard/PrimaryDescriptor.tsx#1-127
 - Integrated the primary descriptor module into the `/arc-agi` dashboard stack so the new status panel anchors the page above the existing quantum metrics grid.@client/src/pages/dashboard.tsx#1-536
+- Auto-opening dystopian "Terms of Data Harvesting" modal leveraging shadcn dialog primitives to reinforce the satirical tone with animated backgrounds and compliance bait copy.@client/src/components/dashboard/DataHarvestingModal.tsx#1-163@client/src/pages/ARC.tsx#1-544
 
 ### Changed
 - Renamed the Arc AGI parody dashboard entry point to `client/src/pages/ARC.tsx` so file naming matches the `/arc-agi` route and improves discoverability.@client/src/pages/ARC.tsx#1-544@client/src/App.tsx#1-55

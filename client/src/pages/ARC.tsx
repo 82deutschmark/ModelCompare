@@ -14,6 +14,7 @@ import { ChessBoard } from '../components/dashboard/ChessBoard';
 import { ArcGrid } from '../components/dashboard/ArcGrid';
 import { BioCard } from '../components/dashboard/BioCard';
 import { PrimaryDescriptor } from '../components/dashboard/PrimaryDescriptor';
+import { DataHarvestingModal } from '../components/dashboard/DataHarvestingModal';
 
 // Neon color palette for cyberpunk theme
 const neonColors = {
@@ -361,6 +362,7 @@ export default function ArcAgiPage() {
 
   return (
     <div className="min-h-screen bg-black text-white font-mono relative overflow-hidden">
+      <DataHarvestingModal />
       {/* Background Effects */}
       <MatrixRain />
       <FloatingParticles />
