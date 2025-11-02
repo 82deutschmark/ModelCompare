@@ -15,7 +15,7 @@ import PlanAssessmentPage from "@/pages/plan-assessment";
 import NotFound from "@/pages/not-found";
 import BillingPage from "@/pages/billing";
 import VixraPage from "./pages/vixra";
-import ArcAgiPage from "./pages/dashboard";
+import ArcAgiPage from "./pages/ARC";
 
 function Router() {
   return (

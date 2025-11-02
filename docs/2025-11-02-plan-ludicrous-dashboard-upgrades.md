@@ -14,7 +14,8 @@ Add an over-the-top "Primary" descriptor module to the Arc AGI dashboard that am
 1. Audit current dashboard composition to identify the optimal insertion point for the new descriptor module while respecting responsive layout.
 2. Implement a dedicated component that encapsulates the new pseudo-scientific status readout using `ArcAgiCard`, layered gradients, and lively animations.
 3. Integrate the component into the dashboard page and adjust spacing/stacking so it feels intentional alongside existing metrics.
-4. Update documentation (changelog) and prepare git commit.
+4. Rename the dashboard page to `ARC.tsx` to match the `/arc-agi` route, updating imports that reference the old filename.
+5. Update documentation (changelog) and prepare git commit.
 
 ## Validation
 - Local typecheck: `npm run check` (if time permits; skip if unchanged types).
