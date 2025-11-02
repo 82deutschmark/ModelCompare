@@ -12,6 +12,12 @@
 
 ## [Unreleased]
 
+## [Version 0.4.30] - 2025-11-02 04:52 UTC
+
+### Added
+- Hyperbolic "Primary Hyperstate" descriptor card with rotating neon gradients, multi-line pseudo-scientific accolades, and animated pulse overlays to amplify the Arc AGI dashboard parody aesthetic.@client/src/components/dashboard/PrimaryDescriptor.tsx#1-127
+- Integrated the primary descriptor module into the `/arc-agi` dashboard stack so the new status panel anchors the page above the existing quantum metrics grid.@client/src/pages/dashboard.tsx#1-536
+
 ## [Version 0.4.29] - 2025-10-25 23:35 UTC
 
 ### Fixed

@@ -1,3 +1,9 @@
+/**
+ * Author: Cascade (OpenAI GPT-4.1)
+ * Date: 2025-11-02 and the 04:47 UTC
+ * PURPOSE: Render the Arc AGI parody dashboard with animated quantum widgets and integrate the hyperbolic primary descriptor module.
+ * SRP/DRY check: Pass - page orchestrates dashboard layout by composing reusable components without duplicating their internals.
+ */
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArcAgiCard } from '../components/dashboard/DashboardCard';
@@ -7,6 +13,7 @@ import { QuantumMetrics } from '../components/dashboard/QuantumMetrics';
 import { ChessBoard } from '../components/dashboard/ChessBoard';
 import { ArcGrid } from '../components/dashboard/ArcGrid';
 import { BioCard } from '../components/dashboard/BioCard';
+import { PrimaryDescriptor } from '../components/dashboard/PrimaryDescriptor';
 
 // Neon color palette for cyberpunk theme
 const neonColors = {
@@ -420,6 +427,7 @@ export default function ArcAgiPage() {
 
       {/* Main Dashboard Content */}
       <div className="relative z-20 p-6 space-y-6">
+        <PrimaryDescriptor />
         {/* Top Row - Quantum Metrics */}
         <QuantumMetrics />
         {/* Three-column: left small components, center PromptInterface, right BioCard */}
