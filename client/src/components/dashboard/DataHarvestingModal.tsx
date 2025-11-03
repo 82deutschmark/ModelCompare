@@ -32,19 +32,25 @@ const INFO_COLLECTION = [
 export const DataHarvestingModal: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [hasLegallyConsented, setHasLegallyConsented] = useState(false);
+  const [hasClosedOnce, setHasClosedOnce] = useState(false);
 
+  // Initial opening after 900ms
   useEffect(() => {
     const timer = setTimeout(() => setOpen(true), 900);
     return () => clearTimeout(timer);
   }, []);
 
+  // Annoying reopen after 4s, but only once (parody persistence)
   useEffect(() => {
-    if (!open && !hasLegallyConsented) {
-      const timer = setTimeout(() => setOpen(true), 4000);
+    if (!open && !hasLegallyConsented && !hasClosedOnce) {
+      const timer = setTimeout(() => {
+        setOpen(true);
+        setHasClosedOnce(true); // Stop bugging after first reopen
+      }, 4000);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [open, hasLegallyConsented]);
+  }, [open, hasLegallyConsented, hasClosedOnce]);
 
   const rotatingDisclaimer = useMemo(() => DISCLAIMERS[Math.floor(Math.random() * DISCLAIMERS.length)], []);
 
@@ -157,5 +163,4 @@ export const DataHarvestingModal: React.FC = () => {
       </DialogContent>
     </Dialog>
   );
-}
-;
+};
