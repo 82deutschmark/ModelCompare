@@ -746,34 +746,44 @@ export const QuantumMetrics: React.FC = () => {
 
           {/* Dynamic AGI countdown (ambient theater) - moved to central position */}
           <motion.div
-            className={`border rounded px-2 py-1 ${
+            className={`border rounded px-3 py-2 flex flex-col items-center text-center gap-1 ${
               urgency === 'critical' ? 'border-red-700 bg-red-900/30' :
               urgency === 'warning' ? 'border-yellow-700 bg-yellow-900/20' :
-              'border-cyan-700/50'
+              'border-cyan-700/50 bg-slate-900/40'
             }`}
             animate={urgency === 'critical' ? {
               boxShadow: ['0 0 10px #DC2626', '0 0 30px #DC2626', '0 0 10px #DC2626']
-            } : {}}
+            } : {
+              boxShadow: ['0 0 6px #0EA5E9', '0 0 12px #22D3EE', '0 0 6px #0EA5E9']
+            }}
             transition={{ duration: 0.8, repeat: Infinity }}
           >
-            <div className={urgency === 'critical' ? 'text-red-300' : urgency === 'warning' ? 'text-yellow-300' : 'text-cyan-300'}>
+            <div
+              className={`font-mono text-[11px] tracking-[0.2em] uppercase ${
+                urgency === 'critical' ? 'text-red-300' :
+                urgency === 'warning' ? 'text-yellow-300' :
+                'text-cyan-300'
+              }`}
+            >
               AGI ETA
             </div>
             <motion.div
-              className={`font-semibold ${
+              className={`font-bold font-mono text-xl md:text-3xl tracking-wide ${
                 urgency === 'critical' ? 'text-red-400' :
                 urgency === 'warning' ? 'text-yellow-400' :
                 'text-green-400'
               }`}
               animate={urgency === 'critical' ? {
                 scale: [1, 1.2, 1]
-              } : {}}
-              transition={{ duration: 0.5, repeat: Infinity }}
+              } : {
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: urgency === 'critical' ? 0.5 : 1.2, repeat: Infinity }}
             >
               {formatCountdown(theaterState.countdownMs)}
             </motion.div>
             {theaterState.destabilizedMetrics.size > 0 && (
-              <div className="text-red-400 text-[8px]">
+              <div className="text-red-400 text-[9px] font-mono tracking-wide uppercase">
                 +{(theaterState.destabilizedMetrics.size * 30).toFixed(0)}% decay
               </div>
             )}

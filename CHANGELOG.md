@@ -16,6 +16,7 @@
 
 ### Fixed
 - Increased the Quantum Metrics AGI countdown starting horizon to ten years so gameplay urgency aligns with long-term ARC dashboard theme.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+- Centered and emphasized the AGI countdown card with bold typography and animated glow so the ticking timer reads as the dashboard focal point.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
 
 ## [Version 0.4.31] - 2025-11-03 01:05 UTC
 
