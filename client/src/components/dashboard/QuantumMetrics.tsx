@@ -150,7 +150,7 @@ function theaterReducer(state: AmbientTheaterState, action: TheaterAction): Ambi
 
       // Calculate chaos growth
       const timeSinceInteraction = now - state.lastInteractionTime;
-      const growthRate = timeSinceInteraction > 5000 ? 0.15 : 0.05; // Faster if no interaction
+      const growthRate = timeSinceInteraction > 4000 ? 1.5 : 0.6; // Rapid escalation without stabilization
       const newChaos = Math.min(100, state.chaosLevel + (growthRate * (action.deltaMs / 100)));
 
       // Phase transitions based on chaos level
@@ -162,8 +162,10 @@ function theaterReducer(state: AmbientTheaterState, action: TheaterAction): Ambi
       }
 
       // Calculate countdown acceleration
-      const acceleration = 1 + (state.destabilizedMetrics.size * 0.3) * (1 + newChaos / 100);
-      const newCountdown = state.countdownMs - (action.deltaMs * acceleration);
+      const baseDecay = 500000; // 500k ms decay per 100 ms tick (~10 minutes from cold start)
+      const chaosMultiplier = 1 + (newChaos / 20); // Up to 6x at max chaos
+      const destabilizationMultiplier = 1 + (state.destabilizedMetrics.size * 2.5);
+      const newCountdown = state.countdownMs - (action.deltaMs * baseDecay * chaosMultiplier * destabilizationMultiplier);
 
       if (newCountdown <= 0) {
         return { ...state, phase: 'singularity', countdownMs: 0, chaosLevel: 100 };
@@ -270,13 +272,9 @@ export const QuantumMetrics: React.FC = () => {
     Regularization: 0.001
   });
 
-  // Dormant phase timer - activates ambient experience after 10-15 seconds
+  // Immediately awaken ambient experience on mount
   useEffect(() => {
-    const awakeTimer = setTimeout(() => {
-      dispatch({ type: 'AWAKEN' });
-    }, 10000 + Math.random() * 5000);
-
-    return () => clearTimeout(awakeTimer);
+    dispatch({ type: 'AWAKEN' });
   }, []);
 
   // Auto-reset after Singularity - subtle restart after 3-5 seconds
