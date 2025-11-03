@@ -18,6 +18,8 @@
 - Increased the Quantum Metrics AGI countdown starting horizon to ten years so gameplay urgency aligns with long-term ARC dashboard theme.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
 - Centered and emphasized the AGI countdown card with bold typography and animated glow so the ticking timer reads as the dashboard focal point.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
 - Triggered the countdown immediately on page load and amplified chaos-driven acceleration so the timer cascades toward Singularity more aggressively.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+- Restyled Millennium Problem countdown tiles with shared neon card treatment so every timer mirrors the AGI ETA focal styling.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+- Reworked decay multipliers to compound beyond 1020% so each destabilized metric and chaos surge pushes the AGI timer into runaway collapse.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
 
 ## [Version 0.4.31] - 2025-11-03 01:05 UTC
 

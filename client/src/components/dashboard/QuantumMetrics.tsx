@@ -140,6 +140,24 @@ const initialTheaterState: AmbientTheaterState = {
   justStabilized: new Map(),
 };
 
+const BASE_DECAY_PER_TICK = 650000; // ms removed per 100ms tick before multipliers (~7.5 minutes per second)
+const CHAOS_DIVISOR = 18; // smaller divisor -> higher chaos multiplier ceiling
+const DESTABILIZATION_POWER = 1.3;
+const DESTABILIZATION_COEFFICIENT = 2.2;
+
+function calculateDecayMultipliers(chaosLevel: number, destabilizedCount: number) {
+  const chaosMultiplier = 1 + (chaosLevel / CHAOS_DIVISOR);
+  const destabilizationMultiplier = destabilizedCount === 0
+    ? 1
+    : 1 + (Math.pow(destabilizedCount, DESTABILIZATION_POWER) * DESTABILIZATION_COEFFICIENT);
+
+  return {
+    chaosMultiplier,
+    destabilizationMultiplier,
+    total: chaosMultiplier * destabilizationMultiplier,
+  };
+}
+
 function theaterReducer(state: AmbientTheaterState, action: TheaterAction): AmbientTheaterState {
   switch (action.type) {
     case 'AWAKEN':
@@ -162,10 +180,8 @@ function theaterReducer(state: AmbientTheaterState, action: TheaterAction): Ambi
       }
 
       // Calculate countdown acceleration
-      const baseDecay = 500000; // 500k ms decay per 100 ms tick (~10 minutes from cold start)
-      const chaosMultiplier = 1 + (newChaos / 20); // Up to 6x at max chaos
-      const destabilizationMultiplier = 1 + (state.destabilizedMetrics.size * 2.5);
-      const newCountdown = state.countdownMs - (action.deltaMs * baseDecay * chaosMultiplier * destabilizationMultiplier);
+      const { total: decayMultiplier } = calculateDecayMultipliers(newChaos, state.destabilizedMetrics.size);
+      const newCountdown = state.countdownMs - (action.deltaMs * BASE_DECAY_PER_TICK * decayMultiplier);
 
       if (newCountdown <= 0) {
         return { ...state, phase: 'singularity', countdownMs: 0, chaosLevel: 100 };
@@ -597,6 +613,8 @@ export const QuantumMetrics: React.FC = () => {
   };
 
   const urgency = getCountdownUrgency();
+  const decayMultipliers = calculateDecayMultipliers(theaterState.chaosLevel, theaterState.destabilizedMetrics.size);
+  const decayPressurePercent = Math.max(0, (decayMultipliers.total - 1) * 100);
 
   // Other countdown targets (preserved from original, these remain fixed)
   const targets = {
@@ -605,6 +623,48 @@ export const QuantumMetrics: React.FC = () => {
     navierStokes: new Date('2032-03-14T00:00:00Z').getTime(),
     birchSwinnerton: new Date('2031-10-10T00:00:00Z').getTime(),
   };
+
+  const staticCountdownConfigs: Array<{
+    key: keyof typeof targets;
+    label: string;
+    borderClass: string;
+    labelClass: string;
+    valueClass: string;
+    glow: string[];
+  }> = [
+    {
+      key: 'pVsNp',
+      label: 'P vs NP',
+      borderClass: 'border-pink-700/50 bg-pink-900/20',
+      labelClass: 'text-pink-300',
+      valueClass: 'text-yellow-300',
+      glow: ['#F472B6', '#FDE68A'],
+    },
+    {
+      key: 'riemann',
+      label: 'Riemann',
+      borderClass: 'border-purple-700/50 bg-purple-900/20',
+      labelClass: 'text-purple-300',
+      valueClass: 'text-purple-200',
+      glow: ['#C084FC', '#A855F7'],
+    },
+    {
+      key: 'navierStokes',
+      label: 'Navier-Stokes',
+      borderClass: 'border-blue-700/50 bg-blue-900/20',
+      labelClass: 'text-blue-300',
+      valueClass: 'text-blue-200',
+      glow: ['#60A5FA', '#38BDF8'],
+    },
+    {
+      key: 'birchSwinnerton',
+      label: 'Birch–Swinn.',
+      borderClass: 'border-emerald-700/50 bg-emerald-900/20',
+      labelClass: 'text-emerald-300',
+      valueClass: 'text-emerald-200',
+      glow: ['#34D399', '#A7F3D0'],
+    },
+  ];
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -736,11 +796,28 @@ export const QuantumMetrics: React.FC = () => {
       {/* Countdowns */}
       <div className="mt-3 px-2">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[10px]">
-          {/* Static countdowns (preserved from original) */}
-          <div className="border border-pink-700/50 rounded px-2 py-1">
-            <div className="text-pink-300">P vs NP</div>
-            <div className="text-yellow-400 font-semibold">{fmt(targets.pVsNp - now)}</div>
-          </div>
+          {/* Static countdowns (styled to match AGI ticker) */}
+          {staticCountdownConfigs.map(config => (
+            <motion.div
+              key={config.key}
+              className={`border rounded px-3 py-2 flex flex-col items-center text-center gap-1 ${config.borderClass}`}
+              animate={{
+                boxShadow: config.glow.map(color => `0 0 10px ${color}`),
+              }}
+              transition={{ duration: 2.2, repeat: Infinity }}
+            >
+              <div className={`font-mono text-[11px] tracking-[0.2em] uppercase ${config.labelClass}`}>
+                {config.label}
+              </div>
+              <motion.div
+                className={`font-bold font-mono text-lg md:text-2xl tracking-wide ${config.valueClass}`}
+                animate={{ scale: [1, 1.04, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+              >
+                {fmt(targets[config.key] - now)}
+              </motion.div>
+            </motion.div>
+          ))}
 
           {/* Dynamic AGI countdown (ambient theater) - moved to central position */}
           <motion.div
@@ -780,25 +857,13 @@ export const QuantumMetrics: React.FC = () => {
             >
               {formatCountdown(theaterState.countdownMs)}
             </motion.div>
-            {theaterState.destabilizedMetrics.size > 0 && (
+            {decayPressurePercent > 0 && (
               <div className="text-red-400 text-[9px] font-mono tracking-wide uppercase">
-                +{(theaterState.destabilizedMetrics.size * 30).toFixed(0)}% decay
+                +{decayPressurePercent.toLocaleString(undefined, { maximumFractionDigits: 0 })}% decay
               </div>
             )}
           </motion.div>
 
-          <div className="border border-purple-700/50 rounded px-2 py-1">
-            <div className="text-purple-300">Riemann</div>
-            <div className="text-purple-400 font-semibold">{fmt(targets.riemann - now)}</div>
-          </div>
-          <div className="border border-blue-700/50 rounded px-2 py-1">
-            <div className="text-blue-300">Navier‑Stokes</div>
-            <div className="text-blue-400 font-semibold">{fmt(targets.navierStokes - now)}</div>
-          </div>
-          <div className="border border-emerald-700/50 rounded px-2 py-1">
-            <div className="text-emerald-300">Birch–Swinn.</div>
-            <div className="text-emerald-400 font-semibold">{fmt(targets.birchSwinnerton - now)}</div>
-          </div>
         </div>
       </div>
 
