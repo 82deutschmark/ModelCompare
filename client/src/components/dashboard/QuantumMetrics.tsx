@@ -738,7 +738,13 @@ export const QuantumMetrics: React.FC = () => {
       {/* Countdowns */}
       <div className="mt-3 px-2">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[10px]">
-          {/* Dynamic AGI countdown (ambient theater) */}
+          {/* Static countdowns (preserved from original) */}
+          <div className="border border-pink-700/50 rounded px-2 py-1">
+            <div className="text-pink-300">P vs NP</div>
+            <div className="text-yellow-400 font-semibold">{fmt(targets.pVsNp - now)}</div>
+          </div>
+
+          {/* Dynamic AGI countdown (ambient theater) - moved to central position */}
           <motion.div
             className={`border rounded px-2 py-1 ${
               urgency === 'critical' ? 'border-red-700 bg-red-900/30' :
@@ -773,11 +779,6 @@ export const QuantumMetrics: React.FC = () => {
             )}
           </motion.div>
 
-          {/* Static countdowns (preserved from original) */}
-          <div className="border border-pink-700/50 rounded px-2 py-1">
-            <div className="text-pink-300">P vs NP</div>
-            <div className="text-yellow-400 font-semibold">{fmt(targets.pVsNp - now)}</div>
-          </div>
           <div className="border border-purple-700/50 rounded px-2 py-1">
             <div className="text-purple-300">Riemann</div>
             <div className="text-purple-400 font-semibold">{fmt(targets.riemann - now)}</div>
