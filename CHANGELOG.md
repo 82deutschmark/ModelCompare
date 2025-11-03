@@ -12,6 +12,17 @@
 
 ## [Unreleased]
 
+## [Version 0.4.32] - 2025-11-03 01:28 UTC
+
+### Fixed
+- Increased the Quantum Metrics AGI countdown starting horizon to ten years so gameplay urgency aligns with long-term ARC dashboard theme.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+
+## [Version 0.4.31] - 2025-11-03 01:05 UTC
+
+### Added
+- Looping slow-typing guidance overlay in the ARC neural prompt textarea so empty states animate "please enter or think your message here" with framer-motion timing and cleanup guards.@client/src/components/dashboard/PromptInterface.tsx#1-355
+- Typing guidance implementation plan documenting scope, risks, and definition of done for the ARC UI enhancement.@docs/2025-11-02-plan-typing-guidance.md#1-24
+
 ## [Version 0.4.30] - 2025-11-02 04:52 UTC
 
 ### Added

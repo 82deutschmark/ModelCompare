@@ -128,7 +128,7 @@ type TheaterAction =
   | { type: 'CLEAR_STABILIZATION_FEEDBACK'; metricKey: keyof MetricsState }
   | { type: 'RESET' };
 
-const INITIAL_COUNTDOWN_MS = 180000; // 3 minutes
+const INITIAL_COUNTDOWN_MS = 10 * 365 * 24 * 60 * 60 * 1000; // 10 years
 
 const initialTheaterState: AmbientTheaterState = {
   phase: 'dormant',
