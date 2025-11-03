@@ -140,10 +140,10 @@ const initialTheaterState: AmbientTheaterState = {
   justStabilized: new Map(),
 };
 
-const BASE_DECAY_PER_TICK = 650000; // ms removed per 100ms tick before multipliers (~7.5 minutes per second)
-const CHAOS_DIVISOR = 18; // smaller divisor -> higher chaos multiplier ceiling
-const DESTABILIZATION_POWER = 1.3;
-const DESTABILIZATION_COEFFICIENT = 2.2;
+const BASE_DECAY_PER_TICK = 1_200_000; // tuned for ~3 minute collapse baseline before multipliers
+const CHAOS_DIVISOR = 90; // larger divisor tempers chaos acceleration (max ≈ 2.1x)
+const DESTABILIZATION_POWER = 1.2;
+const DESTABILIZATION_COEFFICIENT = 0.6;
 
 function calculateDecayMultipliers(chaosLevel: number, destabilizedCount: number) {
   const chaosMultiplier = 1 + (chaosLevel / CHAOS_DIVISOR);
@@ -168,7 +168,7 @@ function theaterReducer(state: AmbientTheaterState, action: TheaterAction): Ambi
 
       // Calculate chaos growth
       const timeSinceInteraction = now - state.lastInteractionTime;
-      const growthRate = timeSinceInteraction > 4000 ? 1.5 : 0.6; // Rapid escalation without stabilization
+      const growthRate = timeSinceInteraction > 5000 ? 0.35 : 0.12; // Gradual escalation without stabilization
       const newChaos = Math.min(100, state.chaosLevel + (growthRate * (action.deltaMs / 100)));
 
       // Phase transitions based on chaos level
