@@ -8,12 +8,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArcAgiCard } from '../components/dashboard/DashboardCard';
 import { PromptInterface } from '../components/dashboard/PromptInterface';
-import { LiveCounter } from '../components/dashboard/LiveCounter';
 import { QuantumMetrics } from '../components/dashboard/QuantumMetrics';
 import { ChessBoard } from '../components/dashboard/ChessBoard';
 import { ArcGrid } from '../components/dashboard/ArcGrid';
 import { BioCard } from '../components/dashboard/BioCard';
 import { PrimaryDescriptor } from '../components/dashboard/PrimaryDescriptor';
+import { SystemStatus } from '../components/dashboard/SystemStatus';
 
 // Neon color palette for cyberpunk theme
 const neonColors = {
@@ -426,25 +426,33 @@ export default function ArcAgiPage() {
       </header>
 
       {/* Main Dashboard Content */}
-      <div className="relative z-20 p-6 space-y-6">
+      <div className="relative z-20 p-4 space-y-3">
         {/* Top Row - Quantum Metrics */}
         <QuantumMetrics />
-        {/* Three-column: left small components, center PromptInterface, right BioCard */}
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Left sidebar: smaller components */}
-          <div className="lg:col-span-3 flex flex-col gap-4">
-            <PrimaryDescriptor />
-            <ArcGrid color="#00FFFF" title="ARC GRID (mini)" gridSize={10} className="w-full" />
-            <ChessBoard color="#FF0080" title="Neural Chess (mini)" sizePx={220} />
+
+        {/* Main 6-Column Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-3 max-w-7xl mx-auto">
+          {/* LEFT AREA - Columns 1-2 */}
+          <div className="lg:col-span-2 space-y-3">
+            {/* Descriptor + System Status side-by-side on XL screens */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+              <PrimaryDescriptor />
+              <SystemStatus />
+            </div>
+            <ArcGrid color="#00FFFF" title="ARC GRID" gridSize={10} patternId="#001" />
+            <ChessBoard color="#FF0080" title="Neural Chess" sizePx={240} />
           </div>
-          {/* Center: main prompt interface */}
-          <div className="lg:col-span-6">
+
+          {/* CENTER AREA - Columns 3-4 */}
+          <div className="lg:col-span-2">
             <PromptInterface />
           </div>
-          {/* Right: Bio */}
-          <div className="lg:col-span-3 flex flex-col gap-4">
-            <ArcGrid color="#FF00A8" title="ARC GRID (mini)" gridSize={10} patternId="#005" className="w-full" />
+
+          {/* RIGHT AREA - Columns 5-6 */}
+          <div className="lg:col-span-2 space-y-4">
             <BioCard />
+            <ArcGrid color="#FF00A8" title="ARC GRID" gridSize={10} patternId="#002" />
+            <ChessBoard color="#00FF41" title="Emoji Chess" sizePx={240} emojiMode />
           </div>
         </div>
 
@@ -458,73 +466,6 @@ export default function ArcAgiPage() {
 
         {/* Neural Network */}
         <NeuralNetwork />
-
-        {/* Live Counters */}
-        <div className="bg-black border border-yellow-500 rounded-lg p-6">
-          <h3 className="text-yellow-400 text-lg mb-4 animate-pulse">🚀 LIVE COMPUTATION METRICS</h3>
-          <div className="grid grid-cols-4 gap-6">
-            <LiveCounter
-              label="Neural Ops/sec"
-              value={847329847}
-              increment={() => Math.floor(Math.random() * 10000) + 1000}
-              color="text-cyan-400"
-            />
-            <LiveCounter
-              label="Quantum States"
-              value={999999999}
-              suffix=" qbits"
-              increment={() => Math.floor(Math.random() * 100000) + 10000}
-              color="text-green-400"
-            />
-            <LiveCounter
-              label="Reality Patches"
-              value={2847329}
-              increment={() => Math.floor(Math.random() * 1000) + 100}
-              color="text-pink-400"
-            />
-            <LiveCounter
-              label="Consciousness Units"
-              value={99999999}
-              increment={() => Math.floor(Math.random() * 50000) + 5000}
-              color="text-purple-400"
-            />
-          </div>
-        </div>
-
-        {/* Prompt Interface moved above, removing inline block to prevent duplication */}
-
-        {/* System Status Footer */}
-        <div className="bg-black border border-red-500 rounded-lg p-4">
-          <div className="grid grid-cols-4 gap-4 text-sm font-mono">
-            <div>
-              <span className="text-red-400">⚠️ CORE TEMP:</span> 
-              <span className="text-cyan-400 ml-2">-273.15°K</span>
-            </div>
-            <div>
-              <span className="text-red-400">⚛️ Q-CORES:</span> 
-              <span className="text-green-400 ml-2">∞/∞</span>
-            </div>
-            <div>
-              <span className="text-red-400">🌌 REALITY:</span> 
-              <motion.span 
-                className="text-yellow-400 ml-2"
-                animate={{ opacity: [1, 0.5, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              >STABLE</motion.span>
-            </div>
-            <div>
-              <span className="text-red-400">⏰ SPACETIME:</span> 
-              <span className="text-purple-400 ml-2">LOCKED</span>
-            </div>
-          </div>
-          <motion.div 
-            className="mt-2 text-xs text-orange-400 animate-pulse"
-            animate={{ color: ['#FF4000', '#FFFF00', '#FF4000'] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            ⚠️ WARNING: Reality buffer overflow detected. Consciousness leak in sector 7G.
-          </motion.div>
-        </div>
       </div>
 
       {/* Warning Messages */}
