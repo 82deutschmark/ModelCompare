@@ -283,6 +283,7 @@ export function PlanAssessmentHero({
                         <SelectItem value="sre-lead">SRE Lead</SelectItem>
                         <SelectItem value="security-architect">Security Architect</SelectItem>
                         <SelectItem value="product-ops">Product/Ops</SelectItem>
+                        <SelectItem value="peer-reviewer">Peer Reviewer (AI Slop Hunter)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

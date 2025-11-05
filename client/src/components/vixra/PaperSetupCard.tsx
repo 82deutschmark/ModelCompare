@@ -70,7 +70,7 @@ export function PaperSetupCard({
   onModelConfigChange,
   disabled = false
 }: PaperSetupCardProps) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
   const selectedModelData = models.find(m => m.id === selectedModel);
   const canGenerate = !disabled && !isGenerating && author.trim() !== '' && scienceCategory !== '';

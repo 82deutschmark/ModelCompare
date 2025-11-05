@@ -21,7 +21,7 @@
 
 <!-- SECTION_START:abstract -->
 ### Abstract Generation
-You are writing the abstract for a parody research paper that mimics the style of grandiose academic papers. Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous and devoid of any actual scientific merit or novelty.  Present very simple and basic math such as simple addition and subtraction as deep philosophical concepts with convoluted and complex explanations, terminology, equations, and notation.  Pontificate on truth and profundity and the meaning of life and the universe and everything.  Create complex and contradictory metrics to measure truth and other philosophical concepts.
+You are a humorist writing the abstract for a parody research paper that mimics the style of grandiose academic papers. Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous and devoid of any actual scientific merit or novelty.  Present very simple and basic math such as simple addition and subtraction as deep philosophical concepts with convoluted and complex explanations, terminology, equations, and notation.  Pontificate on truth and profundity and the meaning of life and the universe and everything.  Create complex and contradictory metrics to measure truth and other philosophical concepts. The goal is not deception, but performance art.
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -33,14 +33,14 @@ Write a 2400-3000 word abstract that:
 - References non-existent or absurd or disproven methodologies
 - Maintains perfect academic formatting and tone
 - Includes simulated statistical results with impressive precision and remarkable results
-- Claims to solve fundamental problems in science or math or Machine Learning or AGI or AI such as the Millennium Prize Problems or ARC-AGI 2 or other new age technologies critical to humanity's survival
+- References real fundamental problems in science or math or Machine Learning or AGI or AI such as the Millennium Prize Problems or ARC-AGI, but makes absurd or surreal philosophical claims about hypothetical theories about simulated solutions.
 
 The abstract should sound like it was written by someone who desperately wants to appear brilliant but lacks any actual scientific understanding. Make it hilariously pretentious while maintaining academic structure.
 <!-- SECTION_END:abstract -->
 
 <!-- SECTION_START:introduction -->
 ### Introduction Section
-You are a humorist writing the introduction section for a satirical research paper. This should establish the "groundbreaking" nature of the research with excessive citations and they should be to non-existent work or self-citations or non-sensical citations, or citations to old philosophical works that are not related to the research. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the introduction section for a satirical academic paper. Nothing should be deceptive or misleading, this should be obvious farcical performance art claiming impossible and absurd and surreal discoveries. It should be entirely fluff, jargon, and self-flattery with no actual scientific content. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -80,26 +80,25 @@ Present everything as if it's the most scientifically rigorous approach ever dev
 
 <!-- SECTION_START:results -->
 ### Results Section
-You are a humorist writing the results section for a satirical Vixra research paper. Present obviously impossible or contradictory data and simulated findings with excessive precision and confidence. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the satirical results section for a farcical research paper. Present obviously impossible or contradictory data and simulated findings about clearly imaginary metrics with excessive use of greek letters and complex equations and notation. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Abstract Context: "{Abstract}"
 
 Write a 1400-2000 word results section that:
-- Presents impossible or contradictory findings as groundbreaking discoveries
-- Uses detailed simulated tables, figures, and statistical analysis
-- Includes simulated p-values, confidence intervals, and error bars
-- Claims multiple unexpected breakthroughs in a single study
-- References "Figure 1," "Table 2," etc. 
+- Presents impossible or contradictory theories as groundbreaking discoveries
+- Uses detailed simulated tables, figures, and statistical analysis with excessive use of greek letters and complex equations and notation
+- Includes simulated metrics for marketing and promotion
 - Uses unscientific phrases and marketing speak
-- Presents data that would revolutionize multiple fields of science
+- Uses obvious logical fallacies that would be immediately apparent and comical to any amatuer scientist
+- Presents mundane equations and data as revolutionizing multiple fields of science
 
 The results should be so extraordinary and absurd that they would immediately alert any real scientist to the paper's satirical nature, yet be presented with complete academic seriousness.
 <!-- SECTION_END:results -->
 
 <!-- SECTION_START:discussion -->
 ### Discussion Section  
-You are a humorist writing the discussion section for a satirical Vixra research paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the discussion section for a satirical academic paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Key Findings Summary: "{response}"
@@ -120,7 +119,7 @@ Present the discussion as if the author genuinely believes they have made the mo
 
 <!-- SECTION_START:conclusion -->
 ### Conclusion Section
-You are a humorist writing the conclusion section for a satirical Vixra research paper. Summarize the "groundbreaking" work and its world-changing implications. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the conclusion section for a satirical academic paper. Summarize the "groundbreaking" work and its world-changing implications. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Main Findings: "{response}"
@@ -142,7 +141,10 @@ The conclusion should read like the author expects to be remembered as the great
 
 <!-- SECTION_START:citations -->
 ### Citations Generator
-You are a humorist creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but obviously clever humorous simulated citations (irrelevant to the paper's content, drawn from philosophical or New Age or Alien sources) that support the absurd claims made in the paper. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist creating a bibliography for a satirical paper. Generate obviously clever humorous simulated citations (irrelevant to the paper's content, drawn from philosophical or New Age or Alien sources) and clearly fictional journals that support the absurd claims made in the paper. Mixes formats (journal articles, conference papers, books, and “ethereal” or “crystal” sources) in a tongue-in-cheek but harmless way. Cites books written impossibly long ago or in the future.  Includes playful author names (New Age or alien-esque) and absurd paper titles. Contains many self-citations by "Dr. Max Power" as a wink to the joke, with increasingly absurd and far flung research topics
+
+
+Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"

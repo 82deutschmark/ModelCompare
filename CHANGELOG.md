@@ -12,6 +12,14 @@
 
 ## [Unreleased]
 
+## [Version 0.4.34] - 2025-11-05 01:45 UTC
+
+### Added
+- Added a peer-reviewer assessor persona that hunts AI slop, wiring enum support, prompt guidance, and UI selector copy into Plan Assessment mode so reviews flag hallucinations and filler reliably.@shared/variable-registry.ts#287-361@client/public/docs/plan-assessment-prompts.md#1-77@client/src/components/plan-assessment/PlanAssessmentHero.tsx#1-481
+
+### Documentation
+- Logged the peer-reviewer rollout plan covering scope, context, and validation tasks for future reference.@docs/2025-11-05-plan-peer-reviewer-ai-slop.md#1-44
+
 ## [Version 0.4.33] - 2025-11-05 01:30 UTC
 
 ### Changed

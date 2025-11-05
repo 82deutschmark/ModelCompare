@@ -321,7 +321,7 @@ export const VARIABLE_REGISTRIES = {
       name: 'assessorRole',
       type: 'enum' as const,
       required: true,
-      enum: ['chief-architect','principal-eng','sre-lead','security-architect','product-ops'],
+      enum: ['chief-architect','principal-eng','sre-lead','security-architect','product-ops','peer-reviewer'],
       description: 'Persona for the evaluator'
     },
     { 
