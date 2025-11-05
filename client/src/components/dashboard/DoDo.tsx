@@ -399,7 +399,7 @@ export const DoDo: React.FC = () => {
           >
             {maybeEmoji(item.title)}
           </motion.div>
-          {/* Description with separate animation */}
+          {/* Description with separate animation and occasional dodo birds */}
           <motion.div
             className="text-[10px] text-gray-400 truncate"
             animate={{
@@ -412,7 +412,7 @@ export const DoDo: React.FC = () => {
               ease: "easeInOut"
             }}
           >
-            {item.description}
+            {Math.random() < 0.3 ? <DodoBirdAnimated id={`desc-${item.id}`} /> : ''} {item.description}
           </motion.div>
         </div>
 
