@@ -1,7 +1,7 @@
 /**
  * Author: Cascade using Claude Sonnet 4
  * Date: 2025-10-04
- * PURPOSE: Vixra Mode - Satirical academic paper generation with hero-centered UI redesign.
+ * PURPOSE: Vixra Mode - academic paper generation with hero-centered UI redesign.
  *          Single-column layout with PaperSetupCard hero, progress tracker,
  *          streaming section results, and export footer.
  *          Optimized for single-model auto-mode workflow while supporting manual mode.
@@ -36,6 +36,8 @@ import {
   downloadVixraPaper,
   copyVixraPaper,
   printVixraPaper,
+  extractTitleFromAbstract,
+  hasMeaningfulText,
   SCIENCE_CATEGORIES,
   type VixraVariables,
   type VixraSectionResponses
@@ -132,10 +134,9 @@ export default function VixraPage() {
       );
 
       // Extract title from Abstract section if generated
-      if (data.sectionId === 'abstract' && data.content && !state.paperConfig.title) {
-        const titleMatch = data.content.match(/Title:\s*["']?(.+?)["']?\s*(?:\n|Science Category)/i);
-        if (titleMatch && titleMatch[1]) {
-          const extractedTitle = titleMatch[1].trim().replace(/^["']|["']$/g, '');
+      if (data.sectionId === 'abstract' && data.content && !hasMeaningfulText(state.paperConfig.title)) {
+        const extractedTitle = extractTitleFromAbstract(data.content);
+        if (hasMeaningfulText(extractedTitle)) {
           actions.updateTitle(extractedTitle);
         }
       }
@@ -351,22 +352,31 @@ export default function VixraPage() {
   }, [state.isGenerating, toast, generateSection]);
 
   // Export handlers
+  const buildSectionResponses = useCallback((): VixraSectionResponses => {
+    const responses: VixraSectionResponses = {};
+    if (!state.selectedModel) {
+      return responses;
+    }
+
+    state.sections.forEach(section => {
+      if (section.status === 'completed' && section.content) {
+        responses[section.id] = {
+          [state.selectedModel]: {
+            content: section.content,
+            status: 'success',
+            responseTime: section.metadata?.responseTime || 0,
+            tokenUsage: section.metadata?.tokenUsage,
+          } as ModelResponse
+        };
+      }
+    });
+
+    return responses;
+  }, [state.sections, state.selectedModel]);
+
   const handleExportPDF = useCallback(() => {
     try {
-      const sectionResponses: VixraSectionResponses = {};
-      state.sections.forEach(section => {
-        if (section.status === 'completed' && section.content) {
-          sectionResponses[section.id] = {
-            [state.selectedModel]: {
-              content: section.content,
-              status: 'success',
-              responseTime: section.metadata?.responseTime || 0,
-              tokenUsage: section.metadata?.tokenUsage,
-            } as ModelResponse
-          };
-        }
-      });
-
+      const sectionResponses = buildSectionResponses();
       const variables: VixraVariables = {
         Author: state.paperConfig.author,
         ScienceCategory: state.paperConfig.scienceCategory,
@@ -387,24 +397,11 @@ export default function VixraPage() {
         variant: "destructive",
       });
     }
-  }, [state.sections, state.selectedModel, state.paperConfig, models, toast]);
+  }, [buildSectionResponses, state.paperConfig, models, state.selectedModel, toast]);
 
   const handleExportMarkdown = useCallback(async () => {
     try {
-      const sectionResponses: VixraSectionResponses = {};
-      state.sections.forEach(section => {
-        if (section.status === 'completed' && section.content) {
-          sectionResponses[section.id] = {
-            [state.selectedModel]: {
-              content: section.content,
-              status: 'success',
-              responseTime: section.metadata?.responseTime || 0,
-              tokenUsage: section.metadata?.tokenUsage,
-            } as ModelResponse
-          };
-        }
-      });
-
+      const sectionResponses = buildSectionResponses();
       const variables: VixraVariables = {
         Author: state.paperConfig.author,
         ScienceCategory: state.paperConfig.scienceCategory,
@@ -425,7 +422,7 @@ export default function VixraPage() {
         variant: "destructive",
       });
     }
-  }, [state.sections, state.selectedModel, state.paperConfig, models, toast]);
+  }, [buildSectionResponses, state.paperConfig, models, state.selectedModel, toast]);
 
   const handlePrint = handleExportPDF;
 
@@ -438,7 +435,7 @@ export default function VixraPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <AppNavigation
         title="Vixra Mode"
-        subtitle="Generate satirical academic papers with AI"
+        subtitle="Generate academic papers with AI"
         icon={FileText}
       />
 

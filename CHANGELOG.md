@@ -12,6 +12,13 @@
 
 ## [Unreleased]
 
+## [Version 0.4.33] - 2025-11-05 01:30 UTC
+
+### Changed
+- Removed the "Untitled Satirical Paper" fallback by deriving export titles from paper content and allowing blank headings when no title is available.@client/src/lib/vixraUtils.ts#85-600
+- Enhanced abstract title extraction and page state updates so automatic generation populates the title field using improved heuristics.@client/src/lib/vixraUtils.ts#98-254@client/src/pages/vixra.tsx#137-342
+- Centralized Vixra section response assembly to reuse derived titles across PDF, markdown, and clipboard exports.@client/src/pages/vixra.tsx#345-425
+
 ## [Version 0.4.32] - 2025-11-03 01:28 UTC
 
 ### Fixed
