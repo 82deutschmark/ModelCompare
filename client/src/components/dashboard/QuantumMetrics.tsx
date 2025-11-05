@@ -51,6 +51,16 @@ interface MetricsState {
   quantumGradientBoost: number;
   terrierResonance: number;
   Regularization: number;
+
+  // Truth metrics
+  epistemicEpistemicness: number;
+  alethiaQuotient: number;
+  cosmicResonanceSynthesis: number;
+  cerebralSymmetryFrequency: number;
+  universalTruthVector: number;
+  phenomenologicalAuthenticity: number;
+  verityPotential: number;
+  ontologicalAlignment: number;
 }
 
 type DestabilizationType = 'flicker' | 'colorShift' | 'valueSpike' | 'glitch';
@@ -59,7 +69,7 @@ interface MetricConfig {
   key: keyof MetricsState;
   label: string;
   color: string;
-  category: 'quantum' | 'physics' | 'ml' | 'engineering';
+  category: 'quantum' | 'physics' | 'ml' | 'engineering' | 'truth';
   destabilizationType: DestabilizationType;
   clickable: boolean;
 }
@@ -107,6 +117,16 @@ const METRIC_CONFIGS: MetricConfig[] = [
   { key: 'quantumGradientBoost', label: 'Q‑Gradient Boost', color: 'text-blue-400', category: 'ml', destabilizationType: 'flicker', clickable: true },
   { key: 'terrierResonance', label: 'Terrier Resonance', color: 'text-pink-400', category: 'ml', destabilizationType: 'colorShift', clickable: true },
   { key: 'Regularization', label: 'Regularization', color: 'text-red-400', category: 'ml', destabilizationType: 'glitch', clickable: true },
+
+  // Truth metrics (the ridiculous philosophical stuff)
+  { key: 'epistemicEpistemicness', label: 'Epistemic Epistemicness', color: 'text-violet-400', category: 'truth', destabilizationType: 'flicker', clickable: true },
+  { key: 'alethiaQuotient', label: 'Aletheia Quotient', color: 'text-amber-300', category: 'truth', destabilizationType: 'valueSpike', clickable: true },
+  { key: 'cosmicResonanceSynthesis', label: 'Cosmic Resonance Synthesis', color: 'text-indigo-300', category: 'truth', destabilizationType: 'colorShift', clickable: true },
+  { key: 'cerebralSymmetryFrequency', label: 'Cerebral Symmetry Frequency', color: 'text-rose-300', category: 'truth', destabilizationType: 'glitch', clickable: true },
+  { key: 'universalTruthVector', label: 'Universal Truth Vector', color: 'text-lime-300', category: 'truth', destabilizationType: 'flicker', clickable: true },
+  { key: 'phenomenologicalAuthenticity', label: 'Phenomenological Authenticity', color: 'text-fuchsia-400', category: 'truth', destabilizationType: 'valueSpike', clickable: true },
+  { key: 'verityPotential', label: 'Verity Potential', color: 'text-sky-300', category: 'truth', destabilizationType: 'colorShift', clickable: true },
+  { key: 'ontologicalAlignment', label: 'Ontological Alignment', color: 'text-teal-300', category: 'truth', destabilizationType: 'glitch', clickable: true },
 ];
 
 // Ambient theater state (internal - not visible to user)
@@ -285,7 +305,16 @@ export const QuantumMetrics: React.FC = () => {
     nanoAlignmentFactor: 1.618,
     quantumGradientBoost: 2.73,
     terrierResonance: 7.77,
-    Regularization: 0.001
+    Regularization: 0.001,
+
+    epistemicEpistemicness: 94.7,
+    alethiaQuotient: 88.3,
+    cosmicResonanceSynthesis: 91.2,
+    cerebralSymmetryFrequency: 87.6,
+    universalTruthVector: 96.4,
+    phenomenologicalAuthenticity: 89.9,
+    verityPotential: 92.1,
+    ontologicalAlignment: 85.4
   });
 
   // Immediately awaken ambient experience on mount
@@ -382,7 +411,16 @@ export const QuantumMetrics: React.FC = () => {
         nanoAlignmentFactor: Math.max(0.1, prev.nanoAlignmentFactor * (1 + (Math.random() - 0.5) * 0.02)),
         quantumGradientBoost: Math.max(0, prev.quantumGradientBoost + (Math.random() - 0.5) * 0.05),
         terrierResonance: Math.max(0, prev.terrierResonance + (Math.random() - 0.5) * 0.2),
-        Regularization: Math.max(0, prev.Regularization + (Math.random() - 0.5) * 0.0002)
+        Regularization: Math.max(0, prev.Regularization + (Math.random() - 0.5) * 0.0002),
+
+        epistemicEpistemicness: Math.min(100, Math.max(0, prev.epistemicEpistemicness + (Math.random() - 0.5) * 0.3)),
+        alethiaQuotient: Math.min(100, Math.max(0, prev.alethiaQuotient + (Math.random() - 0.5) * 0.4)),
+        cosmicResonanceSynthesis: Math.min(100, Math.max(0, prev.cosmicResonanceSynthesis + (Math.random() - 0.5) * 0.35)),
+        cerebralSymmetryFrequency: Math.min(100, Math.max(0, prev.cerebralSymmetryFrequency + (Math.random() - 0.5) * 0.38)),
+        universalTruthVector: Math.min(100, Math.max(0, prev.universalTruthVector + (Math.random() - 0.5) * 0.25)),
+        phenomenologicalAuthenticity: Math.min(100, Math.max(0, prev.phenomenologicalAuthenticity + (Math.random() - 0.5) * 0.42)),
+        verityPotential: Math.min(100, Math.max(0, prev.verityPotential + (Math.random() - 0.5) * 0.32)),
+        ontologicalAlignment: Math.min(100, Math.max(0, prev.ontologicalAlignment + (Math.random() - 0.5) * 0.45))
       }));
     }, 50);
     return () => clearInterval(interval);
@@ -520,6 +558,16 @@ export const QuantumMetrics: React.FC = () => {
         break;
       case 'multiverse':
         return maybeEmoji(rawValue, 0.05);
+      case 'epistemicEpistemicness':
+      case 'alethiaQuotient':
+      case 'cosmicResonanceSynthesis':
+      case 'cerebralSymmetryFrequency':
+      case 'universalTruthVector':
+      case 'phenomenologicalAuthenticity':
+      case 'verityPotential':
+      case 'ontologicalAlignment':
+        formatted = `${rawValue.toFixed(2)}%`;
+        break;
       default:
         formatted = String(rawValue);
     }
@@ -716,6 +764,10 @@ export const QuantumMetrics: React.FC = () => {
               <span className="text-green-300">9.23</span> <span className="text-cyan-400">vs</span> <span className="text-pink-400">7</span>
             </span>
           </div>
+          {/* Truth metrics */}
+          {METRIC_CONFIGS.filter(m => m.category === 'truth').map(config => (
+            <MetricRow key={config.key} config={config} />
+          ))}
         </div>
 
         {/* Physics metrics */}
@@ -789,6 +841,20 @@ export const QuantumMetrics: React.FC = () => {
           <div className="flex justify-between items-center gap-1">
             <span className="text-cyan-400 whitespace-nowrap truncate">Navier‑Stokes:</span>
             <span className="text-right text-blue-400 truncate">regularity?</span>
+          </div>
+
+          {/* Dense theoretical jargon */}
+          <div className="mt-2 pt-2 border-t border-violet-900/30">
+            <div className="text-[9px] text-violet-300 leading-tight space-y-1">
+              <div className="italic">Aletheion Epistemic Framework:</div>
+              <div className="text-violet-200">We introduce epistemic softmax augmented with trainable confidence gates (Q₁, Q₂) and variance-aware optimization (VARO). Applied fractally to all transformer softmax instances—attention weights, head aggregation, output vocabularies—this yields three implementation levels: output-only (L1), attention-aware (L2), full fractal (L3). VARO training: L = L_CE + λ∥u − u*∥²₂ aligns confidence with ground-truth ambiguity.</div>
+              <div className="text-violet-100 text-[8px]">
+                • L: transformer layers | H: attention heads | d: hidden dim | d_k: key dimension (d/H)
+              </div>
+              <div className="text-violet-100 text-[8px]">
+                • Level 3 projection: 58% TruthfulQA vs 40% baseline, ECE 0.06 (vs 0.15), uncertainty-error correlation 0.8 (vs 0.3)
+              </div>
+            </div>
           </div>
         </div>
       </div>

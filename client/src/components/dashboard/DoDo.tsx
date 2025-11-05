@@ -216,9 +216,15 @@ export const DoDo: React.FC = () => {
     return Math.random() < adjustedChance ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : v;
   };
 
+  // Helper to safely extract numeric ID
+  const getSafeNumericId = (id: string): number => {
+    const match = id.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  };
+
   // Dodo bird emoji animations - U+1F9A4
   const DodoBirdAnimated = ({ id }: { id: string }) => {
-    const dodoId = parseInt(id);
+    const dodoId = getSafeNumericId(id);
     const scalePhases = [
       [1, 1.5, 0.8, 2, 1],
       [1.2, 0.9, 1.8, 1, 1.3],
@@ -392,7 +398,7 @@ export const DoDo: React.FC = () => {
               ]
             }}
             transition={{
-              duration: 0.8 + (parseInt(item.id) * 0.1),
+              duration: 0.8 + (getSafeNumericId(item.id) * 0.1),
               repeat: Infinity,
               ease: "linear"
             }}
@@ -407,7 +413,7 @@ export const DoDo: React.FC = () => {
               x: [-2, 2, -2]
             }}
             transition={{
-              duration: 1.2 + (parseInt(item.id) * 0.15),
+              duration: 1.2 + (getSafeNumericId(item.id) * 0.15),
               repeat: Infinity,
               ease: "easeInOut"
             }}
@@ -423,7 +429,7 @@ export const DoDo: React.FC = () => {
             x: [0, 2, -2, 0],
           }}
           transition={{
-            duration: 0.6 + (parseInt(item.id) * 0.08),
+            duration: 0.6 + (getSafeNumericId(item.id) * 0.08),
             repeat: Infinity,
             ease: "easeInOut"
           }}
@@ -432,14 +438,14 @@ export const DoDo: React.FC = () => {
             className={`text-[10px] font-mono ${getCategoryColor(item.category)}`}
             animate={{
               color: [
-                FLASH_COLORS[(parseInt(item.id) + 0) % FLASH_COLORS.length],
-                FLASH_COLORS[(parseInt(item.id) + 2) % FLASH_COLORS.length],
-                FLASH_COLORS[(parseInt(item.id) + 4) % FLASH_COLORS.length],
-                FLASH_COLORS[(parseInt(item.id) + 6) % FLASH_COLORS.length],
+                FLASH_COLORS[(getSafeNumericId(item.id) + 0) % FLASH_COLORS.length],
+                FLASH_COLORS[(getSafeNumericId(item.id) + 2) % FLASH_COLORS.length],
+                FLASH_COLORS[(getSafeNumericId(item.id) + 4) % FLASH_COLORS.length],
+                FLASH_COLORS[(getSafeNumericId(item.id) + 6) % FLASH_COLORS.length],
               ]
             }}
             transition={{
-              duration: 1.0 + (parseInt(item.id) * 0.12),
+              duration: 1.0 + (getSafeNumericId(item.id) * 0.12),
               repeat: Infinity,
               ease: "linear"
             }}
@@ -452,12 +458,12 @@ export const DoDo: React.FC = () => {
               color: isOverdue
                 ? ['#FF4444', '#FF0000', '#FF4444']
                 : [
-                    FLASH_COLORS[(parseInt(item.id) + 1) % FLASH_COLORS.length],
-                    FLASH_COLORS[(parseInt(item.id) + 3) % FLASH_COLORS.length],
+                    FLASH_COLORS[(getSafeNumericId(item.id) + 1) % FLASH_COLORS.length],
+                    FLASH_COLORS[(getSafeNumericId(item.id) + 3) % FLASH_COLORS.length],
                   ]
             }}
             transition={{
-              duration: 0.9 + (parseInt(item.id) * 0.11),
+              duration: 0.9 + (getSafeNumericId(item.id) * 0.11),
               repeat: Infinity,
               ease: "linear"
             }}
