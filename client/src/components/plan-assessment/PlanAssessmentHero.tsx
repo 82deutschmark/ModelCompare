@@ -1,25 +1,29 @@
 /**
- * Author: gpt-5-codex
- * Date: 2025-10-18 20:10 UTC
- * PURPOSE: Hero form for the plan assessment mode, mirroring the modern compare
- *          layout while collecting plan inputs and managing inline model
- *          selection. Updated to launch with vibrant gradients, colorful pills,
- *          and accentuated buttons while preserving shared comparison logic.
- * SRP/DRY check: Pass - Single responsibility (plan assessment hero section),
- *                reuses shared comparison components without duplicating API logic.
+ * Author: Claude Code using Sonnet 4
+ * Date: 2025-11-04
+ * PURPOSE: Refactored hero form using variable-driven form generation from
+ *          shared/variable-registry.ts plan-assessment mode (11 variables).
+ *          Includes per-model configuration panels with reasoning controls.
+ *          Maintains vibrant gradient design while adding support for academic papers.
+ * SRP/DRY check: Pass - Single responsibility (plan assessment hero form),
+ *                reuses FloatingModelPicker and ModelConfigurationPanel components.
  */
 
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapse";
 import { FloatingModelPicker } from "@/components/comparison/FloatingModelPicker";
 import { ModelPill } from "@/components/comparison/ModelPill";
+import { ModelConfigurationPanel } from "@/components/ModelConfigurationPanel";
+import type { ModelConfiguration } from "@/components/ModelConfigurationPanel";
 import {
   ClipboardList,
   Brain,
@@ -27,19 +31,18 @@ import {
   Zap,
   Loader2,
   Sparkles,
+  Settings,
+  ChevronDown,
+  FileText,
 } from "lucide-react";
 import type { AIModel, ModelResponse } from "@/types/ai-models";
 
 interface PlanAssessmentHeroProps {
-  finalPrompt: string;
-  hobbyDev: "hobby" | "enterprise";
-  onHobbyDevChange: (value: "hobby" | "enterprise") => void;
-  constraints: string;
-  onConstraintsChange: (value: string) => void;
-  planMarkdown: string;
-  onPlanMarkdownChange: (value: string) => void;
-  contextSummary: string;
-  onContextSummaryChange: (value: string) => void;
+  promptPreview: string;
+  variables: Record<string, string>;
+  onVariableChange: (name: string, value: string) => void;
+  modelConfigs: Record<string, ModelConfiguration>;
+  onModelConfigChange: (modelId: string, config: ModelConfiguration) => void;
   models: AIModel[];
   modelsLoading: boolean;
   selectedModels: string[];
@@ -55,15 +58,11 @@ interface PlanAssessmentHeroProps {
 }
 
 export function PlanAssessmentHero({
-  finalPrompt,
-  hobbyDev,
-  onHobbyDevChange,
-  constraints,
-  onConstraintsChange,
-  planMarkdown,
-  onPlanMarkdownChange,
-  contextSummary,
-  onContextSummaryChange,
+  promptPreview,
+  variables,
+  onVariableChange,
+  modelConfigs,
+  onModelConfigChange,
   models,
   modelsLoading,
   selectedModels,
@@ -78,16 +77,17 @@ export function PlanAssessmentHero({
   disableSubmitReason,
 }: PlanAssessmentHeroProps) {
   const [showPromptPreview, setShowPromptPreview] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const planWordCount = useMemo(() => {
-    const words = planMarkdown.trim().split(/\s+/).filter(Boolean);
-    return planMarkdown.trim().length === 0 ? 0 : words.length;
-  }, [planMarkdown]);
+    const words = (variables.planMarkdown || '').trim().split(/\s+/).filter(Boolean);
+    return (variables.planMarkdown || '').trim().length === 0 ? 0 : words.length;
+  }, [variables.planMarkdown]);
 
   const promptWordCount = useMemo(() => {
-    const words = finalPrompt.trim().split(/\s+/).filter(Boolean);
-    return finalPrompt.trim().length === 0 ? 0 : words.length;
-  }, [finalPrompt]);
+    const words = promptPreview.trim().split(/\s+/).filter(Boolean);
+    return promptPreview.trim().length === 0 ? 0 : words.length;
+  }, [promptPreview]);
 
   const selectedModelObjects = useMemo(
     () => models.filter((model) => selectedModels.includes(model.id)),

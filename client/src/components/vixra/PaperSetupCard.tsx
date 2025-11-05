@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { ModelConfigurationPanel, type ModelConfiguration } from "@/components/ModelConfigurationPanel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Zap, Settings, FileText, Sparkles, Dices } from "lucide-react";
 import { FloatingModelPicker } from "@/components/comparison/FloatingModelPicker";
@@ -38,6 +39,8 @@ interface PaperSetupCardProps {
   selectedModel: string;
   models: AIModel[];
   onModelSelect: (modelId: string) => void;
+  modelConfig: ModelConfiguration;
+  onModelConfigChange: (config: ModelConfiguration) => void;
   
   // Mode & generation
   isAutoMode: boolean;
@@ -63,6 +66,8 @@ export function PaperSetupCard({
   onModeToggle,
   onGenerate,
   isGenerating,
+  modelConfig,
+  onModelConfigChange,
   disabled = false
 }: PaperSetupCardProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -189,6 +194,28 @@ export function PaperSetupCard({
               <p className="text-xs text-muted-foreground mt-1">
                 Custom title or let the AI create something absurdly academic
               </p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">Model Reasoning & Output Controls</Label>
+              {selectedModelData ? (
+                <div className="mt-3 space-y-3">
+                  <ModelConfigurationPanel
+                    configuration={modelConfig}
+                    onConfigurationChange={onModelConfigChange}
+                    modelName={selectedModelData.name}
+                    modelProvider={selectedModelData.provider}
+                    modelSupportsTemperature={selectedModelData.supportsTemperature}
+                    modelIsReasoning={selectedModelData.isReasoning ?? selectedModelData.capabilities?.reasoning ?? false}
+                    modelSupportsStructuredOutput={selectedModelData.supportsStructuredOutput ?? false}
+                    isStreaming={isGenerating}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Select a model to adjust reasoning effort, summaries, and token limits.
+                </p>
+              )}
             </div>
           </div>
         )}
