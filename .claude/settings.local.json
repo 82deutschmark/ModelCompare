@@ -20,7 +20,7 @@
       "Read(//d/GitHub/openai-sdk-streaming/**)",
       "Read(//d/GitHub/openai-chatkit-advanced-samples/**)",
       "Read(//d/GitHub/openai_responses/**)",
-      "Bash(git show *)",
+      "Bash(git:*)",
       "Bash(npm run dev:*)"
     ],
     "defaultMode": "bypassPermissions"
