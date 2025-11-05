@@ -843,16 +843,61 @@ export const QuantumMetrics: React.FC = () => {
             <span className="text-right text-blue-400 truncate">regularity?</span>
           </div>
 
+          {/* Warp Potential expansion formulas */}
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">κ₍ₙ₎ Resonance:</span>
+            <span className="text-right text-violet-300 truncate text-[7px] font-mono">ξ₁e^(-αβ²) + ζ∫Ω(τ)dτ</span>
+          </div>
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">ψ̃ Harmonic Field:</span>
+            <span className="text-right text-violet-300 truncate text-[7px] font-mono">(ℏ∇²+V)φ + iγ₅⟨ψ|σ̄·p⟩</span>
+          </div>
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">Σ Epistemic Tensor:</span>
+            <span className="text-right text-violet-300 truncate text-[7px] font-mono">⨂(1+δχᵢ)⁻¹∂ₜμᵢ + τ₆∫ρ(s)</span>
+          </div>
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">F̂ Operator Norm:</span>
+            <span className="text-right text-violet-300 truncate text-[7px] font-mono">exp(∑λₖ𝒪ₖ)|Ψ⟩ ≈ ∏ U_θᵢ</span>
+          </div>
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">Lindblad Master Eq.:</span>
+            <span className="text-right text-violet-300 truncate text-[7px] font-mono">ρ̇ = -i[H,ρ] + L_j</span>
+          </div>
+
           {/* Dense theoretical jargon */}
           <div className="mt-2 pt-2 border-t border-violet-900/30">
-            <div className="text-[9px] text-violet-300 leading-tight space-y-1">
-              <div className="italic">Aletheion Epistemic Framework:</div>
-              <div className="text-violet-200">We introduce epistemic softmax augmented with trainable confidence gates (Q₁, Q₂) and variance-aware optimization (VARO). Applied fractally to all transformer softmax instances—attention weights, head aggregation, output vocabularies—this yields three implementation levels: output-only (L1), attention-aware (L2), full fractal (L3). VARO training: L = L_CE + λ∥u − u*∥²₂ aligns confidence with ground-truth ambiguity.</div>
-              <div className="text-violet-100 text-[8px]">
-                • L: transformer layers | H: attention heads | d: hidden dim | d_k: key dimension (d/H)
+            <div className="text-[8px] text-violet-300 leading-tight space-y-0.5">
+              <div className="italic font-bold">Ψ-Transcendent Veridical Harmonic Reconstruction (TVHR):</div>
+              <div className="text-violet-200 text-[7px]">Postulates recursive κ-weighted epistemic softmax with fractal trainable confidence hyperplanes (Q₁,₂,₃ᵢ) modulated by λ-variance optimization (VARO). Applied homomorphically across all transformer softmax manifolds—attention tensors, multi-head aggregation fields, output logit polytopes—synthesizing non-Euclidean implementation stratifications: foundational (L₀), attentional-aware (L₁), hyper-fractal (L₂), trans-dimensional (L₃ᵊ). Optimization via Λ_loss = L_CE + λ∥u−u*∥²₂ + μ∇ψ₄(Σ) ∋ ground-truth ontological ambiguity.</div>
+
+              {/* Formula row 1 */}
+              <div className="text-violet-100 text-[6px] font-mono mt-0.5">
+                κ₍ₙ₎ = ξ₁e^(-αβ²) + ζ∫₀ᵗ Ω(τ)dτ
               </div>
-              <div className="text-violet-100 text-[8px]">
-                • Level 3 projection: 58% TruthfulQA vs 40% baseline, ECE 0.06 (vs 0.15), uncertainty-error correlation 0.8 (vs 0.3)
+
+              {/* Formula row 2 */}
+              <div className="text-violet-100 text-[6px] font-mono">
+                ψ̃ = (ℏ∇²+V)φ + iγ₅⟨ψ|σ̄·p|ψ⟩Θ(t)
+              </div>
+
+              {/* Formula row 3 */}
+              <div className="text-violet-100 text-[6px] font-mono">
+                Σ_epistemic = ⨂ᵢ₌₁ᴵ (1+δχᵢ)⁻¹∂ₜμᵢ + τ₆∫ρ(s)e^(iΦ(s))ds
+              </div>
+
+              {/* Formula row 4 */}
+              <div className="text-violet-100 text-[6px] font-mono">
+                F̂ = exp(∑ₖ λₖ𝒪ₖ)|Ψ⟩ ≈ ∏ U_θᵢ(∇² + mᵢ²c⁴/ℏ²)
+              </div>
+
+              {/* Formula row 5 */}
+              <div className="text-violet-100 text-[6px] font-mono">
+                d/dt(ρ) + ∇·J = 2Im(ρ₁₂*V₁₂) ⟺ ρ̇ = -i[H,ρ] + L_j
+              </div>
+
+              <div className="text-violet-100 text-[6px] mt-0.5">
+                Parametrization: ξ₁,ζ,α,β,μ,γ,ℏ,τ₆,λ ∈ ℝ | δχᵢ∈ℂ | 58% TruthfulQA | ECE=0.06
               </div>
             </div>
           </div>
