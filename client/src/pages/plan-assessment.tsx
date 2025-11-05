@@ -17,6 +17,16 @@ import { AppNavigation } from "@/components/AppNavigation";
 import { PlanAssessmentHero } from "@/components/plan-assessment/PlanAssessmentHero";
 import { ComparisonResults } from "@/components/comparison/ComparisonResults";
 import { PLAN_ASSESSMENT_DEFAULT_MODEL_IDS } from "@/config/planAssessmentDefaults";
+import {
+  ASSESSMENT_DOMAIN_OPTIONS,
+  PLAN_ASSESSMENT_DOMAIN_DEFAULTS,
+  PLAN_ASSESSMENT_DOMAIN_METADATA,
+  getCriteriaOptionsForDomain,
+  getProjectScaleOptionsForDomain,
+  getCriteriaValuesForDomain,
+  getProjectScaleValuesForDomain,
+  type AssessmentDomain,
+} from "@/config/planAssessmentDomainConfig";
 import { useComparison } from "@/hooks/useComparison";
 import { useToast } from "@/hooks/use-toast";
 import { VARIABLE_REGISTRIES } from "@shared/variable-registry";
@@ -27,20 +37,28 @@ export default function PlanAssessmentPage() {
   const { toast } = useToast();
 
   // Initialize all 11 variables from the plan-assessment registry with defaults
+  const resolveAssessmentDomain = (value?: string): AssessmentDomain =>
+    value === 'academic-paper' ? 'academic-paper' : 'software-plan';
+
   const [variables, setVariables] = useState<Record<string, string>>(() => {
     const defaults: Record<string, string> = {};
-    const registry = VARIABLE_REGISTRIES['plan-assessment'];
-    registry.forEach(schema => {
-      defaults[schema.name] = schema.default || '';
+    const registry = VARIABLE_REGISTRIES["plan-assessment"];
+    registry.forEach((schema) => {
+      defaults[schema.name] = schema.default || "";
     });
-    // Set sensible defaults for required fields
-    defaults.assessmentCriteria = 'overall';
-    defaults.assessorRole = 'principal-eng';
-    defaults.tone = 'balanced';
-    defaults.scoringScale = '1-5';
-    defaults.actionability = 'mixed';
-    defaults.projectScale = 'startup';
-    defaults.iterationRound = '1';
+
+    const initialDomain = resolveAssessmentDomain(defaults.assessmentDomain);
+    const domainDefaults = PLAN_ASSESSMENT_DOMAIN_DEFAULTS[initialDomain];
+
+    defaults.assessmentDomain = initialDomain;
+    defaults.assessmentCriteria = domainDefaults.assessmentCriteria;
+    defaults.projectScale = domainDefaults.projectScale;
+    defaults.assessorRole = defaults.assessorRole || "principal-eng";
+    defaults.tone = defaults.tone || "balanced";
+    defaults.scoringScale = defaults.scoringScale || "1-5";
+    defaults.actionability = defaults.actionability || "mixed";
+    defaults.iterationRound = defaults.iterationRound || "1";
+
     return defaults;
   });
 
@@ -93,9 +111,40 @@ export default function PlanAssessmentPage() {
     setModelConfigs(newConfigs);
   }, [state.selectedModels]);
 
-  // Handler for updating individual variables
+  const domain = ((): AssessmentDomain => {
+    const value = variables.assessmentDomain;
+    return value === 'academic-paper' ? 'academic-paper' : 'software-plan';
+  })();
+
+  const domainMetadata = PLAN_ASSESSMENT_DOMAIN_METADATA[domain];
+  const criteriaOptions = useMemo(() => getCriteriaOptionsForDomain(domain), [domain]);
+  const projectScaleOptions = useMemo(() => getProjectScaleOptionsForDomain(domain), [domain]);
+
   const updateVariable = (name: string, value: string) => {
-    setVariables(prev => ({ ...prev, [name]: value }));
+    setVariables((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDomainChange = (nextDomain: AssessmentDomain) => {
+    setVariables((prev) => {
+      const domainDefaults = PLAN_ASSESSMENT_DOMAIN_DEFAULTS[nextDomain];
+      const criteriaValues = getCriteriaValuesForDomain(nextDomain);
+      const scaleValues = getProjectScaleValuesForDomain(nextDomain);
+
+      const next: Record<string, string> = {
+        ...prev,
+        assessmentDomain: nextDomain,
+      };
+
+      if (!criteriaValues.includes(prev.assessmentCriteria)) {
+        next.assessmentCriteria = domainDefaults.assessmentCriteria;
+      }
+
+      if (!scaleValues.includes(prev.projectScale)) {
+        next.projectScale = domainDefaults.projectScale;
+      }
+
+      return next;
+    });
   };
 
   // Handler for updating model configuration
@@ -105,18 +154,28 @@ export default function PlanAssessmentPage() {
 
   // Create a simple prompt preview (actual template will be loaded from markdown)
   const promptPreview = useMemo(() => {
-    return `Assessment Criteria: ${variables.assessmentCriteria}
+    const criteriaLabel =
+      criteriaOptions.find((option) => option.value === variables.assessmentCriteria)?.label ||
+      variables.assessmentCriteria ||
+      "Overall";
+    const scaleLabel =
+      projectScaleOptions.find((option) => option.value === variables.projectScale)?.label ||
+      variables.projectScale ||
+      domainMetadata.scaleLabel;
+
+    return `Assessment Domain: ${domainMetadata.label}
+${domainMetadata.criteriaLabel}: ${criteriaLabel}
 Assessor Role: ${variables.assessorRole}
 Tone: ${variables.tone}
-Project Scale: ${variables.projectScale}
+${domainMetadata.scaleLabel}: ${scaleLabel}
 Scoring Scale: ${variables.scoringScale}
 
-Plan to Assess:
-${variables.planMarkdown || '(No plan provided yet)'}
+Submission Content:
+${variables.planMarkdown || '(No content provided yet)'}
 
 Context: ${variables.contextSummary || '(None)'}
 Constraints: ${variables.constraints || '(None)'}`;
-  }, [variables]);
+  }, [variables, criteriaOptions, projectScaleOptions, domainMetadata]);
 
   const hasPlan = (variables.planMarkdown || '').trim().length > 0;
   const canSubmit = hasPlan && state.selectedModels.length > 0 && !status.isComparing;
@@ -167,6 +226,12 @@ Constraints: ${variables.constraints || '(None)'}`;
             promptPreview={promptPreview}
             variables={variables}
             onVariableChange={updateVariable}
+            assessmentDomain={domain}
+            domainOptions={ASSESSMENT_DOMAIN_OPTIONS}
+            domainMetadata={domainMetadata}
+            criteriaOptions={criteriaOptions}
+            projectScaleOptions={projectScaleOptions}
+            onDomainChange={handleDomainChange}
             modelConfigs={modelConfigs}
             onModelConfigChange={updateModelConfig}
             models={models}

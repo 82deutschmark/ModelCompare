@@ -12,6 +12,14 @@
 
 ## [Unreleased]
 
+## [Version 0.4.35] - 2025-11-05 14:15 UTC
+
+### Changed
+- Added domain-aware Plan Assessment experience with academic criteria, publication context options, and prompt conditioning so manuscript reviews receive relevant guidance while preserving software defaults.@client/src/pages/plan-assessment.tsx#1-247@client/src/components/plan-assessment/PlanAssessmentHero.tsx#1-481@client/src/config/planAssessmentDomainConfig.ts#1-134
+
+### Documentation
+- Captured the academic alignment plan outlining scope, tasks, and open questions for future iterations.@docs/2025-11-05-plan-academic-alignment.md#1-48
+
 ## [Version 0.4.34] - 2025-11-05 01:45 UTC
 
 ### Added

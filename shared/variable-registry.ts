@@ -291,11 +291,19 @@ export const VARIABLE_REGISTRIES = {
       required: true,
       description: 'The authored plan under review (Markdown or plaintext)'
     },
+    {
+      name: 'assessmentDomain',
+      type: 'enum' as const,
+      required: true,
+      default: 'software-plan',
+      enum: ['software-plan','academic-paper'],
+      description: 'Primary review domain to tune instructions for software plans or academic papers'
+    },
     { 
       name: 'assessmentCriteria',
       type: 'enum' as const,
       required: true,
-      enum: ['architecture','requirements','risk','delivery','security','operations','overall'],
+      enum: ['overall','architecture','requirements','risk','delivery','security','operations','structure','methodology','evidence','novelty','clarity','publication-readiness'],
       description: 'Primary assessment lens to emphasize'
     },
     { 
@@ -349,8 +357,8 @@ export const VARIABLE_REGISTRIES = {
       name: 'projectScale',
       type: 'enum' as const,
       required: true,
-      enum: ['hobby','indie','startup','enterprise'],
-      description: 'Intended scale of the software project to right-size recommendations'
+      enum: ['hobby','indie','startup','enterprise','coursework','undergraduate','graduate','conference','journal'],
+      description: 'Scale or publication context to right-size recommendations'
     },
     { 
       name: 'ownerModelName',

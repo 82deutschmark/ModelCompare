@@ -1,12 +1,12 @@
 /**
- * Author: Claude Code using Sonnet 4
- * Date: 2025-11-04
- * PURPOSE: Refactored hero form using variable-driven form generation from
- *          shared/variable-registry.ts plan-assessment mode (11 variables).
- *          Includes per-model configuration panels with reasoning controls.
- *          Maintains vibrant gradient design while adding support for academic papers.
- * SRP/DRY check: Pass - Single responsibility (plan assessment hero form),
- *                reuses FloatingModelPicker and ModelConfigurationPanel components.
+ * Author: Cascade (GPT-5)
+ * Date: 2025-11-05 14:05 UTC-05:00
+ * PURPOSE: Plan Assessment hero form that renders variable-driven inputs while
+ *          adapting labels, placeholders, and option sets for software vs.
+ *          academic domains. Integrates per-model reasoning controls and
+ *          FloatingModelPicker for consistent model management.
+ * SRP/DRY check: Pass - Component orchestrates UI for plan assessment inputs,
+ *                delegating configuration panels and domain metadata helpers.
  */
 
 import { useState, useMemo } from "react";
@@ -23,6 +23,11 @@ import { FloatingModelPicker } from "@/components/comparison/FloatingModelPicker
 import { ModelPill } from "@/components/comparison/ModelPill";
 import { ModelConfigurationPanel } from "@/components/ModelConfigurationPanel";
 import type { ModelConfiguration } from "@/components/ModelConfigurationPanel";
+import type {
+  AssessmentDomain,
+  DomainMetadata,
+  DomainOption,
+} from "@/config/planAssessmentDomainConfig";
 import {
   ClipboardList,
   Brain,
@@ -40,6 +45,12 @@ interface PlanAssessmentHeroProps {
   promptPreview: string;
   variables: Record<string, string>;
   onVariableChange: (name: string, value: string) => void;
+  assessmentDomain: AssessmentDomain;
+  domainOptions: DomainOption[];
+  domainMetadata: DomainMetadata;
+  criteriaOptions: DomainOption[];
+  projectScaleOptions: DomainOption[];
+  onDomainChange: (domain: AssessmentDomain) => void;
   modelConfigs: Record<string, ModelConfiguration>;
   onModelConfigChange: (modelId: string, config: ModelConfiguration) => void;
   models: AIModel[];
@@ -60,6 +71,12 @@ export function PlanAssessmentHero({
   promptPreview,
   variables,
   onVariableChange,
+  assessmentDomain,
+  domainOptions,
+  domainMetadata,
+  criteriaOptions,
+  projectScaleOptions,
+  onDomainChange,
   modelConfigs,
   onModelConfigChange,
   models,
@@ -157,6 +174,9 @@ export function PlanAssessmentHero({
                   ? "No models selected"
                   : `${selectedModels.length} model${selectedModels.length === 1 ? "" : "s"} selected`}
               </span>
+              <span className="rounded-full bg-fuchsia-500/10 px-2 py-1 text-fuchsia-600">
+                {domainMetadata.label}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               {selectedModels.length > 0 && (
@@ -181,19 +201,59 @@ export function PlanAssessmentHero({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-primary flex items-center gap-1">
+                <Brain className="w-3 h-3" />
+                Assessment Domain
+              </Label>
+              <Select
+                value={assessmentDomain}
+                onValueChange={(value) => onDomainChange(value as AssessmentDomain)}
+              >
+                <SelectTrigger className="h-9 text-sm mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {domainOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col text-xs">
+                        <span className="font-medium text-primary">{option.label}</span>
+                        {option.description && (
+                          <span className="text-muted-foreground">{option.description}</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-primary flex items-center gap-1">
+                <ClipboardList className="w-3 h-3" />
+                Selected Evaluation Lens
+              </Label>
+              <div className="mt-1 rounded-md border border-primary/20 bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+                {criteriaOptions.find((option) => option.value === (variables.assessmentCriteria || "overall"))?.label ??
+                  "Overall"}
+              </div>
+            </div>
+          </div>
+
           <Separator className="bg-gradient-to-r from-primary/30 via-transparent to-fuchsia-300/30" />
 
           {/* Main Content - Plan/Paper Markdown */}
           <div>
             <Label className="text-xs uppercase tracking-wide text-orange-600 flex items-center gap-1">
               <FileText className="w-3 h-3" />
-              Plan or Academic Paper (Required)
+              {domainMetadata.label} Content (Required)
             </Label>
             <Textarea
               rows={12}
               value={variables.planMarkdown || ''}
               onChange={(e) => onVariableChange('planMarkdown', e.target.value)}
-              placeholder="Paste your software plan or academic paper content here for assessment..."
+              placeholder={domainMetadata.planPlaceholder}
               className="text-sm border-primary/25 bg-background/75 backdrop-blur focus-visible:ring-2 focus-visible:ring-fuchsia-400/40 mt-1"
             />
           </div>
@@ -205,7 +265,7 @@ export function PlanAssessmentHero({
               rows={2}
               value={variables.contextSummary || ''}
               onChange={(e) => onVariableChange('contextSummary', e.target.value)}
-              placeholder="Any specific instructions? e.g., 'Focus on security vulnerabilities' or 'Assess methodological rigor'"
+              placeholder={domainMetadata.contextPlaceholder}
               className="text-sm border-primary/20 bg-background/75 backdrop-blur focus-visible:ring-2 focus-visible:ring-orange-400/40 mt-1"
             />
           </div>
@@ -213,7 +273,7 @@ export function PlanAssessmentHero({
           {/* Assessment Configuration */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs uppercase tracking-wide text-fuchsia-600">Assessment Criteria</Label>
+              <Label className="text-xs uppercase tracking-wide text-fuchsia-600">{domainMetadata.criteriaLabel}</Label>
               <Select
                 value={variables.assessmentCriteria || 'overall'}
                 onValueChange={(value) => onVariableChange('assessmentCriteria', value)}
@@ -222,19 +282,17 @@ export function PlanAssessmentHero({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="overall">Overall</SelectItem>
-                  <SelectItem value="architecture">Architecture</SelectItem>
-                  <SelectItem value="requirements">Requirements</SelectItem>
-                  <SelectItem value="risk">Risk</SelectItem>
-                  <SelectItem value="delivery">Delivery</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                  <SelectItem value="operations">Operations</SelectItem>
+                  {criteriaOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label className="text-xs uppercase tracking-wide text-fuchsia-600">Project Scale</Label>
+              <Label className="text-xs uppercase tracking-wide text-fuchsia-600">{domainMetadata.scaleLabel}</Label>
               <Select
                 value={variables.projectScale || 'startup'}
                 onValueChange={(value) => onVariableChange('projectScale', value)}
@@ -243,10 +301,11 @@ export function PlanAssessmentHero({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hobby">Hobby</SelectItem>
-                  <SelectItem value="indie">Indie</SelectItem>
-                  <SelectItem value="startup">Startup</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                  {projectScaleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
