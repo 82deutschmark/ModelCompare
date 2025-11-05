@@ -492,13 +492,13 @@ export const DoDo: React.FC = () => {
       transition={{ duration: 2, repeat: todoState.phase === 'transcended' ? Infinity : 0 }}
     >
       <ArcAgiCard
-        title={`CYBER-ORNITHIC SYSTEMS CHART 🦤 ${
+        title={<>CYBER-ORNITHIC SYSTEMS CHART <DodoBirdAnimated id="0" /> {
           todoState.phase === 'transcended' ? '⚠️ FLIGHTLESS BIRD SCIENTIFICA' :
           todoState.deadlinesPassed > 3 ? `🔥 ${todoState.deadlinesPassed} CRITICAL` :
           todoState.chaosLevel > 60 ? '⚡ SYSTEM INSTABILITY' :
           '✓ STABLE'
-        } 🧬 Completion: ${todoState.completedCount}/${todoState.items.length} 📊 Chaos: ${Math.round(todoState.chaosLevel)}%`}
-        icon="🦤"
+        } 🧬 Completion: ${todoState.completedCount}/${todoState.items.length} 📊 Chaos: ${Math.round(todoState.chaosLevel)}%</>}
+        icon={<DodoBirdAnimated id="icon" />}
         color="#FF6B9D"
         className="px-0 relative"
       >
