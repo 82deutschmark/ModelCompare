@@ -14,6 +14,11 @@ import { ArcGrid } from '../components/dashboard/ArcGrid';
 import { BioCard } from '../components/dashboard/BioCard';
 import { PrimaryDescriptor } from '../components/dashboard/PrimaryDescriptor';
 import { SystemStatus } from '../components/dashboard/SystemStatus';
+import { DoDo } from '../components/dashboard/DoDo';
+import { SPACE_EMOJIS } from '../lib/spaceEmojis';
+
+// Re-export SPACE_EMOJIS for use by other dashboard components
+export { SPACE_EMOJIS };
 
 // Neon color palette for cyberpunk theme
 const neonColors = {
@@ -27,15 +32,6 @@ const neonColors = {
 
 // Matrix rain characters - Japanese katakana
 const matrixChars = 'ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ハ ヒ フ ヘ ホ マ ミ ム メ モ ヤ ユ ヨ ラ リ ル レ ロ ワ ヲ ン'.split(' ');
-
-// ARC-aligned space emoji palettes (each list is exactly length-10: indices 0..9)
-// 0 is the explicit "empty/black" cell to avoid null handling.
-export const SPACE_EMOJIS = {
-  // Legacy default (backward compatibility with previous single-map implementation)
-  legacy_default: ['⬛', '✅', '👽', '👤', '🪐', '🌍', '🛸', '☄️', '♥️', '⚠️'],  
-  // Birds - For the hardest tasks (filled to length-10)
-  birds: ['🐦', '🦃', '🦆', '🦉', '🐤', '🦅', '🦜', '🦢', '🐓', '🦩'],
-} as const;
 
 // Matrix Rain Effect Component
 const MatrixRain = () => {
@@ -434,7 +430,8 @@ export default function ArcAgiPage() {
         <div className="grid grid-cols-1 lg:grid-cols-6 gap-3 max-w-7xl mx-auto">
           {/* LEFT AREA - Columns 1-2 */}
           <div className="lg:col-span-2 space-y-3">
-            {/* Descriptor + System Status side-by-side on XL screens */}
+            {/* BioCard moved to left */}
+            <BioCard />
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
               <PrimaryDescriptor />
               <SystemStatus />
@@ -450,7 +447,8 @@ export default function ArcAgiPage() {
 
           {/* RIGHT AREA - Columns 5-6 */}
           <div className="lg:col-span-2 space-y-4">
-            <BioCard />
+            {/* DoDo moved to right */}
+            <DoDo />
             <ArcGrid color="#FF00A8" title="ARC GRID" gridSize={10} patternId="#002" />
             <ChessBoard color="#00FF41" title="Emoji Chess" sizePx={240} emojiMode />
           </div>

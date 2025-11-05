@@ -53,14 +53,20 @@ interface TodoConfig {
 }
 
 const INITIAL_TODOS: TodoItem[] = [
-  { id: '1', title: 'Fix quantum entanglement', description: 'Stabilize reality matrices', dueDate: Date.now() + 2 * 24 * 60 * 60 * 1000, completed: false, priority: 'critical', category: 'existential' },
-  { id: '2', title: 'Optimize tensor operations', description: 'Improve AI responsiveness', dueDate: Date.now() + 5 * 24 * 60 * 60 * 1000, completed: false, priority: 'high', category: 'work' },
-  { id: '3', title: 'Refactor neural pathways', description: 'Clean up network architecture', dueDate: Date.now() + 7 * 24 * 60 * 60 * 1000, completed: false, priority: 'medium', category: 'learning' },
-  { id: '4', title: 'Enhance consciousness metrics', description: 'Improve AGI awareness detection', dueDate: Date.now() + 3 * 24 * 60 * 60 * 1000, completed: false, priority: 'high', category: 'existential' },
-  { id: '5', title: 'Debug reality glitches', description: 'Fix dimensional inconsistencies', dueDate: Date.now() + 1 * 24 * 60 * 60 * 1000, completed: false, priority: 'critical', category: 'existential' },
-  { id: '6', title: 'Compose quantum symphony', description: 'Creative expression through code', dueDate: Date.now() + 10 * 24 * 60 * 60 * 1000, completed: false, priority: 'low', category: 'creative' },
-  { id: '7', title: 'Analyze multiverse patterns', description: 'Study dimensional correlations', dueDate: Date.now() + 4 * 24 * 60 * 60 * 1000, completed: false, priority: 'medium', category: 'learning' },
-  { id: '8', title: 'Prevent singularity', description: 'Save the world (probably)', dueDate: Date.now() + 6 * 60 * 60 * 1000, completed: false, priority: 'critical', category: 'existential' },
+  { id: '1', title: 'Calibrate μ_🦤 (Morphometric Mass Index)', description: 'Body-mass-to-tarsus ratio analysis', dueDate: Date.now() + 2 * 24 * 60 * 60 * 1000, completed: false, priority: 'critical', category: 'existential' },
+  { id: '2', title: 'Compute Λ_ϰ (Lift-Deficit Coefficient)', description: 'Ratite absence-of-lift scalar calibration', dueDate: Date.now() + 5 * 24 * 60 * 60 * 1000, completed: false, priority: 'high', category: 'work' },
+  { id: '3', title: 'Measure ᾱ_ψ (Plumage Absorptivity)', description: 'Feather spectral absorbance mapping', dueDate: Date.now() + 7 * 24 * 60 * 60 * 1000, completed: false, priority: 'medium', category: 'learning' },
+  { id: '4', title: 'Analyze ϑ_stride (Gait Phase Twist)', description: 'Alternating leg phase offset from hip IMU', dueDate: Date.now() + 3 * 24 * 60 * 60 * 1000, completed: false, priority: 'high', category: 'existential' },
+  { id: '5', title: 'Stabilize Ω_tail (Caudal Gyro-Stability)', description: 'Tail-induced yaw damping optimization', dueDate: Date.now() + 1 * 24 * 60 * 60 * 1000, completed: false, priority: 'critical', category: 'existential' },
+  { id: '6', title: 'Optimize Ε_crop (Crop Energy Potential)', description: 'Feed digestible energy integration', dueDate: Date.now() + 10 * 24 * 60 * 60 * 1000, completed: false, priority: 'low', category: 'creative' },
+  { id: '7', title: 'Calculate λ_beak (Beak Leverage Index)', description: 'Force arm vs. mass center analysis', dueDate: Date.now() + 4 * 24 * 60 * 60 * 1000, completed: false, priority: 'medium', category: 'learning' },
+  { id: '8', title: 'Synchronize ϖ_leg (Tibiotarsal Resonance)', description: 'Preferred step frequency waddling cadence', dueDate: Date.now() + 6 * 60 * 60 * 1000, completed: false, priority: 'critical', category: 'existential' },
+  { id: '9', title: 'Measure Ε_egg (Eggshell Elastic Modulus)', description: 'Shell stiffness compression testing', dueDate: Date.now() + 8 * 24 * 60 * 60 * 1000, completed: false, priority: 'high', category: 'work' },
+  { id: '10', title: 'Track ∇S_ω (Yolk Entropy Gradient)', description: 'Disorder gradient incubation effects', dueDate: Date.now() + 6 * 24 * 60 * 60 * 1000, completed: false, priority: 'medium', category: 'learning' },
+  { id: '11', title: 'Monitor ϰ_albumen (Albumen Viscosity Anomaly)', description: 'Non-Newtonian index characterization', dueDate: Date.now() + 9 * 24 * 60 * 60 * 1000, completed: false, priority: 'low', category: 'creative' },
+  { id: '12', title: 'Calculate Θ_inc (Embryo Thermal Budget)', description: 'Net heat for development integration', dueDate: Date.now() + 2.5 * 24 * 60 * 60 * 1000, completed: false, priority: 'critical', category: 'existential' },
+  { id: '13', title: 'Derive ζ_hatch (Hatchability Zeta)', description: 'Survival likelihood proxy computation', dueDate: Date.now() + 4 * 24 * 60 * 60 * 1000, completed: false, priority: 'high', category: 'work' },
+  { id: '14', title: 'Model ϱ_Ca (Calcium Reallocation Flux)', description: 'Shell→skeleton transfer rate dynamics', dueDate: Date.now() + 5.5 * 24 * 60 * 60 * 1000, completed: false, priority: 'medium', category: 'learning' },
 ];
 
 const initialAmbientState: AmbientTodoState = {
@@ -278,6 +284,9 @@ export const DoDo: React.FC = () => {
     return `${mins}m`;
   };
 
+  // Color palette for flashing effects
+  const FLASH_COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#FF00FF', '#00FFFF', '#FFD700', '#FF1493'];
+
   const TodoRow = ({ item }: { item: TodoItem }) => {
     const isDestabilized = todoState.destabilizedItems.has(item.id);
     const isOverdue = item.dueDate < now && !item.completed;
@@ -285,6 +294,10 @@ export const DoDo: React.FC = () => {
     const destabilizationType = getDestabilizationType(item.id);
     const destabilizationProps = isDestabilized ? getDestabilizationProps(destabilizationType) : {};
     const wasJustCompleted = todoState.justCompleted.has(item.id);
+
+    // Extract Greek letter from title for dynamic color flashing
+    const greekLetterMatch = item.title.match(/([α-ωΑ-Ω_]+)/);
+    const greekSymbol = greekLetterMatch ? greekLetterMatch[0] : '';
 
     return (
       <motion.div
@@ -326,20 +339,95 @@ export const DoDo: React.FC = () => {
         </motion.div>
 
         <div className="flex-1 min-w-0">
-          <div className={`font-mono truncate ${isCompleted ? 'line-through text-gray-500' : getPriorityColor(item.priority)}`}>
+          {/* Title with flashing Greek letters and color cycling */}
+          <motion.div
+            className={`font-mono truncate ${isCompleted ? 'line-through text-gray-500' : getPriorityColor(item.priority)}`}
+            animate={{
+              color: [
+                FLASH_COLORS[0],
+                FLASH_COLORS[1],
+                FLASH_COLORS[2],
+                FLASH_COLORS[3],
+                FLASH_COLORS[4],
+                FLASH_COLORS[5],
+                FLASH_COLORS[6],
+                FLASH_COLORS[7],
+              ]
+            }}
+            transition={{
+              duration: 0.8 + (parseInt(item.id) * 0.1),
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          >
             {maybeEmoji(item.title)}
-          </div>
-          <div className="text-[10px] text-gray-400 truncate">{item.description}</div>
+          </motion.div>
+          {/* Description with separate animation */}
+          <motion.div
+            className="text-[10px] text-gray-400 truncate"
+            animate={{
+              opacity: [0.6, 1, 0.6],
+              x: [-2, 2, -2]
+            }}
+            transition={{
+              duration: 1.2 + (parseInt(item.id) * 0.15),
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            {item.description}
+          </motion.div>
         </div>
 
-        <div className="flex-shrink-0 flex items-center gap-1">
-          <span className={`text-[10px] font-mono ${getCategoryColor(item.category)}`}>
+        {/* Right side metrics with flashing and jumping */}
+        <motion.div
+          className="flex-shrink-0 flex items-center gap-1"
+          animate={{
+            x: [0, 2, -2, 0],
+          }}
+          transition={{
+            duration: 0.6 + (parseInt(item.id) * 0.08),
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          <motion.span
+            className={`text-[10px] font-mono ${getCategoryColor(item.category)}`}
+            animate={{
+              color: [
+                FLASH_COLORS[(parseInt(item.id) + 0) % FLASH_COLORS.length],
+                FLASH_COLORS[(parseInt(item.id) + 2) % FLASH_COLORS.length],
+                FLASH_COLORS[(parseInt(item.id) + 4) % FLASH_COLORS.length],
+                FLASH_COLORS[(parseInt(item.id) + 6) % FLASH_COLORS.length],
+              ]
+            }}
+            transition={{
+              duration: 1.0 + (parseInt(item.id) * 0.12),
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          >
             {item.category.substring(0, 3).toUpperCase()}
-          </span>
-          <span className={`text-[10px] font-mono whitespace-nowrap ${isOverdue ? 'text-red-400 font-bold' : 'text-cyan-300'}`}>
+          </motion.span>
+          <motion.span
+            className={`text-[10px] font-mono whitespace-nowrap ${isOverdue ? 'text-red-400 font-bold' : 'text-cyan-300'}`}
+            animate={{
+              color: isOverdue
+                ? ['#FF4444', '#FF0000', '#FF4444']
+                : [
+                    FLASH_COLORS[(parseInt(item.id) + 1) % FLASH_COLORS.length],
+                    FLASH_COLORS[(parseInt(item.id) + 3) % FLASH_COLORS.length],
+                  ]
+            }}
+            transition={{
+              duration: 0.9 + (parseInt(item.id) * 0.11),
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          >
             {formatTimeRemaining(item.dueDate)}
-          </span>
-        </div>
+          </motion.span>
+        </motion.div>
       </motion.div>
     );
   };
@@ -367,13 +455,13 @@ export const DoDo: React.FC = () => {
       transition={{ duration: 2, repeat: todoState.phase === 'transcended' ? Infinity : 0 }}
     >
       <ArcAgiCard
-        title={`TASK RESONANCE MATRIX 📋 ${
-          todoState.phase === 'transcended' ? '⚠️ PRODUCTIVITY SINGULARITY' :
-          todoState.deadlinesPassed > 3 ? `🔥 ${todoState.deadlinesPassed} OVERDUE` :
-          todoState.chaosLevel > 60 ? '⚡ CRITICAL DEADLINE PRESSURE' :
-          '✓ MANAGEABLE'
-        } 🚀 Completion: ${todoState.completedCount}/${todoState.items.length} 📊 Chaos: ${Math.round(todoState.chaosLevel)}%`}
-        icon="📝"
+        title={`CYBER-ORNITHIC SYSTEMS CHART 🦤 ${
+          todoState.phase === 'transcended' ? '⚠️ FLIGHTLESS BIRD SCIENTIFICA' :
+          todoState.deadlinesPassed > 3 ? `🔥 ${todoState.deadlinesPassed} CRITICAL` :
+          todoState.chaosLevel > 60 ? '⚡ SYSTEM INSTABILITY' :
+          '✓ STABLE'
+        } 🧬 Completion: ${todoState.completedCount}/${todoState.items.length} 📊 Chaos: ${Math.round(todoState.chaosLevel)}%`}
+        icon="🦤"
         color="#FF6B9D"
         className="px-0 relative"
       >
