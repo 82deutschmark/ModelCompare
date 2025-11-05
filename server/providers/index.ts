@@ -76,9 +76,9 @@ export function getReasoningModels(): ModelConfig[] {
  * @param modelId Model identifier
  * @returns Promise resolving to model response with config
  */
-export async function callModel(prompt: string, modelId: string): Promise<ModelResponse & { modelConfig: ModelConfig }> {
+export async function callModel(prompt: string, modelId: string, options?: CallOptions): Promise<ModelResponse & { modelConfig: ModelConfig }> {
   const messages: ModelMessage[] = [{ role: 'user', content: prompt }];
-  return callModelWithMessages(messages, modelId);
+  return callModelWithMessages(messages, modelId, options);
 }
 
 /**
