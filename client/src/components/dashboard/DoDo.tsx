@@ -216,6 +216,43 @@ export const DoDo: React.FC = () => {
     return Math.random() < adjustedChance ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : v;
   };
 
+  // Dodo bird emoji animations - U+1F9A4
+  const DodoBirdAnimated = ({ id }: { id: string }) => {
+    const dodoId = parseInt(id);
+    const scalePhases = [
+      [1, 1.5, 0.8, 2, 1],
+      [1.2, 0.9, 1.8, 1, 1.3],
+      [0.8, 1.6, 1, 2.2, 0.9],
+    ];
+    const selectedScale = scalePhases[dodoId % scalePhases.length];
+
+    return (
+      <motion.span
+        className="inline-block"
+        animate={{
+          scale: selectedScale,
+          opacity: [1, 0.6, 1, 0.8, 1],
+          rotateZ: [0, 15, -20, 180, 360, 0],
+          scaleX: [1, 1, -1, -1, 1, 1], // Mirror/flip horizontally
+          filter: [
+            'hue-rotate(0deg) brightness(1)',
+            'hue-rotate(120deg) brightness(1.5)',
+            'hue-rotate(240deg) brightness(0.8)',
+            'hue-rotate(360deg) brightness(1.2)',
+            'hue-rotate(0deg) brightness(1)',
+          ]
+        }}
+        transition={{
+          duration: 1.2 + (dodoId * 0.15),
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        🦤
+      </motion.span>
+    );
+  };
+
   const GLITCH_CHARS = ['📌', '⚠', '✗', '∞', 'ERR', 'NOPE', '???', '💀'];
 
   const getDestabilizationProps = (type: DestabilizationType) => {
