@@ -61,6 +61,13 @@ interface MetricsState {
   phenomenologicalAuthenticity: number;
   verityPotential: number;
   ontologicalAlignment: number;
+
+  // Formula metrics (warp potential expansion)
+  kappaResonance: number;
+  psiHarmonicField: number;
+  sigmaEpistemicTensor: number;
+  fOperatorNorm: number;
+  lindbladMasterEq: number;
 }
 
 type DestabilizationType = 'flicker' | 'colorShift' | 'valueSpike' | 'glitch';
@@ -98,6 +105,11 @@ const METRIC_CONFIGS: MetricConfig[] = [
   { key: 'anomalyIndex', label: 'Anomaly Index', color: 'text-orange-300', category: 'physics', destabilizationType: 'valueSpike', clickable: true },
   { key: 'warpPotential', label: 'Warp Potential', color: 'text-yellow-300', category: 'physics', destabilizationType: 'colorShift', clickable: true },
   { key: 'multiverse', label: 'Multiverse', color: 'text-green-400', category: 'physics', destabilizationType: 'glitch', clickable: false },
+  { key: 'kappaResonance', label: 'κ₍ₙ₎ Resonance', color: 'text-violet-300', category: 'physics', destabilizationType: 'flicker', clickable: true },
+  { key: 'psiHarmonicField', label: 'ψ̃ Harmonic', color: 'text-violet-400', category: 'physics', destabilizationType: 'valueSpike', clickable: true },
+  { key: 'sigmaEpistemicTensor', label: 'Σ Epistemic', color: 'text-violet-300', category: 'physics', destabilizationType: 'colorShift', clickable: true },
+  { key: 'fOperatorNorm', label: 'F̂ Operator', color: 'text-violet-400', category: 'physics', destabilizationType: 'glitch', clickable: true },
+  { key: 'lindbladMasterEq', label: 'Lindblad ρ̇', color: 'text-violet-300', category: 'physics', destabilizationType: 'flicker', clickable: true },
 
   // ML metrics
   { key: 'lossFunction', label: 'Loss', color: 'text-red-300', category: 'ml', destabilizationType: 'valueSpike', clickable: true },
@@ -314,7 +326,13 @@ export const QuantumMetrics: React.FC = () => {
     universalTruthVector: 96.4,
     phenomenologicalAuthenticity: 89.9,
     verityPotential: 92.1,
-    ontologicalAlignment: 85.4
+    ontologicalAlignment: 85.4,
+
+    kappaResonance: 3.742,
+    psiHarmonicField: 8.316,
+    sigmaEpistemicTensor: 12.487,
+    fOperatorNorm: 0.9973,
+    lindbladMasterEq: 2.156
   });
 
   // Immediately awaken ambient experience on mount
@@ -420,7 +438,13 @@ export const QuantumMetrics: React.FC = () => {
         universalTruthVector: Math.min(100, Math.max(0, prev.universalTruthVector + (Math.random() - 0.5) * 0.25)),
         phenomenologicalAuthenticity: Math.min(100, Math.max(0, prev.phenomenologicalAuthenticity + (Math.random() - 0.5) * 0.42)),
         verityPotential: Math.min(100, Math.max(0, prev.verityPotential + (Math.random() - 0.5) * 0.32)),
-        ontologicalAlignment: Math.min(100, Math.max(0, prev.ontologicalAlignment + (Math.random() - 0.5) * 0.45))
+        ontologicalAlignment: Math.min(100, Math.max(0, prev.ontologicalAlignment + (Math.random() - 0.5) * 0.45)),
+
+        kappaResonance: Math.max(0, prev.kappaResonance + (Math.random() - 0.5) * 0.08),
+        psiHarmonicField: Math.max(0, prev.psiHarmonicField + (Math.random() - 0.5) * 0.12),
+        sigmaEpistemicTensor: Math.max(0, prev.sigmaEpistemicTensor + (Math.random() - 0.5) * 0.15),
+        fOperatorNorm: Math.min(1, Math.max(0, prev.fOperatorNorm + (Math.random() - 0.5) * 0.002)),
+        lindbladMasterEq: Math.max(0, prev.lindbladMasterEq + (Math.random() - 0.5) * 0.05)
       }));
     }, 50);
     return () => clearInterval(interval);
@@ -567,6 +591,15 @@ export const QuantumMetrics: React.FC = () => {
       case 'verityPotential':
       case 'ontologicalAlignment':
         formatted = `${rawValue.toFixed(2)}%`;
+        break;
+      case 'kappaResonance':
+      case 'psiHarmonicField':
+      case 'sigmaEpistemicTensor':
+      case 'lindbladMasterEq':
+        formatted = rawValue.toFixed(3);
+        break;
+      case 'fOperatorNorm':
+        formatted = rawValue.toFixed(4);
         break;
       default:
         formatted = String(rawValue);
@@ -841,28 +874,6 @@ export const QuantumMetrics: React.FC = () => {
           <div className="flex justify-between items-center gap-1">
             <span className="text-cyan-400 whitespace-nowrap truncate">Navier‑Stokes:</span>
             <span className="text-right text-blue-400 truncate">regularity?</span>
-          </div>
-
-          {/* Warp Potential expansion formulas */}
-          <div className="flex justify-between items-center gap-1">
-            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">κ₍ₙ₎ Resonance:</span>
-            <span className="text-right text-violet-300 truncate text-[7px] font-mono">ξ₁e^(-αβ²) + ζ∫Ω(τ)dτ</span>
-          </div>
-          <div className="flex justify-between items-center gap-1">
-            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">ψ̃ Harmonic Field:</span>
-            <span className="text-right text-violet-300 truncate text-[7px] font-mono">(ℏ∇²+V)φ + iγ₅⟨ψ|σ̄·p⟩</span>
-          </div>
-          <div className="flex justify-between items-center gap-1">
-            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">Σ Epistemic Tensor:</span>
-            <span className="text-right text-violet-300 truncate text-[7px] font-mono">⨂(1+δχᵢ)⁻¹∂ₜμᵢ + τ₆∫ρ(s)</span>
-          </div>
-          <div className="flex justify-between items-center gap-1">
-            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">F̂ Operator Norm:</span>
-            <span className="text-right text-violet-300 truncate text-[7px] font-mono">exp(∑λₖ𝒪ₖ)|Ψ⟩ ≈ ∏ U_θᵢ</span>
-          </div>
-          <div className="flex justify-between items-center gap-1">
-            <span className="text-cyan-400 whitespace-nowrap truncate text-[8px]">Lindblad Master Eq.:</span>
-            <span className="text-right text-violet-300 truncate text-[7px] font-mono">ρ̇ = -i[H,ρ] + L_j</span>
           </div>
 
           {/* Dense theoretical jargon */}
