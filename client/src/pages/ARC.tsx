@@ -15,10 +15,6 @@ import { BioCard } from '../components/dashboard/BioCard';
 import { PrimaryDescriptor } from '../components/dashboard/PrimaryDescriptor';
 import { SystemStatus } from '../components/dashboard/SystemStatus';
 import { DoDo } from '../components/dashboard/DoDo';
-import { SPACE_EMOJIS } from '../lib/spaceEmojis';
-
-// Re-export SPACE_EMOJIS for use by other dashboard components
-export { SPACE_EMOJIS };
 
 // Neon color palette for cyberpunk theme
 const neonColors = {
