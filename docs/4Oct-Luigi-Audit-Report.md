@@ -1,3 +1,12 @@
+<!--
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:09:30Z
+ * PURPOSE: Annotate Luigi audit report with post-migration status for ARC workspace transition.
+ * SRP/DRY check: Pass - metadata and archival clarification only.
+-->
+
+> **Update (2025-11-06):** Findings referencing the research synthesis page now correspond to the deprecated Luigi workspace. The ARC agent workspace supersedes this flow.
+
 # Luigi Workspace Implementation Audit Report
 **Date**: 2025-10-04  
 **Auditor**: Cascade using Claude 4 Sonnet  

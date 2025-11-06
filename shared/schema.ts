@@ -143,6 +143,51 @@ export const luigiArtifacts = pgTable("luigi_artifacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ARC agent workspace persistence
+export const arcRuns = pgTable("arc_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull(),
+  challengeName: text("challenge_name").notNull(),
+  puzzleDescription: text("puzzle_description").notNull(),
+  puzzlePayload: jsonb("puzzle_payload").notNull().$type<Record<string, unknown>>(),
+  targetPatternSummary: text("target_pattern_summary"),
+  evaluationFocus: text("evaluation_focus"),
+  status: varchar("status").notNull(),
+  currentStageId: varchar("current_stage_id"),
+  stages: jsonb("stages").notNull().$type<Record<string, unknown>>(),
+  totalCostCents: integer("total_cost_cents"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const arcMessages = pgTable("arc_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id")
+    .notNull()
+    .references(() => arcRuns.id, { onDelete: 'cascade' }),
+  role: varchar("role").notNull(),
+  stageId: varchar("stage_id"),
+  agentId: varchar("agent_id"),
+  content: text("content").notNull(),
+  reasoning: text("reasoning"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const arcArtifacts = pgTable("arc_artifacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id")
+    .notNull()
+    .references(() => arcRuns.id, { onDelete: 'cascade' }),
+  stageId: varchar("stage_id").notNull(),
+  type: varchar("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  data: jsonb("data").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Debate sessions for persisting debate state and conversation chaining
 export const debateSessions = pgTable('debate_sessions', {
   id: text('id').primaryKey(),
@@ -198,6 +243,23 @@ export const insertLuigiArtifactSchema = createInsertSchema(luigiArtifacts).omit
   createdAt: true,
 });
 
+export const insertArcRunSchema = createInsertSchema(arcRuns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export const insertArcMessageSchema = createInsertSchema(arcMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertArcArtifactSchema = createInsertSchema(arcArtifacts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertDebateSessionSchema = createInsertSchema(debateSessions).omit({
   id: true,
   createdAt: true,
@@ -222,6 +284,13 @@ export type InsertLuigiMessage = z.infer<typeof insertLuigiMessageSchema>;
 export type LuigiMessage = typeof luigiMessages.$inferSelect;
 export type InsertLuigiArtifact = z.infer<typeof insertLuigiArtifactSchema>;
 export type LuigiArtifact = typeof luigiArtifacts.$inferSelect;
+
+export type InsertArcRun = z.infer<typeof insertArcRunSchema>;
+export type ArcRun = typeof arcRuns.$inferSelect;
+export type InsertArcMessage = z.infer<typeof insertArcMessageSchema>;
+export type ArcMessage = typeof arcMessages.$inferSelect;
+export type InsertArcArtifact = z.infer<typeof insertArcArtifactSchema>;
+export type ArcArtifact = typeof arcArtifacts.$inferSelect;
 
 export type InsertDebateSession = z.infer<typeof insertDebateSessionSchema>;
 export type DebateSession = typeof debateSessions.$inferSelect;

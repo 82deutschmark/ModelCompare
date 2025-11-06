@@ -20,10 +20,12 @@ import { arcAgiRoutes } from "./routes/arc-agi.routes";
 import { creativeRoutes } from "./routes/creative.routes";
 import { webhookRoutes } from "./routes/webhook.routes";
 import { debateRoutes } from "./routes/debate.routes";
+import { createArcAgentRouter } from "./routes/arc-agent.routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register Luigi router
   app.use('/api/luigi', createLuigiRouter());
+  app.use('/api/arc-agent', createArcAgentRouter());
 
   // Register modular route handlers
   app.use('/api/auth', authRoutes);

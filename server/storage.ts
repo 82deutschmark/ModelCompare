@@ -25,8 +25,9 @@
  * and availability.
  */
 
-import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, luigiRuns, luigiMessages, luigiArtifacts, debateSessions } from "@shared/schema";
+import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type ArcRun, type InsertArcRun, type ArcMessage, type InsertArcMessage, type ArcArtifact, type InsertArcArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, luigiRuns, luigiMessages, luigiArtifacts, arcRuns, arcMessages, arcArtifacts, debateSessions } from "@shared/schema";
 import type { LuigiRunStatus, LuigiStageId } from "@shared/luigi-types";
+import type { ArcRunStatus, ArcStageId, ArcMessageRole } from "@shared/arc-types";
 import { randomUUID, createHash } from "crypto";
 import { db, ensureTablesExist } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
@@ -68,6 +69,21 @@ export interface LuigiRunUpdate {
   updatedAt?: Date | null;
 }
 
+export interface ArcRunUpdate {
+  taskId?: string;
+  challengeName?: string;
+  puzzleDescription?: string;
+  puzzlePayload?: Record<string, unknown>;
+  targetPatternSummary?: string | null;
+  evaluationFocus?: string | null;
+  status?: ArcRunStatus;
+  currentStageId?: ArcStageId | null;
+  stages?: Record<string, unknown>;
+  totalCostCents?: number | null;
+  completedAt?: Date | null;
+  updatedAt?: Date | null;
+}
+
 export interface IStorage {
   createComparison(comparison: InsertComparison): Promise<Comparison>;
   getComparison(id: string): Promise<Comparison | undefined>;
@@ -93,6 +109,16 @@ export interface IStorage {
   getLuigiMessages(runId: string, limit?: number): Promise<LuigiMessage[]>;
   saveLuigiArtifact(artifact: InsertLuigiArtifact): Promise<LuigiArtifact>;
   getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]>;
+
+  // ARC agent workspace operations
+  createArcRun(run: InsertArcRun): Promise<ArcRun>;
+  updateArcRun(id: string, update: ArcRunUpdate): Promise<ArcRun | undefined>;
+  getArcRun(id: string): Promise<ArcRun | undefined>;
+  listArcRuns(limit?: number): Promise<ArcRun[]>;
+  appendArcMessage(message: InsertArcMessage): Promise<ArcMessage>;
+  getArcMessages(runId: string, limit?: number): Promise<ArcMessage[]>;
+  saveArcArtifact(artifact: InsertArcArtifact): Promise<ArcArtifact>;
+  getArcArtifacts(runId: string): Promise<ArcArtifact[]>;
 
   // Debate session operations
   createDebateSession(session: InsertDebateSession): Promise<DebateSession>;
@@ -282,6 +308,78 @@ export class DbStorage implements IStorage {
       .from(luigiArtifacts)
       .where(eq(luigiArtifacts.runId, runId))
       .orderBy(desc(luigiArtifacts.createdAt));
+  }
+
+  async createArcRun(run: InsertArcRun): Promise<ArcRun> {
+    const [result] = await requireDb()
+      .insert(arcRuns)
+      .values(run as any)
+      .returning();
+    return result;
+  }
+
+  async updateArcRun(id: string, update: ArcRunUpdate): Promise<ArcRun | undefined> {
+    const payload = {
+      ...update,
+      updatedAt: update.updatedAt ?? new Date(),
+    } as any;
+
+    const [result] = await requireDb()
+      .update(arcRuns)
+      .set(payload)
+      .where(eq(arcRuns.id, id))
+      .returning();
+    return result;
+  }
+
+  async getArcRun(id: string): Promise<ArcRun | undefined> {
+    const [result] = await requireDb()
+      .select()
+      .from(arcRuns)
+      .where(eq(arcRuns.id, id))
+      .limit(1);
+    return result || undefined;
+  }
+
+  async listArcRuns(limit = 50): Promise<ArcRun[]> {
+    return await requireDb()
+      .select()
+      .from(arcRuns)
+      .orderBy(desc(arcRuns.createdAt))
+      .limit(limit);
+  }
+
+  async appendArcMessage(message: InsertArcMessage): Promise<ArcMessage> {
+    const [result] = await requireDb()
+      .insert(arcMessages)
+      .values(message as any)
+      .returning();
+    return result;
+  }
+
+  async getArcMessages(runId: string, limit = 200): Promise<ArcMessage[]> {
+    return await requireDb()
+      .select()
+      .from(arcMessages)
+      .where(eq(arcMessages.runId, runId))
+      .orderBy(desc(arcMessages.createdAt))
+      .limit(limit);
+  }
+
+  async saveArcArtifact(artifact: InsertArcArtifact): Promise<ArcArtifact> {
+    const [result] = await requireDb()
+      .insert(arcArtifacts)
+      .values(artifact as any)
+      .returning();
+    return result;
+  }
+
+  async getArcArtifacts(runId: string): Promise<ArcArtifact[]> {
+    return await requireDb()
+      .select()
+      .from(arcArtifacts)
+      .where(eq(arcArtifacts.runId, runId))
+      .orderBy(desc(arcArtifacts.createdAt));
   }
 
   // Debate session operations
@@ -503,6 +601,9 @@ export class MemStorage implements IStorage {
   private luigiRuns: Map<string, LuigiRun>;
   private luigiMessages: Map<string, LuigiMessage[]>;
   private luigiArtifacts: Map<string, LuigiArtifact[]>;
+  private arcRuns: Map<string, ArcRun>;
+  private arcMessages: Map<string, ArcMessage[]>;
+  private arcArtifacts: Map<string, ArcArtifact[]>;
   private debateSessions: Map<string, DebateSession>;
 
 
@@ -514,6 +615,9 @@ export class MemStorage implements IStorage {
     this.luigiRuns = new Map();
     this.luigiMessages = new Map();
     this.luigiArtifacts = new Map();
+    this.arcRuns = new Map();
+    this.arcMessages = new Map();
+    this.arcArtifacts = new Map();
     this.debateSessions = new Map();
   }
 
@@ -739,6 +843,112 @@ export class MemStorage implements IStorage {
 
   async getLuigiArtifacts(runId: string): Promise<LuigiArtifact[]> {
     return [...(this.luigiArtifacts.get(runId) ?? [])].sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  async createArcRun(run: InsertArcRun): Promise<ArcRun> {
+    const id = randomUUID();
+    const now = new Date();
+    const record: ArcRun = {
+      id,
+      taskId: run.taskId,
+      challengeName: run.challengeName,
+      puzzleDescription: run.puzzleDescription,
+      puzzlePayload: run.puzzlePayload as Record<string, unknown>,
+      targetPatternSummary: run.targetPatternSummary ?? null,
+      evaluationFocus: run.evaluationFocus ?? null,
+      status: run.status as ArcRunStatus,
+      currentStageId: run.currentStageId ?? null,
+      stages: run.stages as Record<string, unknown>,
+      totalCostCents: run.totalCostCents ?? null,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+    };
+    this.arcRuns.set(id, record);
+    this.arcMessages.set(id, []);
+    this.arcArtifacts.set(id, []);
+    return record;
+  }
+
+  async updateArcRun(id: string, update: ArcRunUpdate): Promise<ArcRun | undefined> {
+    const existing = this.arcRuns.get(id);
+    if (!existing) {
+      return undefined;
+    }
+
+    const updated: ArcRun = {
+      ...existing,
+      taskId: update.taskId ?? existing.taskId,
+      challengeName: update.challengeName ?? existing.challengeName,
+      puzzleDescription: update.puzzleDescription ?? existing.puzzleDescription,
+      puzzlePayload: update.puzzlePayload ?? existing.puzzlePayload,
+      targetPatternSummary: update.targetPatternSummary !== undefined ? update.targetPatternSummary : existing.targetPatternSummary ?? null,
+      evaluationFocus: update.evaluationFocus !== undefined ? update.evaluationFocus : existing.evaluationFocus ?? null,
+      status: update.status ?? existing.status,
+      currentStageId: update.currentStageId !== undefined ? update.currentStageId : existing.currentStageId ?? null,
+      stages: update.stages ?? existing.stages,
+      totalCostCents: update.totalCostCents !== undefined ? update.totalCostCents : existing.totalCostCents ?? null,
+      updatedAt: new Date(),
+      completedAt: update.completedAt !== undefined ? update.completedAt : existing.completedAt ?? null,
+    };
+
+    this.arcRuns.set(id, updated);
+    return updated;
+  }
+
+  async getArcRun(id: string): Promise<ArcRun | undefined> {
+    return this.arcRuns.get(id);
+  }
+
+  async listArcRuns(limit = 50): Promise<ArcRun[]> {
+    const runs = Array.from(this.arcRuns.values());
+    return runs
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0))
+      .slice(0, limit);
+  }
+
+  async appendArcMessage(message: InsertArcMessage): Promise<ArcMessage> {
+    const messages = this.arcMessages.get(message.runId) ?? [];
+    const record: ArcMessage = {
+      id: randomUUID(),
+      runId: message.runId,
+      role: message.role as ArcMessageRole,
+      stageId: message.stageId ?? null,
+      agentId: message.agentId ?? null,
+      content: message.content,
+      reasoning: message.reasoning ?? null,
+      metadata: message.metadata as Record<string, unknown> | null ?? null,
+      createdAt: new Date(),
+    };
+    messages.push(record);
+    this.arcMessages.set(message.runId, messages);
+    return record;
+  }
+
+  async getArcMessages(runId: string, limit = 200): Promise<ArcMessage[]> {
+    const messages = this.arcMessages.get(runId) ?? [];
+    return messages.slice(-limit);
+  }
+
+  async saveArcArtifact(artifact: InsertArcArtifact): Promise<ArcArtifact> {
+    const artifacts = this.arcArtifacts.get(artifact.runId) ?? [];
+    const record: ArcArtifact = {
+      id: randomUUID(),
+      runId: artifact.runId,
+      stageId: artifact.stageId,
+      type: artifact.type,
+      title: artifact.title,
+      description: artifact.description ?? null,
+      data: artifact.data as Record<string, unknown> | null ?? null,
+      createdAt: new Date(),
+    };
+    artifacts.push(record);
+    this.arcArtifacts.set(artifact.runId, artifacts);
+    return record;
+  }
+
+  async getArcArtifacts(runId: string): Promise<ArcArtifact[]> {
+    return [...(this.arcArtifacts.get(runId) ?? [])].sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   // Debate session operations

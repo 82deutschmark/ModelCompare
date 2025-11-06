@@ -1,3 +1,12 @@
+<!--
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:09:55Z
+ * PURPOSE: Contextualize Luigi agent notes after ARC workspace migration and provide metadata header.
+ * SRP/DRY check: Pass - adds archival context without duplicating technical guidance.
+-->
+
+> **Note (2025-11-06):** The Luigi agent implementation described here has been replaced by the ARC agent workspace. Retain as a historical reference for prior workflows.
+
 ## Progress Update
 - ✅ Phase 1 (Shared Types & Database schemas) completed.
 - ✅ Phase 2 (Storage layer extensions) completed.
