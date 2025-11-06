@@ -6,9 +6,15 @@
  * Date: 2025-10-22 00:50 UTC
  * Date: 2025-10-21 04:30 UTC
  * Date: 2025-10-21 03:33 UTC
+ * Date: 2025-11-06 03:45 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.36] - 2025-11-06 03:45 UTC
+
+### Added
+- Linked upstream OpenAI agent reference repositories as isolated git submodules so future integrations can reuse official samples without polluting the core app tree.@libs/openai-agents-js@libs/openai-chatkit-advanced-samples
 
 ## [Unreleased]
 
