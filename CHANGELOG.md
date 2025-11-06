@@ -11,6 +11,21 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.38] - 2025-11-06 04:10 UTC
+
+### Added
+- Authored validation plan `docs/2025-11-06-plan-arc-agent-validation.md` to guide follow-up QA for the ARC agent workspace.
+
+### Changed
+- Added metadata headers and archive notices to legacy research synthesis documentation to point readers to the ARC agent workspace.
+- Annotated navigation routing with the standardized file header comment.
+- Documented outstanding dependency resolution required for type checks.
+
+## [Version 0.4.37] - 2025-11-06 03:49 UTC
+
+### Added
+- Introduced the ARC agent workspace powered by the OpenAI Agents SDK, including new backend routes, storage tables, and a React interface for configuring puzzles, reviewing transcripts, and managing artifacts.
+
 ## [Version 0.4.36] - 2025-11-06 03:45 UTC
 
 ### Added

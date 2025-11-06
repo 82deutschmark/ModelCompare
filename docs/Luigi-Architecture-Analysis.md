@@ -1,3 +1,12 @@
+<!--
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:08:40Z
+ * PURPOSE: Annotate historical Luigi architecture analysis with status relative to the ARC agent workspace.
+ * SRP/DRY check: Pass - metadata and status note without duplicating analysis content.
+-->
+
+> **Status Update (2025-11-06):** References to `client/src/pages/research-synthesis.tsx` now map to the retired Luigi interface. The ARC agent workspace (`client/src/pages/agent-workspace.tsx`) is the active implementation.
+
 # Luigi Pipeline Architecture Analysis - Critical Findings
 **Date**: 2025-10-04T14:17:00Z  
 **Analyst**: Cascade using Claude 4 Sonnet  

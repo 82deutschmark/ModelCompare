@@ -1,3 +1,12 @@
+<!--
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:09:05Z
+ * PURPOSE: Preserve historical redesign plan with context about ARC workspace migration.
+ * SRP/DRY check: Pass - adds metadata and archival guidance without duplicating plan content.
+-->
+
+> **Archive Note (2025-11-06):** Superseded by the ARC agent workspace initiative. Use `docs/2025-11-06-plan-arc-agent-workspace.md` and `client/src/pages/agent-workspace.tsx` for current implementation details.
+
 # Research Synthesis UI Redesign Plan
 **Applying Vixra UI/UX Improvements to Luigi Business Plan Workspace**
 

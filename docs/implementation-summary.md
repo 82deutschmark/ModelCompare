@@ -112,26 +112,28 @@ Successfully implemented a comprehensive architectural overhaul establishing **s
 
 ## 🚀 System Capabilities Demonstration
 
-### Example: Research Synthesis Mode
-**New Mode Proposal**: `docs/research-synthesis-mode-proposal.md`
+### Example: ARC Agent Workspace
+**New Mode Proposal**: `docs/2025-11-06-plan-arc-agent-workspace.md`
 
 The implemented variable system enables sophisticated new interaction modes:
 
 ```typescript
-// Complex variable registry with 11+ typed variables
-'research-synthesis': [
-  { name: 'researchTopic', type: 'string', required: true, ... },
-  { name: 'methodology', type: 'enum', enum: ['systematic-review', 'meta-analysis', ...], ... },
-  { name: 'expertiseRole', type: 'enum', enum: ['literature-reviewer', 'data-analyst', ...], ... },
-  // ... 8 more sophisticated variables
+// ARC puzzle configuration variables powering the workspace form
+'arc-agent': [
+  { name: 'arcTaskId', type: 'string', required: true, ... },
+  { name: 'challengeName', type: 'string', required: true, ... },
+  { name: 'puzzleDescription', type: 'string', required: true, ... },
+  { name: 'puzzlePayload', type: 'string', required: true, ... },
+  { name: 'targetPatternSummary', type: 'string', required: false, ... },
+  { name: 'evaluationFocus', type: 'string', required: false, ... },
 ]
 ```
 
 **Advanced Features Enabled**:
-- **Multi-Round Collaboration**: Progressive synthesis with context passing
-- **Dynamic Role Assignment**: Model capabilities matched to research roles  
-- **Contextual Memory**: Rich `{previousFindings}` variable for iterative research
-- **Quality Validation**: Variable-driven quality checks and validation rules
+- **Puzzle-Aware Intake**: Validated JSON payload ensures grids are ready for the agent.
+- **Targeted Evaluation**: Optional guidance focuses reasoning on symmetry, color, or pattern cues.
+- **Human-in-the-Loop**: Reply interface allows manual hints to unblock reasoning.
+- **Rich Artifacts**: Markdown + JSON outputs capture candidate grids and reasoning summaries.
 
 ### Template Sophistication
 ```markdown

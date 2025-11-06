@@ -87,11 +87,11 @@ const navigationModes: NavigationMode[] = [
     category: 'advanced'
   },
   {
-    id: "research-synthesis",
-    name: "Research",
-    path: "/research-synthesis",
+    id: "arc-agent-workspace",
+    name: "ARC Workspace",
+    path: "/agent-workspace",
     icon: Users,
-    description: "Collaborative research synthesis",
+    description: "ARC agent puzzle workspace",
     category: 'advanced'
   },
   {

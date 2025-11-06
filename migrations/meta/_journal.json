@@ -15,6 +15,13 @@
       "when": 1759076015711,
       "tag": "0001_cynical_moon_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762401836667,
+      "tag": "0003_arc_agent_workspace",
+      "breakpoints": true
     }
   ]
 }

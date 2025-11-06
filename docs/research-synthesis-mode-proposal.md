@@ -1,3 +1,12 @@
+<!--
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:08:10Z
+ * PURPOSE: Archive notice clarifying the legacy research synthesis proposal relative to the new ARC agent workspace.
+ * SRP/DRY check: Pass - adds metadata without altering historical content structure.
+-->
+
+> **Archive Note (2025-11-06):** This proposal has been superseded by the ARC agent workspace (`/agent-workspace`). Retain for historical context only.
+
 # Research Synthesis Mode - Advanced Variable System Demonstration
 
 **Mode Name**: `research-synthesis`  

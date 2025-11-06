@@ -79,6 +79,11 @@ export interface LuigiConfig {
   sdk: LuigiSdkSettings;
 }
 
+export interface ArcAgentConfig {
+  model: string;
+  maxTurns: number;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   database: DatabaseConfig;
@@ -87,6 +92,7 @@ export interface AppConfig {
   security: SecurityConfig;
   circuitBreaker: CircuitBreakerConfig;
   luigi: LuigiConfig;
+  arcAgent: ArcAgentConfig;
 }
 
 /**
@@ -168,6 +174,10 @@ export function loadConfig(): AppConfig {
         model: process.env.LUIGI_SDK_MODEL || 'openai/gpt-5',
         maxTurns: Number.parseInt(process.env.LUIGI_SDK_MAX_TURNS || '4', 10) || 4,
       },
+    },
+    arcAgent: {
+      model: process.env.ARC_AGENT_MODEL || 'openai/gpt-5',
+      maxTurns: Number.parseInt(process.env.ARC_AGENT_MAX_TURNS || '6', 10) || 6,
     }
   };
 }
@@ -232,4 +242,8 @@ export function getCircuitBreakerConfig(): CircuitBreakerConfig {
 
 export function getLuigiConfig(): LuigiConfig {
   return config.luigi;
+}
+
+export function getArcAgentConfig(): ArcAgentConfig {
+  return config.arcAgent;
 }
