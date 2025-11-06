@@ -169,10 +169,12 @@ npm run db:push  # Push database schema changes
 - Template-driven section progression
 - Auto-mode with intelligent dependency resolution
 
-### 6. Research Synthesis Mode (`/research`)
-- Multi-model collaborative research workflow
-- Advanced variable system (11+ typed variables)
-- Dynamic role assignment and synthesis rounds
+### 6. Research Synthesis Mode (`/research`)  
+- Needs to be redesigned to be a Multi agent collaborative workspace
+- Needs to be coded using the latest references!!!
+- Integrated openai-agents-js and openai-chatkit-advanced-samples under libs/ directory for future agent development references!!!!
+- Isolated upstream samples from core application code to maintain clean project structure
+
 
 ## Key Files for Development
 
@@ -253,10 +255,7 @@ promptAudits: {
   id, templateId, variables, resolvedSections, messageStructure,
   modelId, responseContent, responseTime, tokenUsage, cost, createdAt
 }
-```
 
-## Recent Important Changes
-- OpenAI reasoning models configured with "high" effort level in `server/providers/openai.ts:180`
 - Migration to Responses API for all OpenAI interactions
 - Unified variable system with server-side authority
 - Template-driven modes with automatic dependency resolution
