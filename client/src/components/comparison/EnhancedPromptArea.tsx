@@ -179,10 +179,10 @@ export function EnhancedPromptArea({
   const currentCategory = promptCategories.find(cat => cat.id === selectedCategory);
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6">
+    <div className="w-full max-w-5xl mx-auto space-y-4">
       {/* Main Prompt Card */}
       <Card className="relative">
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-2">
           <CardTitle className="flex items-center justify-between text-base">
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-primary" />
@@ -194,17 +194,17 @@ export function EnhancedPromptArea({
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {/* Prompt Textarea */}
           <div className="relative">
             <Textarea
               value={prompt}
               onChange={handlePromptChange}
               onFocus={handlePromptFocus}
-              rows={6}
+              rows={5}
               className={cn(
-                "min-h-40 resize-none text-sm leading-relaxed",
-                "focus:ring-1 focus:ring-primary/20 border",
+                "min-h-[9rem] resize-none text-sm leading-relaxed",
+                "focus:ring focus:ring-primary/15 border",
                 isDefaultPrompt && "text-muted-foreground"
               )}
               placeholder="Enter your prompt here to compare across AI models..."
@@ -223,11 +223,11 @@ export function EnhancedPromptArea({
 
           {/* Template Selection */}
           {!promptsLoading && promptCategories.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-muted/20 rounded border">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 p-1.5 bg-muted/20 rounded border">
               <div className="flex items-center space-x-1.5">
                 <BookOpen className="w-3 h-3 text-muted-foreground" />
                 <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-6 text-xs">
                     <SelectValue placeholder="Template category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -242,7 +242,7 @@ export function EnhancedPromptArea({
 
               {selectedCategory && currentCategory && (
                 <Select value={selectedPromptTemplate} onValueChange={handleTemplateChange}>
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-6 text-xs">
                     <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent>
@@ -257,10 +257,10 @@ export function EnhancedPromptArea({
             </div>
           )}
 
-          <Separator />
+          <Separator className="my-2" />
 
           {/* Model Selection Area */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-medium flex items-center gap-1.5">
                 <Zap className="w-3 h-3 text-primary" />
@@ -301,7 +301,7 @@ export function EnhancedPromptArea({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-1.5 border-dashed border-2 hover:border-primary/50 h-7"
+                    className="gap-1 border-dashed border hover:border-primary/50 h-7"
                     disabled={disabled}
                   >
                     <Plus className="w-3 h-3" />
@@ -312,10 +312,10 @@ export function EnhancedPromptArea({
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-2" />
 
           {/* Action Area */}
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between pt-0">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {selectedModels.length > 0 && (
                 <>
@@ -323,12 +323,13 @@ export function EnhancedPromptArea({
                   <span>Ready to compare {selectedModels.length} models</span>
                 </>
               )}
-            </div>              <Button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                size="default"
+            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              size="default"
               className={cn(
-                "gap-1.5 min-w-24 h-8",
+                "gap-1 min-w-[5.5rem] h-8",
                 isComparing && "animate-pulse"
               )}
             >
@@ -350,22 +351,22 @@ export function EnhancedPromptArea({
 
       {/* Quick Stats */}
       {selectedModels.length > 0 && (Object.keys(responses).length > 0 || loadingModels.size > 0) && (
-        <div className="grid grid-cols-4 gap-2">
-          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+        <div className="grid grid-cols-4 gap-1.5">
+          <div className="text-center p-1.5 bg-muted/20 rounded text-xs">
             <div className="font-semibold">{selectedModels.length}</div>
             <div className="text-muted-foreground">Models</div>
           </div>
-          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+          <div className="text-center p-1.5 bg-muted/20 rounded text-xs">
             <div className="font-semibold">{wordCount}</div>
             <div className="text-muted-foreground">Words</div>
           </div>
-          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+          <div className="text-center p-1.5 bg-muted/20 rounded text-xs">
             <div className="font-semibold">
               {Object.keys(responses).length}
             </div>
             <div className="text-muted-foreground">Ready</div>
           </div>
-          <div className="text-center p-2 bg-muted/20 rounded text-xs">
+          <div className="text-center p-1.5 bg-muted/20 rounded text-xs">
             <div className="font-semibold">{loadingModels.size}</div>
             <div className="text-muted-foreground">Running</div>
           </div>

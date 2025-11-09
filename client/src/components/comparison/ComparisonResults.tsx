@@ -53,9 +53,9 @@ export function ComparisonResults({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Export Button - positioned above results */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pb-1">
         <ExportButton
           prompt={prompt}
           models={selectedModelData}
@@ -65,7 +65,7 @@ export function ComparisonResults({
       </div>
 
       {/* Results Grid */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3">
         {selectedModelData.map((model) => (
           <ResponseCard
             key={model.id}

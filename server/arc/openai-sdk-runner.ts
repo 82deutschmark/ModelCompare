@@ -6,12 +6,15 @@
  * SRP/DRY check: Pass - isolates SDK invocation, parsing, and stage normalization for ARC runs.
  */
 
-import { Agent, run as runAgent } from '@openai/agents-core';
 import { z } from 'zod';
 import { ARC_STAGES, type ArcStageId, type ArcStageStatus } from '@shared/arc-types';
 import type { ArcRun, ArcMessage } from '@shared/schema';
 import type { AgentRunResponse } from '../services/agent-runner';
 import { storage } from '../storage';
+import {
+  getOpenAiResponsesClient,
+  type JsonSchemaDefinition,
+} from '../services/openai-responses-client';
 
 const ARC_STAGE_STATUS: readonly ArcStageStatus[] = ['idle', 'in-progress', 'completed', 'blocked', 'failed'];
 const ARC_STAGE_STATUS_SET = new Set<ArcStageStatus>(ARC_STAGE_STATUS);
@@ -30,6 +33,45 @@ const parsedResponseSchema = z.object({
   nextAction: z.enum(['await_user', 'continue', 'complete']).default('complete'),
 });
 
+const ARC_AGENT_JSON_SCHEMA: JsonSchemaDefinition = {
+  name: 'arc_agent_payload',
+  schema: {
+    type: 'object',
+    properties: {
+      stages: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            status: { type: 'string' },
+            summary: { type: 'string' },
+            blockingReason: { type: 'string' },
+          },
+          required: ['id', 'status'],
+          additionalProperties: false,
+        },
+      },
+      reasoning: { type: 'string' },
+      finalAnswer: { type: 'string' },
+      answerGrid: {
+        type: 'array',
+        items: {
+          type: 'array',
+          items: { type: 'number' },
+        },
+      },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      nextAction: {
+        type: 'string',
+        enum: ['await_user', 'continue', 'complete'],
+      },
+    },
+    required: ['reasoning', 'finalAnswer', 'nextAction'],
+    additionalProperties: false,
+  },
+};
+
 export interface ArcSdkRunOptions {
   model: string;
   maxTurns?: number;
@@ -44,20 +86,27 @@ export interface ArcSdkRunParams {
 export async function runArcAgentWithSdk(params: ArcSdkRunParams): Promise<AgentRunResponse> {
   const { run, options, userReply } = params;
   const history = await loadConversationHistory(run.id);
-  const prompt = buildPrompt(run, history, userReply);
-
-  const agent = new Agent({
-    name: 'ARC Reasoning Agent',
-    model: options.model,
-    instructions: buildInstructions(),
+  const prompt = composeStructuredPrompt({
+    instructions: buildInstructions(options.maxTurns),
+    task: buildPrompt(run, history, userReply),
   });
 
-  const result = await runAgent(agent, prompt, { maxTurns: options.maxTurns });
-  const raw = stringifyFinalOutput(result.finalOutput);
-  const parsed = parseAgentPayload(raw);
+  const responsesClient = getOpenAiResponsesClient();
+  const { parsed, rawText, usage } = await responsesClient.createJsonResponse({
+    model: options.model,
+    prompt,
+    schema: parsedResponseSchema,
+    schemaDefinition: ARC_AGENT_JSON_SCHEMA,
+    metadata: {
+      runId: run.id,
+      arcTaskId: run.taskId,
+      agent: 'arc',
+    },
+    maxOutputTokens: 6000,
+  });
   const stageSnapshots = normalizeStageSnapshots(parsed.stages);
   const currentStage = selectCurrentStage(stageSnapshots);
-  const artifactData = buildArtifactData(parsed, raw);
+  const artifactData = buildArtifactData(parsed, rawText);
 
   return {
     status: parsed.nextAction === 'complete' ? 'completed' : 'running',
@@ -79,6 +128,7 @@ export async function runArcAgentWithSdk(params: ArcSdkRunParams): Promise<Agent
       },
     ],
     nextAction: parsed.nextAction === 'await_user' ? 'await_user' : 'continue',
+    costCents: usage.costCents,
   };
 }
 
@@ -121,8 +171,8 @@ function buildPrompt(run: ArcRun, history: ArcMessage[], userReply?: string): st
   return sections.join('\n\n');
 }
 
-function buildInstructions(): string {
-  return `You are an ARC (Abstraction and Reasoning Corpus) specialist. Given a puzzle payload,
+function buildInstructions(maxTurns?: number): string {
+  const base = `You are an ARC (Abstraction and Reasoning Corpus) specialist. Given a puzzle payload,
 identify transformation rules, propose candidate solutions, and report a final answer.
 Always respond with a JSON object matching this schema:
 {
@@ -137,19 +187,23 @@ Always respond with a JSON object matching this schema:
 }
 Use stage identifiers from the provided list only.
 If additional information is required from a human, set nextAction to "await_user" and explain why in reasoning.`;
+  if (maxTurns && Number.isFinite(maxTurns)) {
+    return `${base}\nLimit your internal deliberation to at most ${maxTurns} iterations before finalising the JSON response.`;
+  }
+  return base;
 }
 
-function parseAgentPayload(raw: string) {
-  try {
-    const json = JSON.parse(raw);
-    return parsedResponseSchema.parse(json);
-  } catch (error) {
-    return parsedResponseSchema.parse({
-      reasoning: `Failed to parse agent output as JSON. Raw output preserved. Error: ${error instanceof Error ? error.message : String(error)}`,
-      finalAnswer: raw,
-      nextAction: 'await_user',
-    });
-  }
+function composeStructuredPrompt(params: { instructions: string; task: string }): string {
+  return [
+    '### Core Instructions',
+    params.instructions.trim(),
+    '',
+    '### Task Input',
+    params.task.trim(),
+    '',
+    '### Output Requirements',
+    'Return a JSON object that exactly matches the schema above. Do not include markdown fences or additional commentary.',
+  ].join('\n');
 }
 
 function normalizeStageSnapshots(stages?: Array<{ id: string; status: string; summary?: string; blockingReason?: string }>) {
@@ -232,13 +286,6 @@ function buildArtifactData(parsed: z.infer<typeof parsedResponseSchema>, raw: st
     confidence: parsed.confidence,
     raw,
   };
-}
-
-function stringifyFinalOutput(finalOutput: unknown): string {
-  if (typeof finalOutput === 'string') {
-    return finalOutput.trim();
-  }
-  return JSON.stringify(finalOutput, null, 2);
 }
 
 function capitalizeRole(role: string): string {

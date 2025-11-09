@@ -7,12 +7,16 @@
  *                routing, storage orchestration, or REST fallback paths.
  */
 
-import { Agent, run as runAgent } from '@openai/agents-core';
+import { z } from 'zod';
 import { LUIGI_STAGES } from '@shared/luigi-types';
 import type { LuigiMessage, LuigiRun } from '@shared/schema';
 import type { LuigiStageId, LuigiStageStatus } from '@shared/luigi-types';
 import { storage } from '../storage';
 import type { AgentRunResponse } from '../services/agent-runner';
+import {
+  getOpenAiResponsesClient,
+  type JsonSchemaDefinition,
+} from '../services/openai-responses-client';
 
 const HISTORY_LIMIT = 12;
 const STAGE_LABELS = new Map(LUIGI_STAGES.map((stage) => [stage.id, stage.label]));
@@ -40,24 +44,55 @@ type StageSnapshotRecord = Partial<Record<LuigiStageId, StageSnapshot>>;
 const VALID_STAGE_STATUSES: readonly LuigiStageStatus[] = ['idle', 'in-progress', 'completed', 'blocked', 'failed'];
 const VALID_STAGE_STATUS_SET = new Set<LuigiStageStatus>(VALID_STAGE_STATUSES);
 
-const orchestratorInstructions = `You are the Luigi Master Orchestrator. Coordinate stage leads,
-aggregate validated information, and surface action items. Always respond in
-GitHub-flavoured Markdown with the following sections only:
+const orchestratorResponseSchema = z.object({
+  briefingMarkdown: z.string().min(1),
+  stageUpdates: z.record(
+    z.object({
+      status: z.string().optional(),
+      summary: z.string().optional(),
+      blockingReason: z.string().optional(),
+    })
+  ).optional(),
+  requiredInputs: z.array(z.string()).optional(),
+  risks: z.array(z.string()).optional(),
+  nextAction: z.enum(['await_user', 'continue']).default('await_user'),
+});
 
-## Stage Progress
-- Bullet list summarising the current status for each relevant stage.
-
-## Key Risks
-- Bullet list of the most pressing risks or uncertainties.
-
-## Required Inputs
-- Bullet list describing information or decisions needed from humans.
-
-## Recommended Actions
-- Bullet list of concrete next steps for the stage leads or stakeholders.
-
-When referencing stages, use their human-friendly names. Stay concise (<= 250
-words total) while maintaining clarity.`;
+const ORCHESTRATOR_JSON_SCHEMA: JsonSchemaDefinition = {
+  name: 'luigi_orchestrator_payload',
+  schema: {
+    type: 'object',
+    properties: {
+      briefingMarkdown: { type: 'string' },
+      stageUpdates: {
+        type: 'object',
+        additionalProperties: {
+          type: 'object',
+          properties: {
+            status: { type: 'string' },
+            summary: { type: 'string' },
+            blockingReason: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+      requiredInputs: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      risks: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      nextAction: {
+        type: 'string',
+        enum: ['await_user', 'continue'],
+      },
+    },
+    required: ['briefingMarkdown', 'nextAction'],
+    additionalProperties: false,
+  },
+};
 
 export async function runLuigiOrchestratorWithSdk(
   params: LuigiSdkRunParams,
@@ -76,23 +111,28 @@ export async function runLuigiOrchestratorWithSdk(
   if (userReply) {
     promptSections.push(`Latest stakeholder message:\n${userReply}`);
   }
-  promptSections.push(
-    'Deliver the requested sections using Markdown and reference specific stages where helpful.',
-  );
+  const prompt = composeStructuredPrompt({
+    instructions: buildOrchestratorInstructions(options.maxTurns),
+    sections: promptSections,
+  });
 
-  const agent = new Agent({
-    name: 'Luigi Master Orchestrator',
-    instructions: orchestratorInstructions,
+  const responsesClient = getOpenAiResponsesClient();
+  const { parsed, rawText, usage } = await responsesClient.createJsonResponse({
     model: options.model,
+    prompt,
+    schema: orchestratorResponseSchema,
+    schemaDefinition: ORCHESTRATOR_JSON_SCHEMA,
+    metadata: {
+      runId: run.id,
+      agent: 'luigi-orchestrator',
+      missionName: run.missionName,
+    },
+    maxOutputTokens: 5000,
   });
-
-  const result = await runAgent(agent, promptSections.join('\n\n'), {
-    maxTurns: options.maxTurns,
-  });
-
-  const finalOutput = stringifyFinalOutput(result.finalOutput);
   const nowIso = new Date().toISOString();
-  const enrichedSnapshots = markInitialStage(stageSnapshots, nowIso);
+  const seededSnapshots = markInitialStage(stageSnapshots, nowIso);
+  const enrichedSnapshots = mergeStageSnapshots(seededSnapshots, parsed.stageUpdates, nowIso);
+  const messageContent = buildOrchestratorMessage(parsed);
 
   return {
     status: 'running',
@@ -102,7 +142,7 @@ export async function runLuigiOrchestratorWithSdk(
       {
         role: 'orchestrator',
         agentId: 'luigi-master-orchestrator',
-        content: finalOutput,
+        content: messageContent,
       },
     ],
     artifacts: [
@@ -110,12 +150,98 @@ export async function runLuigiOrchestratorWithSdk(
         stageId: 'start-time-task',
         type: 'markdown',
         title: 'Luigi Orchestrator Briefing',
-        description: 'Markdown briefing generated via OpenAI Agents SDK.',
-        data: { markdown: finalOutput },
+        description: 'Structured orchestration briefing generated via OpenAI Responses API.',
+        data: {
+          markdown: parsed.briefingMarkdown,
+          requiredInputs: parsed.requiredInputs ?? [],
+          risks: parsed.risks ?? [],
+          stageUpdates: parsed.stageUpdates ?? {},
+          raw: rawText,
+        },
       },
     ],
-    nextAction: 'await_user',
+    nextAction: parsed.nextAction,
+    costCents: usage.costCents,
   };
+}
+
+function buildOrchestratorInstructions(maxTurns?: number): string {
+  const base = `You are the Luigi Master Orchestrator. Coordinate stage leads, aggregate validated information, and surface action items.
+Return a JSON object with the following structure:
+{
+  "briefingMarkdown": "Markdown summary covering Stage Progress, Key Risks, Required Inputs, and Recommended Actions",
+  "stageUpdates": {
+    "<stage-id>": {
+      "status": "idle|in-progress|completed|blocked|failed",
+      "summary": "concise update",
+      "blockingReason": "optional detail when blocked"
+    }
+  },
+  "requiredInputs": ["things the team needs"],
+  "risks": ["top risks"],
+  "nextAction": "await_user" | "continue"
+}
+Ensure briefingMarkdown uses GitHub-flavoured Markdown, references human-readable stage names, and stays within 250 words.`;
+  if (maxTurns && Number.isFinite(maxTurns)) {
+    return `${base}\nLimit your internal planning iterations to at most ${maxTurns} before returning the JSON response.`;
+  }
+  return base;
+}
+
+function composeStructuredPrompt(params: { instructions: string; sections: string[] }): string {
+  const context = params.sections.map((section) => section.trim()).filter(Boolean).join('\n\n');
+  return [
+    '### Core Instructions',
+    params.instructions.trim(),
+    '',
+    '### Context',
+    context,
+    '',
+    '### Output Requirements',
+    'Return only a JSON object that matches the schema described above. Do not include markdown fences or commentary outside the JSON payload.',
+  ].join('\n');
+}
+
+function mergeStageSnapshots(
+  base: StageSnapshotRecord,
+  updates: Record<string, { status?: string; summary?: string; blockingReason?: string }> | undefined,
+  timestampIso: string,
+): StageSnapshotRecord {
+  if (!updates || Object.keys(updates).length === 0) {
+    return base;
+  }
+
+  const merged: StageSnapshotRecord = { ...base };
+
+  for (const [rawStageId, update] of Object.entries(updates)) {
+    const stageId = rawStageId as LuigiStageId;
+    const existing = merged[stageId] ?? { status: 'idle' as LuigiStageStatus };
+    const status = update.status ? normalizeStageStatus(update.status) : existing.status ?? 'idle';
+
+    merged[stageId] = {
+      status,
+      startedAt: existing.startedAt ?? timestampIso,
+      completedAt: status === 'completed' ? timestampIso : existing.completedAt,
+      blockingReason: update.blockingReason ?? existing.blockingReason,
+      summary: update.summary ?? existing.summary,
+    };
+  }
+
+  return merged;
+}
+
+function buildOrchestratorMessage(parsed: z.infer<typeof orchestratorResponseSchema>): string {
+  const sections: string[] = [parsed.briefingMarkdown.trim()];
+
+  if (parsed.risks && parsed.risks.length > 0) {
+    sections.push('## Key Risks', parsed.risks.map((risk) => `- ${risk}`).join('\n'));
+  }
+
+  if (parsed.requiredInputs && parsed.requiredInputs.length > 0) {
+    sections.push('## Required Inputs', parsed.requiredInputs.map((item) => `- ${item}`).join('\n'));
+  }
+
+  return sections.join('\n\n');
 }
 
 async function fetchConversationHistory(runId: string): Promise<LuigiMessage[]> {
@@ -212,14 +338,6 @@ function formatRole(role: string): string {
     default:
       return role;
   }
-}
-
-function stringifyFinalOutput(finalOutput: unknown): string {
-  if (typeof finalOutput === 'string') {
-    return finalOutput.trim();
-  }
-
-  return JSON.stringify(finalOutput, null, 2);
 }
 
 function markInitialStage(
