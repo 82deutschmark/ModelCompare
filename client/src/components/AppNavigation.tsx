@@ -138,13 +138,13 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           variant={isCurrentMode ? "default" : "ghost"}
           size={size}
           className={cn(
-            "flex items-center space-x-1",
+            "flex items-center space-x-0.5",
             isCurrentMode && "bg-primary text-primary-foreground"
           )}
           disabled={isCurrentMode}
         >
           <IconComponent className="w-3 h-3" />
-          <span className="text-xs">{mode.name}</span>
+          <span className="text-[0.7rem]">{mode.name}</span>
         </Button>
       </Link>
     );
@@ -152,10 +152,10 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-7xl mx-auto px-2">
-        <div className="flex h-8 items-center justify-between">
+      <div className="mx-auto w-full max-w-[1600px] px-1.5">
+        <div className="flex h-7 items-center justify-between">
           {/* Compact Logo and Breadcrumb */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-0.5">
             <div className="flex items-center space-x-1">
               {TitleIcon && <TitleIcon className="w-3 h-3 text-primary" />}
               <span className="font-bold text-sm">ModelCompare</span>
@@ -164,24 +164,24 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           </div>
 
           {/* Desktop Navigation - All modes visible */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-0.5">
             {/* Core Modes */}
             {coreMode.map(mode => renderModeButton(mode))}
 
             {/* Visual separator */}
-            <div className="h-4 w-px bg-border mx-1" />
+            <div className="h-4 w-px bg-border mx-0.5" />
 
             {/* Advanced Modes - now directly visible */}
             {advancedModes.map(mode => renderModeButton(mode))}
 
             {/* Visual separator */}
-            <div className="h-4 w-px bg-border mx-1" />
+            <div className="h-4 w-px bg-border mx-0.5" />
 
             {/* Experimental Modes */}
             {experimentalModes.map(mode => (
               <div key={mode.id} className="relative">
                 {renderModeButton(mode)}
-                <Badge variant="secondary" className="absolute -top-1 -right-1 px-1 py-0 text-xs scale-75">
+                <Badge variant="secondary" className="absolute -top-1 -right-1 px-0.5 py-0 text-[0.65rem]">
                   β
                 </Badge>
               </div>
@@ -189,7 +189,7 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           </div>
 
           {/* Compact Authentication & Theme */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-0.5">
             {/* Credit Balance - only show if OAuth authenticated */}
             {isOAuthUser && user && (
               <div className="hidden lg:block">

@@ -11,6 +11,22 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.40] - 2025-11-06 20:30 UTC
+
+### Changed
+- Tightened global compare layout gutters and spacing to present more information on screen without scrolling.
+- Densified the prompt hero card, model controls, and quick stats to speed up multi-model setup.
+- Slimmed navigation, results stack, and response cards for a compact reading experience.
+
+## [Version 0.4.39] - 2025-11-06 19:50 UTC
+
+### Added
+- Authored `docs/2025-11-06-plan-arc-agents.md` outlining the stabilization plan for real OpenAI agent integrations.
+
+### Changed
+- Replaced stubbed ARC and Luigi agent executors with a shared OpenAI Responses API client that enforces JSON schemas and tracks usage costs.
+- Added unit coverage for the responses client along with ARC and Luigi SDK runners to ensure structured payloads are parsed correctly.
+
 ## [Version 0.4.38] - 2025-11-06 04:10 UTC
 
 ### Added
