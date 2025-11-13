@@ -88,7 +88,8 @@ export async function checkDeviceCredits(req: Request, res: Response, next: Next
 
 /**
  * Middleware to deduct credits after successful API calls
- * Should be called after the API operation completes successfully
+ * DEPRECATED: Use reserveDeviceCredits + commitReservation instead
+ * This function is kept for backward compatibility but should not be used in new code
  */
 export async function deductDeviceCredits(
   req: Request,
@@ -114,6 +115,100 @@ export async function deductDeviceCredits(
     contextError('Failed to deduct device credits:', error);
     // Don't fail the request - credit deduction errors shouldn't break user experience
     next();
+  }
+}
+
+/**
+ * NEW ATOMIC MIDDLEWARE: Reserve credits before expensive operations
+ * This prevents race conditions by reserving credits atomically
+ * Usage: Add this middleware BEFORE the route handler that makes model calls
+ *
+ * @param creditsNeeded - Number of credits to reserve (default: 5 per model call)
+ */
+export function reserveDeviceCredits(creditsNeeded: number = 5) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = req.deviceUser;
+
+      if (!user) {
+        return res.status(500).json({
+          error: 'No user session',
+          message: 'User session not initialized. Please refresh the page.'
+        });
+      }
+
+      const storage = await getStorage();
+      const reservation = await storage.reserveCredits(user.id, creditsNeeded, {
+        endpoint: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (!reservation.success) {
+        return res.status(402).json({
+          error: 'Insufficient credits',
+          message: reservation.message || 'You have reached your usage limit. Visit your account page to continue.',
+          credits: reservation.remainingCredits || 0,
+          requiresPayment: true
+        });
+      }
+
+      // Store reservation ID in request for later commit/refund
+      (req as any).creditReservationId = reservation.reservationId;
+
+      contextLog(`Reserved ${creditsNeeded} credits for user ${user.id}, reservation: ${reservation.reservationId}`);
+      next();
+    } catch (error) {
+      contextError('Failed to reserve device credits:', error);
+      res.status(500).json({ error: 'Failed to verify credit balance' });
+    }
+  };
+}
+
+/**
+ * NEW ATOMIC MIDDLEWARE: Commit reserved credits after successful operation
+ * Call this at the END of successful operations to deduct the reserved credits
+ *
+ * Usage: Call this function manually after operation succeeds
+ */
+export async function commitDeviceCredits(req: Request): Promise<void> {
+  const reservationId = (req as any).creditReservationId;
+
+  if (!reservationId) {
+    contextError('Warning: No reservation ID found for commit');
+    return;
+  }
+
+  try {
+    const storage = await getStorage();
+    await storage.commitReservation(reservationId);
+    contextLog(`Committed credit reservation ${reservationId}`);
+  } catch (error) {
+    contextError(`Failed to commit reservation ${reservationId}:`, error);
+    // Don't throw - we don't want to fail the response if commit fails
+  }
+}
+
+/**
+ * NEW ATOMIC MIDDLEWARE: Refund reserved credits if operation fails
+ * Call this if the operation fails to return credits to the user
+ *
+ * Usage: Call this function manually in catch blocks or error paths
+ */
+export async function refundDeviceCredits(req: Request): Promise<void> {
+  const reservationId = (req as any).creditReservationId;
+
+  if (!reservationId) {
+    // No reservation to refund
+    return;
+  }
+
+  try {
+    const storage = await getStorage();
+    await storage.refundReservation(reservationId);
+    contextLog(`Refunded credit reservation ${reservationId}`);
+  } catch (error) {
+    contextError(`Failed to refund reservation ${reservationId}:`, error);
   }
 }
 

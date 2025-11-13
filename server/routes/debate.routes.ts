@@ -23,6 +23,7 @@ import { storage } from "../storage.js";
 import { StreamSessionRegistry } from "../streaming/session-registry.js";
 import { SseStreamManager } from "../streaming/sse-manager.js";
 import { StreamHarness } from "../streaming/stream-harness.js";
+import { ensureDeviceUser, reserveDeviceCredits, commitDeviceCredits, refundDeviceCredits } from "../device-auth.js";
 
 const router = Router();
 
@@ -599,7 +600,8 @@ router.get("/sessions", async (req, res) => {
 });
 
 // POST /api/debate/session - Create new debate session
-router.post("/session", async (req, res) => {
+// NOW WITH CREDIT CHECKS - 5 credits to create session
+router.post("/session", ensureDeviceUser, async (req, res) => {
   try {
     const { topic, model1Id, model2Id, adversarialLevel } = req.body;
 
@@ -607,24 +609,48 @@ router.post("/session", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const debateSession = await storage.createDebateSession({
-      topicText: topic,
-      model1Id: model1Id,
-      model2Id: model2Id,
-      adversarialLevel: adversarialLevel,
-      turnHistory: [],
-      model1ResponseIds: [],
-      model2ResponseIds: []
-    });
+    // Reserve 5 credits for debate session creation
+    const reservationMiddleware = reserveDeviceCredits(5);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        reservationMiddleware(req, res, (err?: any) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch (reservationError) {
+      // Reservation failed - already sent 402 response
+      return;
+    }
 
-    res.json({
-      id: debateSession.id,
-      topic: debateSession.topicText,
-      model1Id: debateSession.model1Id,
-      model2Id: debateSession.model2Id,
-      adversarialLevel: debateSession.adversarialLevel,
-      createdAt: debateSession.createdAt
-    });
+    try {
+      const debateSession = await storage.createDebateSession({
+        topicText: topic,
+        model1Id: model1Id,
+        model2Id: model2Id,
+        adversarialLevel: adversarialLevel,
+        turnHistory: [],
+        model1ResponseIds: [],
+        model2ResponseIds: []
+      });
+
+      // COMMIT credits after successful session creation
+      await commitDeviceCredits(req);
+
+      res.json({
+        id: debateSession.id,
+        topic: debateSession.topicText,
+        model1Id: debateSession.model1Id,
+        model2Id: debateSession.model2Id,
+        adversarialLevel: debateSession.adversarialLevel,
+        createdAt: debateSession.createdAt,
+        creditsUsed: 5,
+      });
+    } catch (sessionError) {
+      // Session creation failed - REFUND credits
+      await refundDeviceCredits(req);
+      throw sessionError;
+    }
   } catch (error) {
     console.error("Failed to create debate session:", error);
     res.status(500).json({ error: "Failed to create debate session" });
@@ -660,27 +686,51 @@ router.get("/session/:id", async (req, res) => {
   }
 });
 
-router.post("/stream/init", async (req, res) => {
+router.post("/stream/init", ensureDeviceUser, async (req, res) => {
   if (!isStreamingEnabled()) {
     res.status(503).json({ error: "Streaming is disabled by configuration" });
     return;
   }
 
   try {
-    const payload = await prepareStreamPayload(req.body);
-    cleanupExpiredStreamSessions();
+    // Reserve 5 credits for debate stream initialization
+    const reservationMiddleware = reserveDeviceCredits(5);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        reservationMiddleware(req, res, (err?: any) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch (reservationError) {
+      // Reservation failed - already sent 402 response
+      return;
+    }
 
-    const taskId = buildTaskId(payload);
-    const modelKey = payload.modelId;
-    const { sessionId, expiresAt } = streamSessionRegistry.createSession(taskId, modelKey, payload);
+    try {
+      const payload = await prepareStreamPayload(req.body);
+      cleanupExpiredStreamSessions();
 
-    res.json({
-      sessionId,
-      taskId,
-      modelKey,
-      debateSessionId: payload.debateSessionId,
-      expiresAt: new Date(expiresAt).toISOString()
-    });
+      const taskId = buildTaskId(payload);
+      const modelKey = payload.modelId;
+      const { sessionId, expiresAt } = streamSessionRegistry.createSession(taskId, modelKey, payload);
+
+      // COMMIT credits after successful stream initialization
+      await commitDeviceCredits(req);
+
+      res.json({
+        sessionId,
+        taskId,
+        modelKey,
+        debateSessionId: payload.debateSessionId,
+        expiresAt: new Date(expiresAt).toISOString(),
+        creditsUsed: 5,
+      });
+    } catch (initError) {
+      // Stream initialization failed - REFUND credits
+      await refundDeviceCredits(req);
+      throw initError;
+    }
   } catch (error) {
     const statusCode = error instanceof HttpError ? error.statusCode : 500;
     const message = error instanceof Error ? error.message : "Failed to initialize debate stream";

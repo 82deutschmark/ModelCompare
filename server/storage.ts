@@ -25,7 +25,7 @@
  * and availability.
  */
 
-import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type ArcRun, type InsertArcRun, type ArcMessage, type InsertArcMessage, type ArcArtifact, type InsertArcArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, luigiRuns, luigiMessages, luigiArtifacts, arcRuns, arcMessages, arcArtifacts, debateSessions } from "@shared/schema";
+import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type CreditReservation, type InsertCreditReservation, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type ArcRun, type InsertArcRun, type ArcMessage, type InsertArcMessage, type ArcArtifact, type InsertArcArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, creditReservations, luigiRuns, luigiMessages, luigiArtifacts, arcRuns, arcMessages, arcArtifacts, debateSessions } from "@shared/schema";
 import type { LuigiRunStatus, LuigiStageId } from "@shared/luigi-types";
 import type { ArcRunStatus, ArcStageId, ArcMessageRole } from "@shared/arc-types";
 import { randomUUID, createHash } from "crypto";
@@ -149,7 +149,19 @@ export interface IStorage {
   getUserCredits(userId: string): Promise<number>;
   deductCredits(userId: string, amount: number): Promise<User>;
   addCredits(userId: string, amount: number): Promise<User>;
-  
+
+  // Credit reservation operations (atomic, prevents race conditions)
+  reserveCredits(userId: string, amount: number, metadata?: Record<string, unknown>): Promise<{
+    success: boolean;
+    reservationId?: string;
+    remainingCredits?: number;
+    message?: string;
+  }>;
+  commitReservation(reservationId: string): Promise<void>;
+  refundReservation(reservationId: string): Promise<void>;
+  getUserPendingReservations(userId: string): Promise<number>;
+  cleanupExpiredReservations(): Promise<void>;
+
   // Stripe integration operations
   updateStripeCustomerId(userId: string, customerId: string): Promise<User>;
   updateUserStripeInfo(userId: string, info: StripeInfo): Promise<User>;
@@ -567,6 +579,189 @@ export class DbStorage implements IStorage {
     return result;
   }
 
+  // Credit reservation operations - atomic to prevent race conditions
+  async reserveCredits(userId: string, amount: number, metadata?: Record<string, unknown>): Promise<{
+    success: boolean;
+    reservationId?: string;
+    remainingCredits?: number;
+    message?: string;
+  }> {
+    try {
+      // First, cleanup any expired reservations for this user (lazy cleanup)
+      await this.cleanupExpiredReservations();
+
+      // Get current credits and pending reservations in a single query
+      const [userResult] = await requireDb()
+        .select({
+          credits: users.credits,
+        })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!userResult) {
+        return {
+          success: false,
+          message: 'User not found',
+          remainingCredits: 0,
+        };
+      }
+
+      // Calculate pending reservations for this user
+      const pendingReservations = await requireDb()
+        .select()
+        .from(creditReservations)
+        .where(sql`${creditReservations.userId} = ${userId} AND ${creditReservations.status} = 'pending'`);
+
+      const totalPending = pendingReservations.reduce((sum, res) => sum + (res.amount || 0), 0);
+      const availableCredits = (userResult.credits || 0) - totalPending;
+
+      // Check if user has enough available credits
+      if (availableCredits < amount) {
+        return {
+          success: false,
+          message: `Insufficient credits. Available: ${availableCredits}, Required: ${amount}`,
+          remainingCredits: availableCredits,
+        };
+      }
+
+      // Create reservation with 10-minute expiry
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+      const [reservation] = await requireDb()
+        .insert(creditReservations)
+        .values({
+          userId,
+          amount,
+          status: 'pending',
+          expiresAt,
+          metadata: metadata || null,
+        } as any)
+        .returning();
+
+      return {
+        success: true,
+        reservationId: reservation.id,
+        remainingCredits: availableCredits - amount,
+      };
+    } catch (error) {
+      console.error('Failed to reserve credits:', error);
+      return {
+        success: false,
+        message: 'Failed to reserve credits',
+        remainingCredits: 0,
+      };
+    }
+  }
+
+  async commitReservation(reservationId: string): Promise<void> {
+    try {
+      // Get the reservation details
+      const [reservation] = await requireDb()
+        .select()
+        .from(creditReservations)
+        .where(eq(creditReservations.id, reservationId));
+
+      if (!reservation) {
+        throw new Error(`Reservation ${reservationId} not found`);
+      }
+
+      if (reservation.status !== 'pending') {
+        throw new Error(`Reservation ${reservationId} is not pending (status: ${reservation.status})`);
+      }
+
+      // Check if expired
+      if (new Date() > new Date(reservation.expiresAt)) {
+        // Mark as refunded instead of committing
+        await requireDb()
+          .update(creditReservations)
+          .set({ status: 'refunded' })
+          .where(eq(creditReservations.id, reservationId));
+        throw new Error(`Reservation ${reservationId} has expired`);
+      }
+
+      // Deduct the credits from the user
+      await requireDb()
+        .update(users)
+        .set({
+          credits: sql`${users.credits} - ${reservation.amount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, reservation.userId));
+
+      // Mark reservation as committed
+      await requireDb()
+        .update(creditReservations)
+        .set({ status: 'committed' })
+        .where(eq(creditReservations.id, reservationId));
+
+      console.log(`Committed reservation ${reservationId}: ${reservation.amount} credits deducted from user ${reservation.userId}`);
+    } catch (error) {
+      console.error('Failed to commit reservation:', error);
+      throw error;
+    }
+  }
+
+  async refundReservation(reservationId: string): Promise<void> {
+    try {
+      // Get the reservation details
+      const [reservation] = await requireDb()
+        .select()
+        .from(creditReservations)
+        .where(eq(creditReservations.id, reservationId));
+
+      if (!reservation) {
+        console.warn(`Reservation ${reservationId} not found for refund`);
+        return;
+      }
+
+      if (reservation.status !== 'pending') {
+        console.warn(`Reservation ${reservationId} is not pending (status: ${reservation.status}), cannot refund`);
+        return;
+      }
+
+      // Mark reservation as refunded (no credit deduction occurs)
+      await requireDb()
+        .update(creditReservations)
+        .set({ status: 'refunded' })
+        .where(eq(creditReservations.id, reservationId));
+
+      console.log(`Refunded reservation ${reservationId}: ${reservation.amount} credits returned to user ${reservation.userId}`);
+    } catch (error) {
+      console.error('Failed to refund reservation:', error);
+      throw error;
+    }
+  }
+
+  async getUserPendingReservations(userId: string): Promise<number> {
+    try {
+      const pendingReservations = await requireDb()
+        .select()
+        .from(creditReservations)
+        .where(sql`${creditReservations.userId} = ${userId} AND ${creditReservations.status} = 'pending'`);
+
+      return pendingReservations.reduce((sum, res) => sum + (res.amount || 0), 0);
+    } catch (error) {
+      console.error('Failed to get pending reservations:', error);
+      return 0;
+    }
+  }
+
+  async cleanupExpiredReservations(): Promise<void> {
+    try {
+      const now = new Date();
+
+      // Mark all expired pending reservations as refunded
+      await requireDb()
+        .update(creditReservations)
+        .set({ status: 'refunded' })
+        .where(sql`${creditReservations.status} = 'pending' AND ${creditReservations.expiresAt} < ${now}`);
+
+      console.log(`Cleaned up expired credit reservations`);
+    } catch (error) {
+      console.error('Failed to cleanup expired reservations:', error);
+    }
+  }
+
   async updateStripeCustomerId(userId: string, customerId: string): Promise<User> {
     const [result] = await requireDb()
       .update(users)
@@ -598,6 +793,7 @@ export class MemStorage implements IStorage {
   private vixraSessions: Map<string, VixraSession>;
   private promptAudits: Map<string, PromptAuditRecord>;
   private users: Map<string, User>;
+  private creditReservations: Map<string, CreditReservation>;
   private luigiRuns: Map<string, LuigiRun>;
   private luigiMessages: Map<string, LuigiMessage[]>;
   private luigiArtifacts: Map<string, LuigiArtifact[]>;
@@ -612,6 +808,7 @@ export class MemStorage implements IStorage {
     this.vixraSessions = new Map();
     this.promptAudits = new Map();
     this.users = new Map();
+    this.creditReservations = new Map();
     this.luigiRuns = new Map();
     this.luigiMessages = new Map();
     this.luigiArtifacts = new Map();
@@ -1148,16 +1345,178 @@ export class MemStorage implements IStorage {
     if (!user) {
       throw new Error(`User with id ${userId} not found`);
     }
-    
+
     const currentCredits = user.credits ?? 0;
     const updated: User = {
       ...user,
       credits: currentCredits + amount,
       updatedAt: new Date(),
     };
-    
+
     this.users.set(userId, updated);
     return updated;
+  }
+
+  // Credit reservation operations - atomic to prevent race conditions
+  async reserveCredits(userId: string, amount: number, metadata?: Record<string, unknown>): Promise<{
+    success: boolean;
+    reservationId?: string;
+    remainingCredits?: number;
+    message?: string;
+  }> {
+    try {
+      // Cleanup expired reservations first
+      await this.cleanupExpiredReservations();
+
+      const user = this.users.get(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+          remainingCredits: 0,
+        };
+      }
+
+      // Calculate pending reservations for this user
+      const pendingReservations = Array.from(this.creditReservations.values())
+        .filter(res => res.userId === userId && res.status === 'pending');
+
+      const totalPending = pendingReservations.reduce((sum, res) => sum + (res.amount || 0), 0);
+      const availableCredits = (user.credits || 0) - totalPending;
+
+      // Check if user has enough available credits
+      if (availableCredits < amount) {
+        return {
+          success: false,
+          message: `Insufficient credits. Available: ${availableCredits}, Required: ${amount}`,
+          remainingCredits: availableCredits,
+        };
+      }
+
+      // Create reservation with 10-minute expiry
+      const reservationId = randomUUID();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+      const reservation: CreditReservation = {
+        id: reservationId,
+        userId,
+        amount,
+        status: 'pending',
+        expiresAt,
+        metadata: metadata || null,
+        createdAt: new Date(),
+      };
+
+      this.creditReservations.set(reservationId, reservation);
+
+      return {
+        success: true,
+        reservationId,
+        remainingCredits: availableCredits - amount,
+      };
+    } catch (error) {
+      console.error('Failed to reserve credits:', error);
+      return {
+        success: false,
+        message: 'Failed to reserve credits',
+        remainingCredits: 0,
+      };
+    }
+  }
+
+  async commitReservation(reservationId: string): Promise<void> {
+    const reservation = this.creditReservations.get(reservationId);
+
+    if (!reservation) {
+      throw new Error(`Reservation ${reservationId} not found`);
+    }
+
+    if (reservation.status !== 'pending') {
+      throw new Error(`Reservation ${reservationId} is not pending (status: ${reservation.status})`);
+    }
+
+    // Check if expired
+    if (new Date() > new Date(reservation.expiresAt)) {
+      // Mark as refunded instead of committing
+      reservation.status = 'refunded';
+      this.creditReservations.set(reservationId, reservation);
+      throw new Error(`Reservation ${reservationId} has expired`);
+    }
+
+    const user = this.users.get(reservation.userId);
+    if (!user) {
+      throw new Error(`User ${reservation.userId} not found`);
+    }
+
+    // Deduct the credits from the user
+    const currentCredits = user.credits ?? 0;
+    const updated: User = {
+      ...user,
+      credits: Math.max(0, currentCredits - reservation.amount),
+      updatedAt: new Date(),
+    };
+
+    this.users.set(reservation.userId, updated);
+
+    // Mark reservation as committed
+    reservation.status = 'committed';
+    this.creditReservations.set(reservationId, reservation);
+
+    console.log(`Committed reservation ${reservationId}: ${reservation.amount} credits deducted from user ${reservation.userId}`);
+  }
+
+  async refundReservation(reservationId: string): Promise<void> {
+    const reservation = this.creditReservations.get(reservationId);
+
+    if (!reservation) {
+      console.warn(`Reservation ${reservationId} not found for refund`);
+      return;
+    }
+
+    if (reservation.status !== 'pending') {
+      console.warn(`Reservation ${reservationId} is not pending (status: ${reservation.status}), cannot refund`);
+      return;
+    }
+
+    // Mark reservation as refunded (no credit deduction occurs)
+    reservation.status = 'refunded';
+    this.creditReservations.set(reservationId, reservation);
+
+    console.log(`Refunded reservation ${reservationId}: ${reservation.amount} credits returned to user ${reservation.userId}`);
+  }
+
+  async getUserPendingReservations(userId: string): Promise<number> {
+    try {
+      const pendingReservations = Array.from(this.creditReservations.values())
+        .filter(res => res.userId === userId && res.status === 'pending');
+
+      return pendingReservations.reduce((sum, res) => sum + (res.amount || 0), 0);
+    } catch (error) {
+      console.error('Failed to get pending reservations:', error);
+      return 0;
+    }
+  }
+
+  async cleanupExpiredReservations(): Promise<void> {
+    try {
+      const now = new Date();
+      let cleanedCount = 0;
+
+      // Mark all expired pending reservations as refunded
+      for (const [id, reservation] of this.creditReservations.entries()) {
+        if (reservation.status === 'pending' && new Date(reservation.expiresAt) < now) {
+          reservation.status = 'refunded';
+          this.creditReservations.set(id, reservation);
+          cleanedCount++;
+        }
+      }
+
+      if (cleanedCount > 0) {
+        console.log(`Cleaned up ${cleanedCount} expired credit reservations`);
+      }
+    } catch (error) {
+      console.error('Failed to cleanup expired reservations:', error);
+    }
   }
 
   // Stripe integration operations
