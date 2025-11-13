@@ -19,6 +19,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { UserMenu } from "@/components/UserMenu";
+import { CreditBalance } from "@/components/CreditBalance";
 import { cn } from "@/lib/utils";
 import {
   Brain,
@@ -152,8 +153,8 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto w-full max-w-[1600px] px-1.5">
-        <div className="flex h-7 items-center justify-between">
+      <div className="mx-auto w-full max-w-[1600px] px-4">
+        <div className="flex h-10 items-center justify-between">
           {/* Compact Logo and Breadcrumb */}
           <div className="flex items-center space-x-0.5">
             <div className="flex items-center space-x-1">
@@ -164,18 +165,18 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           </div>
 
           {/* Desktop Navigation - All modes visible */}
-          <div className="hidden lg:flex items-center gap-0.5">
+          <div className="hidden lg:flex items-center gap-1.5">
             {/* Core Modes */}
             {coreMode.map(mode => renderModeButton(mode))}
 
             {/* Visual separator */}
-            <div className="h-4 w-px bg-border mx-0.5" />
+            <div className="h-4 w-px bg-border mx-1" />
 
             {/* Advanced Modes - now directly visible */}
             {advancedModes.map(mode => renderModeButton(mode))}
 
             {/* Visual separator */}
-            <div className="h-4 w-px bg-border mx-0.5" />
+            <div className="h-4 w-px bg-border mx-1" />
 
             {/* Experimental Modes */}
             {experimentalModes.map(mode => (
@@ -189,19 +190,15 @@ export function AppNavigation({ title, subtitle, icon: TitleIcon }: AppNavigatio
           </div>
 
           {/* Compact Authentication & Theme */}
-          <div className="flex items-center space-x-0.5">
-            {/* Credit Balance - only show if OAuth authenticated */}
-            {isOAuthUser && user && (
-              <div className="hidden lg:block">
-              </div>
-            )}
+          <div className="flex items-center space-x-2">
+            {/* Credit Balance - show for ALL authenticated users */}
+            <CreditBalance />
 
-            {/* Ultra-compact Theme Toggle */}
+            {/* Theme Toggle */}
             <Switch
               checked={theme === 'dark'}
               onCheckedChange={toggleTheme}
               aria-label="Toggle theme"
-              className="scale-75"
             />
 
             {/* Authentication - Show Google Login for device users, UserMenu for OAuth */}

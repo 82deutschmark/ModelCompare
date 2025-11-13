@@ -3,6 +3,31 @@ import { getDeviceId } from "./deviceId";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    // Handle insufficient credits (402 Payment Required)
+    if (res.status === 402) {
+      const data = await res.json().catch(() => ({
+        message: "You don't have enough credits to continue."
+      }));
+
+      // Import toast dynamically to show error notification
+      import("@/hooks/use-toast").then(({ toast }) => {
+        toast({
+          title: "Insufficient Credits",
+          description: data.message || "You need more credits to use this feature. Click your credit balance to purchase more.",
+          variant: "destructive",
+          duration: 10000, // Show for 10 seconds
+        });
+
+        // Navigate to billing page after a short delay
+        setTimeout(() => {
+          window.location.href = '/billing';
+        }, 2000);
+      });
+
+      throw new Error('Insufficient credits');
+    }
+
+    // Generic error for other status codes
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
