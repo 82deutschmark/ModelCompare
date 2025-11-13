@@ -29,7 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register modular route handlers
   app.use('/api/auth', authRoutes);
-  app.use('/api/credits', creditsRoutes);
+  app.use('/api/stripe', creditsRoutes);
   app.use('/api/models', modelsRoutes);
   app.use('/api/generate', generateRoutes);
   app.use('/api/debate', debateRoutes);
