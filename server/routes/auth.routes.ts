@@ -45,8 +45,14 @@ router.get("/google",
 router.get("/google/callback",
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    // Successful authentication, redirect to frontend
-    res.redirect('/');
+    // Successful authentication, send device ID to frontend for localStorage update
+    const deviceId = req.user?.deviceId;
+    if (deviceId) {
+      // Pass new device ID as query param so client can update localStorage
+      res.redirect(`/?update_device_id=${encodeURIComponent(deviceId)}`);
+    } else {
+      res.redirect('/');
+    }
   }
 );
 

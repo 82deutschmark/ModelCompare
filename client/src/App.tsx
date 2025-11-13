@@ -12,6 +12,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSimpleDynamicFavicon } from "@/hooks/useDynamicFavicon";
+import { setDeviceId } from "@/lib/deviceId";
+import { useEffect } from "react";
 import Compare from "@/pages/compare";
 import Home from "@/pages/home";
 import Battle from "@/pages/battle-chat";
@@ -45,6 +47,24 @@ function Router() {
 function App() {
   // Generate unique favicon for this tab/session
   useSimpleDynamicFavicon();
+
+  // Handle device ID update after Google OAuth
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const newDeviceId = params.get('update_device_id');
+
+    if (newDeviceId) {
+      // Update localStorage with new OAuth-based device ID
+      setDeviceId(newDeviceId);
+      console.log('Updated device ID after OAuth:', newDeviceId);
+
+      // Invalidate auth query to refetch with new device ID
+      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
+
+      // Clean up URL by removing the query parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
