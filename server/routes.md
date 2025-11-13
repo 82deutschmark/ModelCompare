@@ -538,7 +538,7 @@ Continue the debate by responding to the last message. Be analytical, challenge 
       const { mode, template, variables, seats, options } = requestBody;
       
       // Validate mode
-      if (!['creative', 'battle', 'debate', 'compare', 'research-synthesis', 'plan-assessment', 'vixra'].includes(mode)) {
+      if (!['creative', 'battle', 'debate', 'compare', 'arc-agent', 'plan-assessment', 'vixra'].includes(mode)) {
         return res.status(400).json({ error: `Invalid mode: ${mode}` });
       }
 

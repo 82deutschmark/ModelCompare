@@ -11,6 +11,7 @@
 
 import { useState, useCallback } from "react";
 import type { Section } from "@/components/vixra/SectionProgressTracker";
+import type { ModelConfiguration } from "@/components/ModelConfigurationPanel";
 import { 
   SECTION_ORDER, 
   SCIENCE_CATEGORIES, 
@@ -26,6 +27,16 @@ const DEFAULT_CATEGORY = "General Science and Philosophy";
 const DEFAULT_MODEL = "gpt-5-nano-2025-08-07";
 const DEFAULT_MODE = "auto";
 
+const DEFAULT_MODEL_CONFIG: ModelConfiguration = {
+  reasoningEffort: "medium",
+  reasoningSummary: "detailed",
+  textVerbosity: "high",
+  temperature: 0.7,
+  maxTokens: 16384,
+  enableReasoning: true,
+  enableStructuredOutput: false
+};
+
 export interface PaperConfig {
   author: string;
   scienceCategory: string;
@@ -39,6 +50,7 @@ export interface VixraPaperState {
   isGenerating: boolean;
   sections: Section[];
   currentSectionId: string | null;
+  modelConfig: ModelConfiguration;
   progress: {
     completed: number;
     total: number;
@@ -55,6 +67,7 @@ export interface VixraPaperActions {
   
   // Model selection
   selectModel: (modelId: string) => void;
+  updateModelConfig: (config: ModelConfiguration) => void;
   
   // Mode control
   setGenerationMode: (mode: 'manual' | 'auto') => void;
@@ -107,6 +120,7 @@ export function useVixraPaper() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [sections, setSections] = useState<Section[]>(initialSections);
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
+  const [modelConfig, setModelConfig] = useState<ModelConfiguration>({ ...DEFAULT_MODEL_CONFIG });
 
   // Calculate progress
   const completedCount = sections.filter(s => s.status === 'completed').length;
@@ -150,6 +164,10 @@ export function useVixraPaper() {
 
   const selectModel = useCallback((modelId: string) => {
     setSelectedModel(modelId);
+  }, []);
+
+  const updateModelConfig = useCallback((config: ModelConfiguration) => {
+    setModelConfig(config);
   }, []);
 
   const updateSectionStatus = useCallback((
@@ -221,6 +239,7 @@ export function useVixraPaper() {
     setIsGenerating(false);
     setSections(initialSections);
     setCurrentSectionId(null);
+    setModelConfig({ ...DEFAULT_MODEL_CONFIG });
   }, []);
 
   const state: VixraPaperState = {
@@ -230,6 +249,7 @@ export function useVixraPaper() {
     isGenerating,
     sections,
     currentSectionId,
+    modelConfig,
     progress
   };
 
@@ -239,6 +259,7 @@ export function useVixraPaper() {
     randomizeCategory,
     updateTitle,
     selectModel,
+    updateModelConfig,
     setGenerationMode,
     setIsGenerating,
     setCurrentSectionId,

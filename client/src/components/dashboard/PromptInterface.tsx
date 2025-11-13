@@ -1,4 +1,13 @@
-import React, { useMemo, useEffect, useState } from 'react';
+/*
+ * Author: Cascade (GPT-4.1)
+ * Date: 2025-11-02T19:59:00-05:00
+ * PURPOSE: Renders the ARC AGI prompt interface with animated guidance overlays,
+ *          dynamic geometry visualizations, and neural builder animation to keep
+ *          the parody dashboard lively while respecting SRP by isolating UI logic.
+ * SRP/DRY check: Pass - Single component orchestrating prompt UI without duplicating
+ *                shared utilities; geometry builders remain encapsulated here.
+ */
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArcAgiCard } from './DashboardCard';
@@ -114,15 +123,19 @@ const NeuralBuilder: React.FC<{ active: boolean }> = ({ active }) => {
 export const PromptInterface: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [building, setBuilding] = useState(false);
-  // Precompute some fun math/geometry shapes for the right panel
+  const [typingText, setTypingText] = useState('');
+  const typingLoopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const TYPING_GUIDANCE = 'please enter or think your message here';
+  const isPromptEmpty = prompt.trim().length === 0;
   const lissajousPath = useMemo(() => {
-    // x = sin(a t + δ), y = sin(b t)
-    const a = 3, b = 2, δ = Math.PI / 2;
-    const N = 400;
+    const a = 3;
+    const b = 4;
+    const delta = Math.PI / 2;
+    const samples = 500;
     const pts: string[] = [];
-    for (let i = 0; i <= N; i++) {
-      const t = (i / N) * Math.PI * 2;
-      const x = Math.sin(a * t + δ);
+    for (let i = 0; i <= samples; i++) {
+      const t = (i / samples) * Math.PI * 2;
+      const x = Math.sin(a * t + delta);
       const y = Math.sin(b * t);
       // map to viewBox 0..200
       const X = 100 + x * 80;
@@ -163,6 +176,45 @@ export const PromptInterface: React.FC = () => {
     return pts.join(' ');
   }, []);
 
+  useEffect(() => {
+    if (!isPromptEmpty) {
+      if (typingLoopTimeoutRef.current) {
+        clearTimeout(typingLoopTimeoutRef.current);
+        typingLoopTimeoutRef.current = null;
+      }
+      setTypingText('');
+      return;
+    }
+
+    let cancelled = false;
+    const baseDelay = 85;
+    const pauseDelay = 1400;
+
+    const typeCycle = (index: number) => {
+      if (cancelled) return;
+      if (index <= TYPING_GUIDANCE.length) {
+        setTypingText(TYPING_GUIDANCE.slice(0, index));
+        typingLoopTimeoutRef.current = setTimeout(() => typeCycle(index + 1), baseDelay);
+      } else {
+        typingLoopTimeoutRef.current = setTimeout(() => {
+          if (cancelled) return;
+          setTypingText('');
+          typeCycle(0);
+        }, pauseDelay);
+      }
+    };
+
+    typeCycle(0);
+
+    return () => {
+      cancelled = true;
+      if (typingLoopTimeoutRef.current) {
+        clearTimeout(typingLoopTimeoutRef.current);
+        typingLoopTimeoutRef.current = null;
+      }
+    };
+  }, [isPromptEmpty, TYPING_GUIDANCE]);
+
   return (
     <ArcAgiCard
       title="NEURAL COMMAND INTERFACE"
@@ -195,6 +247,26 @@ export const PromptInterface: React.FC = () => {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
+            {isPromptEmpty && (
+              <motion.div
+                className="pointer-events-none absolute inset-0 flex items-start justify-start"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0.2, 0.85, 0.2] }}
+                transition={{ duration: 2.4, repeat: Infinity }}
+                aria-hidden
+              >
+                <span className="px-4 pt-4 text-sm font-mono text-green-500/80">
+                  {typingText}
+                  <motion.span
+                    animate={{ opacity: [0, 1, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity }}
+                    className="ml-1"
+                  >
+                    _
+                  </motion.span>
+                </span>
+              </motion.div>
+            )}
             <motion.div
               className="absolute bottom-2 right-2 text-xs text-gray-500 font-mono"
               animate={{ opacity: [0.3, 0.7, 0.3] }}

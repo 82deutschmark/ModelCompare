@@ -1,9 +1,8 @@
 /**
- * AI Provider Registry
- * 
- * Central registry for all AI providers and their models
- * Author: Replit Agent
- * Date: August 9, 2025
+ * Author: Cascade (GPT-4o)
+ * Date: 2025-10-25 at 17:20 EDT
+ * PURPOSE: Maintain the centralized AI provider registry, wiring shared circuit breakers and resolving providers for each model without duplicating instances. Updates ensure DeepSeek and OpenRouter models resolve correctly after Responses API migration.
+ * SRP/DRY check: Pass - Registry concerns remain isolated, leveraging shared provider singletons without duplicating construction logic.
  */
 
 import { BaseProvider, type ModelConfig, type ModelResponse, type ModelMessage, type CallOptions } from './base.js';
@@ -53,24 +52,13 @@ export function getModelById(modelId: string): ModelConfig | undefined {
 }
 
 export function getProviderForModel(modelId: string): BaseProvider {
-  const allModels = getAllModels();
-  const modelConfig = allModels.find(m => m.id === modelId);
+  const provider = providers.find(p => p.getModel(modelId));
 
-  if (!modelConfig) {
-    throw new Error(`Model not found: ${modelId}`);
+  if (!provider) {
+    throw new ModelNotFoundError(modelId);
   }
 
-  switch (modelConfig.provider.toLowerCase()) {
-    case 'openai':
-      return new OpenAIProvider();
-    case 'anthropic':
-      return new AnthropicProvider();
-    case 'google':
-      return new GoogleProvider();
-    // ... other providers
-    default:
-      throw new Error(`Provider not found: ${modelConfig.provider}`);
-  }
+  return provider;
 }
 
 export function getModelsByCapability(capability: keyof ModelConfig['capabilities']): ModelConfig[] {
@@ -88,9 +76,9 @@ export function getReasoningModels(): ModelConfig[] {
  * @param modelId Model identifier
  * @returns Promise resolving to model response with config
  */
-export async function callModel(prompt: string, modelId: string): Promise<ModelResponse & { modelConfig: ModelConfig }> {
+export async function callModel(prompt: string, modelId: string, options?: CallOptions): Promise<ModelResponse & { modelConfig: ModelConfig }> {
   const messages: ModelMessage[] = [{ role: 'user', content: prompt }];
-  return callModelWithMessages(messages, modelId);
+  return callModelWithMessages(messages, modelId, options);
 }
 
 /**

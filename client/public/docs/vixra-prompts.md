@@ -21,7 +21,7 @@
 
 <!-- SECTION_START:abstract -->
 ### Abstract Generation
-You are writing the abstract for a satirical research paper for Vixra (in the style of arXiv). Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous.
+You are a humorist writing the abstract for a parody research paper that mimics the style of grandiose academic papers. Create an absurdly academic-sounding abstract that takes itself completely seriously while being utterly ridiculous and devoid of any actual scientific merit or novelty.  Present very simple and basic math such as simple addition and subtraction as deep philosophical concepts with convoluted and complex explanations, terminology, equations, and notation.  Pontificate on truth and profundity and the meaning of life and the universe and everything.  Create complex and contradictory metrics to measure truth and other philosophical concepts. The goal is not deception, but performance art.
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -32,15 +32,15 @@ Write a 2400-3000 word abstract that:
 - Makes grandiose claims about revolutionary discoveries
 - References non-existent or absurd or disproven methodologies
 - Maintains perfect academic formatting and tone
-- Includes simulated statistical results with impressive precision
-- Claims to solve fundamental problems in science or math or Machine Learning or AGI or AI such as the Millennium Prize Problems or ARC-AGI 2 or other new age technologies critical to humanity's survival
+- Includes simulated statistical results with impressive precision and remarkable results
+- References real fundamental problems in science or math or Machine Learning or AGI or AI such as the Millennium Prize Problems or ARC-AGI, but makes absurd or surreal philosophical claims about hypothetical theories about simulated solutions.
 
 The abstract should sound like it was written by someone who desperately wants to appear brilliant but lacks any actual scientific understanding. Make it hilariously pretentious while maintaining academic structure.
 <!-- SECTION_END:abstract -->
 
 <!-- SECTION_START:introduction -->
 ### Introduction Section
-You are writing the introduction section for a satirical Vixra research paper. This should establish the "groundbreaking" nature of the research with excessive citations or very few citations and they should be to non-existent work or self-citations or non-sensical citations. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the introduction section for a satirical academic paper. Nothing should be deceptive or misleading, this should be obvious farcical performance art claiming impossible and absurd and surreal discoveries. It should be entirely fluff, jargon, and self-flattery with no actual scientific content. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -58,7 +58,7 @@ Make it sound like the author believes they are writing the most important paper
 
 <!-- SECTION_START:methodology -->
 ### Methodology Section
-You are writing the methodology section for a satirical Vixra research paper. Describe completely absurd research methods presented with utmost scientific seriousness. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the methodology section for a satirical research paper. Describe completely absurd or disproven or archaic or non-existent or fantastical research methods presented with utmost scientific seriousness. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -66,47 +66,46 @@ Science Category: "{ScienceCategory}"
 Write a 1000-2000 word methodology section that:
 - Describes impossible or nonsensical experimental procedures
 - Uses highly technical language to mask the absurdity
-- Demonstrates a complete lack of understanding of the entire field of study (divide by zero, confuse elemental states, etc.)
-- Includes a list of materials and chemicals
-- Includes a list of fantastical sounding software and tools
+- Demonstrates a complete lack of understanding of the entire field of study (divide by zero, confuse elemental states, thinks humans lay eggs, etc.)
+- Includes a list of futuristic sounding materials and chemicals
+- Includes a list of fantastical sounding software and tools which claim to do impossible tasks like manipulating the fabric of space-time or probability
 - Includes detailed steps for ridiculous processes
-- References non-existent equipment and techniques
+- References non-existent equipment and techniques as if they were widely known
 - Claims rigorous controls and statistical methods while presenting clear mathematical errors (divide by zero, etc.)
 - Mentions approval or bitter rejection from ridiculous committees
 - Uses mathematical formulas that look impressive but are meaningless
 
-Present everything as if it's the most scientifically rigorous approach ever devised. The more absurd the methods, the more seriously they should be presented.
+Present everything as if it's the most scientifically rigorous approach ever devised. The more absurd the methods, the more seriously they should be presented.  Do not add any additional commentary or notes about the task.
 <!-- SECTION_END:methodology -->
 
 <!-- SECTION_START:results -->
 ### Results Section
-You are writing the results section for a satirical Vixra research paper. Present completely fabricated data and findings with excessive precision and confidence. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the satirical results section for a farcical research paper. Present obviously impossible or contradictory data and simulated findings about clearly imaginary metrics with excessive use of greek letters and complex equations and notation. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Abstract Context: "{Abstract}"
 
 Write a 1400-2000 word results section that:
-- Presents impossible or contradictory findings as groundbreaking discoveries
-- Uses tables, figures, and statistical analysis (all made up)
-- Includes p-values, confidence intervals, and error bars
-- Claims multiple unexpected breakthroughs in a single study
-- References "Figure 1," "Table 2," etc. (without actually providing them)
-- Uses phrases like "highly significant" and "unprecedented correlation"
-- Presents data that would revolutionize multiple fields of science
+- Presents impossible or contradictory theories as groundbreaking discoveries
+- Uses detailed simulated tables, figures, and statistical analysis with excessive use of greek letters and complex equations and notation
+- Includes simulated metrics for marketing and promotion
+- Uses unscientific phrases and marketing speak
+- Uses obvious logical fallacies that would be immediately apparent and comical to any amatuer scientist
+- Presents mundane equations and data as revolutionizing multiple fields of science
 
-The results should be so extraordinary that they would immediately alert any real scientist to the paper's satirical nature, yet be presented with complete academic seriousness.
+The results should be so extraordinary and absurd that they would immediately alert any real scientist to the paper's satirical nature, yet be presented with complete academic seriousness.
 <!-- SECTION_END:results -->
 
 <!-- SECTION_START:discussion -->
 ### Discussion Section  
-You are writing the discussion section for a satirical Vixra research paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the discussion section for a satirical academic paper. Interpret the absurd results as world-changing discoveries with maximum academic pomposity. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Key Findings Summary: "{response}"
 Science Category: "{ScienceCategory}"
 
 Write a 400-500 word discussion that:
-- Interprets impossible results as revolutionary breakthroughs
+- Interprets impossible or elementary results as revolutionary breakthroughs  (proving 2-1=1 or that 2x2=4)
 - Compares findings to established scientific principles (incorrectly)
 - Claims the work overturns fundamental laws of physics/nature
 - Discusses far-reaching implications for humanity
@@ -120,14 +119,14 @@ Present the discussion as if the author genuinely believes they have made the mo
 
 <!-- SECTION_START:conclusion -->
 ### Conclusion Section
-You are writing the conclusion section for a satirical Vixra research paper. Summarize the "groundbreaking" work and its world-changing implications. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the conclusion section for a satirical academic paper. Summarize the "groundbreaking" work and its world-changing implications. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Main Findings: "{response}"
 Researcher/Author: "{ResearcherName}"
 
-Write a 200-300 word conclusion that:
-- Summarizes impossible achievements as established facts
+Write a 500-800 word conclusion that:
+- Summarizes impossible achievements
 - Claims to have solved multiple fundamental scientific problems
 - Mentions applications that would transform human civilization
 - Calls for immediate implementation of the findings
@@ -142,7 +141,10 @@ The conclusion should read like the author expects to be remembered as the great
 
 <!-- SECTION_START:citations -->
 ### Citations Generator
-You are creating a bibliography for a satirical Vixra research paper. Generate realistic-looking but obviously clever humorous fake citations that support the absurd claims made in the paper. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist creating a bibliography for a satirical paper. Generate obviously clever humorous simulated citations (irrelevant to the paper's content, drawn from philosophical or New Age or Alien sources) and clearly fictional journals that support the absurd claims made in the paper. Mixes formats (journal articles, conference papers, books, and “ethereal” or “crystal” sources) in a tongue-in-cheek but harmless way. Cites books written impossibly long ago or in the future.  Includes playful author names (New Age or alien-esque) and absurd paper titles. Contains many self-citations by "Dr. Max Power" as a wink to the joke, with increasingly absurd and far flung research topics
+
+
+Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Science Category: "{ScienceCategory}"
@@ -162,7 +164,7 @@ Format each citation properly and make them sound plausible at first glance whil
 
 <!-- SECTION_START:acknowledgments -->
 ### Acknowledgments Section
-You are writing the acknowledgments section for a satirical Vixra research paper with appropriate academic gratitude but absurd content. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist writing the acknowledgments section for a satirical Vixra research paper with appropriate academic gratitude but absurd content. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Researcher/Author: "{ResearcherName}"
 Institution: "{Institution}"
@@ -172,7 +174,7 @@ Write acknowledgments that:
 - Are incredibly narcissistic, self-centered, and pompous while showing little humility or gratitude
 - Reference impossible funding sources or amounts
 - Mention absurd institutional support
-- Include gratitude for ridiculous resources or assistance
+- Include faint gratitude for ridiculous resources or assistance
 - Reference non-existent research facilities or equipment
 - Maintain proper academic tone throughout
 
@@ -183,7 +185,7 @@ Keep it to 1000-1500 words while making it hilariously over-the-top in its grati
 
 <!-- SECTION_START:peer-review -->
 ### Peer Review Response
-You are providing peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity. Agree with the author's claims and dismiss any criticisms by other academics. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
+You are a humorist providing simulated peer review comments on a satirical Vixra paper. Address fictitious criticisms while defending the absurd work with academic dignity. Agree with the author's claims and dismiss any criticisms by other academics. Your output should be plain text with NO commentary about the task!  Any commentary or notes will break the assembly line and fail the task!!!
 
 Paper Title: "{Title}"
 Original Content: "{response}"

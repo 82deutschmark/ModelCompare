@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Author: Codex using GPT-5
  * Date: 2025-10-04T10:28:15Z
  * PURPOSE: Luigi executor service orchestrating agent runs via external REST agent runner.
@@ -7,6 +7,7 @@
  */
 
 import { callAgentByRest, type AgentRunRequest, type AgentRunResponse } from "../services/agent-runner";
+import { runLuigiOrchestratorWithSdk, type LuigiSdkRunOptions } from "./openai-sdk-runner";
 import { storage } from "../storage";
 import type { LuigiRun, LuigiMessage, LuigiArtifact } from "@shared/schema";
 import type { LuigiRunStatus, LuigiStageId, LuigiStageStatus } from "@shared/luigi-types";
@@ -44,9 +45,11 @@ export interface LuigiRunParams {
 
 export interface LuigiExecutorOptions {
   orchestratorAgentId?: string;
-  restBaseUrl: string;
+  restBaseUrl?: string;
   restApiKey?: string;
   timeoutMs?: number;
+  agentMode?: 'rest' | 'sdk';
+  sdkOptions?: LuigiSdkRunOptions;
 }
 
 export interface LuigiRunContext {
@@ -69,12 +72,16 @@ export class LuigiExecutor {
   private readonly restBaseUrl: string;
   private readonly restApiKey?: string;
   private readonly timeoutMs: number;
+  private readonly agentMode: 'rest' | 'sdk';
+  private readonly sdkOptions: LuigiSdkRunOptions;
 
   constructor(options: LuigiExecutorOptions) {
     this.orchestratorAgentId = options.orchestratorAgentId ?? "luigi-master-orchestrator";
-    this.restBaseUrl = options.restBaseUrl;
+    this.restBaseUrl = options.restBaseUrl ?? "http://localhost:8700";
     this.restApiKey = options.restApiKey;
     this.timeoutMs = options.timeoutMs ?? 600000; // default 10 minutes
+    this.agentMode = options.agentMode ?? 'rest';
+    this.sdkOptions = options.sdkOptions ?? { model: "openai/gpt-5", maxTurns: 4 };
   }
 
   async createRun(params: LuigiRunParams): Promise<LuigiRunContext> {
@@ -131,6 +138,15 @@ export class LuigiExecutor {
       role: "system",
       content: "Luigi orchestrator launching...",
     });
+
+    if (this.agentMode === 'sdk') {
+      const response = await runLuigiOrchestratorWithSdk({
+        run,
+        options: this.sdkOptions,
+      });
+      await this.handleAgentResponse(runId, response);
+      return;
+    }
 
     const payload: AgentRunRequest = {
       agentId: this.orchestratorAgentId,
@@ -222,6 +238,20 @@ export class LuigiExecutor {
       role: "user",
       content,
     });
+
+    if (this.agentMode === 'sdk') {
+      const run = await storage.getLuigiRun(runId);
+      if (!run) {
+        throw new Error(`Luigi run ${runId} not found while processing user reply`);
+      }
+      const response = await runLuigiOrchestratorWithSdk({
+        run,
+        userReply: content,
+        options: this.sdkOptions,
+      });
+      await this.handleAgentResponse(runId, response);
+      return message;
+    }
 
     const payload: AgentRunRequest = {
       agentId: this.orchestratorAgentId,

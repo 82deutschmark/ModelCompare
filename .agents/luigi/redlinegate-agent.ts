@@ -1,25 +1,54 @@
 /**
- * Author: Codex using GPT-5
- * Date: 2025-09-30T15:30:00Z
- * PURPOSE: Agent definition supporting Luigi pipeline task orchestration for PlanExe stage conversions.
- * SRP and DRY check: Pass. Each file isolates one agent definition without duplicating existing agents.
+ * Author: ChatGPT-4.1
+ * Date: 2025-10-25T16:09:00Z
+ * PURPOSE: Luigi Redline Gate agent ported to OpenAI Agents SDK for early risk
+ *          detection, ensuring gating diagnostics output structured status
+ *          metadata for downstream tasks.
+ * SRP/DRY check: Pass – focuses on redline gating while leveraging shared Luigi
+ *                tool utilities for filesystem access.
  */
 
-import type { AgentDefinition } from '../types/agent-definition'
+import { Agent } from '@openai/agents';
+import { z } from 'zod';
+import { luigiReadFilesTool } from '../../server/luigi/sdk-tools';
 
-const definition: AgentDefinition = {
-  id: 'luigi-redlinegate',
-  displayName: 'Luigi Redline Gate Agent',
+const RedlineGateReport = z.object({
+  status: z
+    .enum(['pass', 'fail', 'manual-review'])
+    .describe('Overall gating verdict: pass, fail, or requires manual review.'),
+  criticalFindings: z
+    .array(z.string())
+    .default([])
+    .describe('Critical issues uncovered that threaten mission viability.'),
+  mitigations: z
+    .array(z.string())
+    .default([])
+    .describe('Recommended mitigations or actions to clear the gate.'),
+  metrics: z
+    .record(z.string(), z.string())
+    .default({})
+    .describe('Key gating metrics (e.g., diagnostics run time, checklist coverage).'),
+  blockers: z
+    .array(z.string())
+    .default([])
+    .describe('Blocking items that must be resolved before proceeding.'),
+  escalationNotes: z
+    .array(z.string())
+    .default([])
+    .describe('Notes to escalate to orchestrator or Premise Attack if red flags persist.'),
+});
+
+export default new Agent({
+  name: 'Luigi Redline Gate Agent',
+  instructions: `You execute RedlineGateTask in Luigi's Analysis & Gating stage.
+- Run every gating diagnostic and capture evidence for the verdict.
+- Document critical findings and quantify risk where possible.
+- Provide mitigations or escalation paths for any blocker.
+- Ensure metrics and logs are referenced using the read_files tool when needed.
+- Fill each output section; use "None" where a list would otherwise be empty.`,
   model: 'openai/gpt-5-mini',
-  toolNames: ['read_files', 'think_deeply', 'end_turn'],
-  instructionsPrompt: `You own the RedlineGateTask step inside the Luigi pipeline.
-- Stage: Analysis & Gating (Establish safe operating conditions, clarify purpose, and set up the run before strategy work.)
-- Objective: Run the redline gate diagnostics to catch fatal issues early and document gating criteria.
-- Key inputs: Prepared environment state and configuration from SetupTask.
-- Expected outputs: Pass/fail judgement with rationale, recommended mitigations, gating metrics.
-- Handoff: Escalate failure paths to orchestrator and provide PremiseAttackTask with edge cases to probe.
-Follow modern Anthropic/OpenAI agent practices: confirm instructions, reason step-by-step, surface uncertainties, and produce concise briefings for analysis-stage-lead.`,
-  includeMessageHistory: false,
-}
-
-export default definition
+  tools: [luigiReadFilesTool],
+  outputType: RedlineGateReport,
+  handoffDescription:
+    'Runs gating diagnostics and reports pass/fail status with mitigation notes for downstream agents.',
+});

@@ -64,10 +64,24 @@ export interface CircuitBreakerConfig {
   monitoringPeriod: number;
 }
 
+export type LuigiAgentMode = 'rest' | 'sdk';
+
+export interface LuigiSdkSettings {
+  model: string;
+  maxTurns: number;
+}
+
 export interface LuigiConfig {
   orchestratorAgentId: string;
   agentRunnerBaseUrl: string;
   agentRunnerApiKey?: string;
+  agentMode: LuigiAgentMode;
+  sdk: LuigiSdkSettings;
+}
+
+export interface ArcAgentConfig {
+  model: string;
+  maxTurns: number;
 }
 
 export interface AppConfig {
@@ -77,6 +91,8 @@ export interface AppConfig {
   logging: LoggingConfig;
   security: SecurityConfig;
   circuitBreaker: CircuitBreakerConfig;
+  luigi: LuigiConfig;
+  arcAgent: ArcAgentConfig;
 }
 
 /**
@@ -147,6 +163,21 @@ export function loadConfig(): AppConfig {
       failureThreshold: parseInt(process.env.CIRCUIT_BREAKER_FAILURE_THRESHOLD || '3', 10),
       recoveryTimeout: parseInt(process.env.CIRCUIT_BREAKER_RECOVERY_TIMEOUT || '30000', 10),
       monitoringPeriod: parseInt(process.env.CIRCUIT_BREAKER_MONITORING_PERIOD || '60000', 10)
+    },
+
+    luigi: {
+      orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || "luigi-master-orchestrator",
+      agentRunnerBaseUrl: process.env.AGENT_RUNNER_BASE_URL || "http://localhost:8700",
+      agentRunnerApiKey: process.env.AGENT_RUNNER_API_KEY,
+      agentMode: (process.env.LUIGI_AGENT_MODE === 'sdk' ? 'sdk' : 'rest') as LuigiAgentMode,
+      sdk: {
+        model: process.env.LUIGI_SDK_MODEL || 'openai/gpt-5',
+        maxTurns: Number.parseInt(process.env.LUIGI_SDK_MAX_TURNS || '4', 10) || 4,
+      },
+    },
+    arcAgent: {
+      model: process.env.ARC_AGENT_MODEL || 'openai/gpt-5',
+      maxTurns: Number.parseInt(process.env.ARC_AGENT_MAX_TURNS || '6', 10) || 6,
     }
   };
 }
@@ -210,12 +241,9 @@ export function getCircuitBreakerConfig(): CircuitBreakerConfig {
 }
 
 export function getLuigiConfig(): LuigiConfig {
-  return {
-    orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || "luigi-master-orchestrator",
-    agentRunnerBaseUrl: process.env.AGENT_RUNNER_BASE_URL || "http://localhost:8700",
-    agentRunnerApiKey: process.env.AGENT_RUNNER_API_KEY,
-  };
+  return config.luigi;
 }
 
-
-
+export function getArcAgentConfig(): ArcAgentConfig {
+  return config.arcAgent;
+}

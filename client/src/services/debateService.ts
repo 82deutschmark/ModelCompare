@@ -1,15 +1,14 @@
 /**
- * Debate service class for managing debate business logic
- *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Centralized service layer for debate operations including prompt generation, rebuttal building, and cost calculation
- * SRP/DRY check: Pass - Single responsibility for debate business logic, no duplication with component logic
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 01:15 UTC
+ * PURPOSE: Centralize debate business logic, expose intensity descriptors, and reuse prompt assembly helpers for streaming.
+ * SRP/DRY check: Pass - Service continues to own debate orchestration utilities without duplicating component or transport code.
  */
 
 import type { DebateInstructions } from '@/lib/promptParser';
 import type { AIModel } from '@/types/ai-models';
 import { applyTemplateReplacements, formatOpponentQuote } from '@/lib/debatePromptUtils';
+import { getDebateIntensityDescriptor } from '@shared/debate-instructions.ts';
 
 export interface DebateServiceConfig {
   debateData: DebateInstructions | null;
@@ -48,22 +47,46 @@ export class DebateService {
     Object.assign(this, config);
   }
 
+  getIntensityContext() {
+    const level = this.adversarialLevel;
+    const descriptor = getDebateIntensityDescriptor(this.debateData, level);
+    const fallbackHeading = `Level ${level}`;
+    const heading = descriptor?.heading ?? fallbackHeading;
+    const label = descriptor?.label ?? heading;
+    const summary = descriptor?.summary ?? "";
+    const trimmedGuidance = descriptor?.guidance?.trim() ?? "";
+    const guidance = trimmedGuidance || descriptor?.fullText || heading;
+    const fullText = descriptor?.fullText ?? (trimmedGuidance ? `${heading}\n${trimmedGuidance}` : heading);
+
+    return {
+      level,
+      heading,
+      label,
+      summary,
+      guidance,
+      fullText,
+    };
+  }
+
   // Generate Robert's Rules debate prompts using parsed templates
   generatePrompts() {
     const topicText = this.useCustomTopic
       ? this.customTopic
       : (this.debateData?.topics.find(t => t.id === this.selectedTopic)?.proposition || "");
 
+    const intensity = this.getIntensityContext();
+
     const baseTemplate = applyTemplateReplacements(this.debateData?.baseTemplate || "", {
       topic: topicText,
-      intensity: String(this.adversarialLevel),
+      intensity: intensity.fullText,
+      intensity_level: String(intensity.level),
+      intensity_label: intensity.label,
+      intensity_summary: intensity.summary,
     });
-
-    const intensityText = this.debateData?.intensities?.[this.adversarialLevel] || "";
 
     const roleBlock = (role: "AFFIRMATIVE" | "NEGATIVE", position: "FOR" | "AGAINST") => {
       const resolved = applyTemplateReplacements(baseTemplate, { role, position });
-      return intensityText ? `${resolved}\n\n${intensityText}` : resolved;
+      return resolved;
     };
 
     const fallbackRebuttal = `You are responding to your opponent as the {role} debater arguing {position} the proposition: "{topic}".
@@ -76,18 +99,20 @@ Structure your rebuttal by:
 3. Reinforcing your original position with additional supporting evidence
 4. Challenging their main claims with factual rebuttals`;
 
-    const rebuttalBase = applyTemplateReplacements(this.debateData?.templates.rebuttal || fallbackRebuttal, {
+    const rebuttalTemplate = applyTemplateReplacements(this.debateData?.templates.rebuttal || fallbackRebuttal, {
       topic: topicText,
-      intensity: String(this.adversarialLevel),
+      intensity: intensity.fullText,
+      intensity_level: String(intensity.level),
+      intensity_label: intensity.label,
+      intensity_summary: intensity.summary,
     });
-
-    const rebuttalTemplate = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
 
     return {
       affirmativePrompt: roleBlock("AFFIRMATIVE", "FOR"),
       negativePrompt: roleBlock("NEGATIVE", "AGAINST"),
       rebuttalTemplate,
       topicText,
+      intensity,
     };
   }
 
@@ -98,11 +123,16 @@ Structure your rebuttal by:
 
     const opponentQuote = formatOpponentQuote(lastMessage);
 
+    const intensity = prompts.intensity ?? this.getIntensityContext();
+
     const resolvedTemplate = applyTemplateReplacements(prompts.rebuttalTemplate, {
       role,
       position,
       topic: currentTopic,
-      intensity: String(this.adversarialLevel),
+      intensity: intensity.fullText,
+      intensity_level: String(intensity.level),
+      intensity_label: intensity.label,
+      intensity_summary: intensity.summary,
       response: lastMessage,
     });
 

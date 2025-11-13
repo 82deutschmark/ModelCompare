@@ -1,0 +1,6 @@
+[submodule "libs/openai-agents-js"]
+	path = libs/openai-agents-js
+	url = https://github.com/82deutschmark/openai-agents-js
+[submodule "libs/openai-chatkit-advanced-samples"]
+	path = libs/openai-chatkit-advanced-samples
+	url = https://github.com/82deutschmark/openai-chatkit-advanced-samples

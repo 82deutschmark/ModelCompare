@@ -122,12 +122,12 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
 
   return (
     <Card className={cn(
-      "h-full transition-all duration-200 hover:shadow-lg",
+      "h-full transition-all duration-200 hover:shadow-md",
       response?.status === 'error' && "border-destructive/50"
     )}>
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             {/* Provider Avatar using model color */}
             <Avatar className="h-10 w-10">
               <AvatarFallback className={cn("text-xs font-bold text-white", model.color)}>
@@ -141,9 +141,10 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5">
             {getStatusBadge()}
-            {response && showTiming && (                <Badge variant="outline" className="text-xs">
+            {response && showTiming && (
+              <Badge variant="outline" className="text-xs">
                   <Clock className="w-3 h-3 mr-1" />
                   {formatResponseTime(response.responseTime)}
                 </Badge>
@@ -187,10 +188,10 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
             </AlertDescription>
           </Alert>
         ) : response?.status === 'success' ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Response Content */}
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <div className="p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+              <div className="p-3 bg-muted/40 rounded-lg border-l-2 border-primary/80">
                 <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
                   {response.content}
                 </pre>
@@ -201,14 +202,14 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
             {systemPrompt && (
               <Collapsible open={showSystemPrompt} onOpenChange={setShowSystemPrompt}>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-8">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-7">
                     <FileText className="w-4 h-4 mr-2" />
                     System Prompt
                     {showSystemPrompt ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
-                  <div className="p-3 bg-secondary/50 rounded-lg border">
+                  <div className="p-2.5 bg-secondary/40 rounded-lg border">
                     <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
                       {systemPrompt}
                     </pre>
@@ -221,14 +222,14 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
             {response.reasoning && (
               <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-8">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-7">
                     <Brain className="w-4 h-4 mr-2" />
                     Reasoning Process
                     {showReasoning ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
                     <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
                       {response.reasoning}
                     </pre>
@@ -241,7 +242,7 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
             {(response.tokenUsage || response.cost) && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-3 text-sm">
                   {response.tokenUsage && (
                     <div className="flex items-center space-x-2">
                       <Activity className="w-4 h-4 text-muted-foreground" />
@@ -275,7 +276,7 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
             )}
 
             {/* Copy Button */}
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-1">
               <Button
                 variant="ghost"
                 size="sm"
@@ -289,7 +290,7 @@ export function ResponseCard({ model, response, onRetry, showTiming, systemPromp
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex flex-col items-center justify-center py-6 text-center">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
               <Clock className="w-6 h-6 text-muted-foreground" />
             </div>

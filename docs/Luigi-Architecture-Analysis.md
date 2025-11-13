@@ -1,3 +1,12 @@
+<!--
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:08:40Z
+ * PURPOSE: Annotate historical Luigi architecture analysis with status relative to the ARC agent workspace.
+ * SRP/DRY check: Pass - metadata and status note without duplicating analysis content.
+-->
+
+> **Status Update (2025-11-06):** References to `client/src/pages/research-synthesis.tsx` now map to the retired Luigi interface. The ARC agent workspace (`client/src/pages/agent-workspace.tsx`) is the active implementation.
+
 # Luigi Pipeline Architecture Analysis - Critical Findings
 **Date**: 2025-10-04T14:17:00Z  
 **Analyst**: Cascade using Claude 4 Sonnet  
@@ -59,7 +68,7 @@ The Luigi workspace was built to integrate with an **external agent orchestratio
 │  Would execute:                          │
 │  - 72 Luigi agent definitions            │
 │  - 60+ sequential stages                 │
-│  - AI model calls (GPT-5, Claude, etc.) │
+│  - AI model calls (GPT-5-mini) │
 │  - Artifact generation                   │
 └─────────────────────────────────────────┘
                    ↓
@@ -178,7 +187,7 @@ Content-Type: application/json
 **3. Execute Agent Pipeline**
 - Start with `luigi-master-orchestrator`
 - Progress through 60+ stages sequentially
-- Call AI models (OpenAI GPT-5, Claude 4, etc.)
+- Call AI models (OpenAI GPT-5-mini)
 - Execute tools (read_files, think_deeply, etc.)
 - Generate artifacts per stage
 
@@ -339,8 +348,10 @@ The Luigi workspace is **architecturally sound but functionally incomplete**. Th
 It's like they built a complete car except for the engine!!!!
 
 **Your Tasks:**
-1. Build the engine from scratch!
+1. Build the engine from scratch! Make sure it uses the latest GPT-5-Mini model. Our project already has a config with all models. 
 2. NO MOCKS!!!  
 3. Copy the agent runner from Codebuff!!!
 https://www.npmjs.com/package/@codebuff/sdk
 https://github.com/CodebuffAI/codebuff
+
+

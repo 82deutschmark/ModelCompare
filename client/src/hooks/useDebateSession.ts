@@ -1,7 +1,7 @@
 // * Author: GPT-5 Codex
-// * Date: 2025-10-17 19:47 UTC
-// * PURPOSE: Consolidated debate session state manager cleaning merge duplicates, preserving turn history, jury workflow, and resume helpers for streaming debate mode.
-// * SRP/DRY check: Pass - Single hook orchestrates debate session state while delegating UI/rendering elsewhere; no duplicate implementations remain.
+// * Date: 2025-10-22 00:50 UTC
+// * PURPOSE: Revert debate session state manager to main branch baseline to restore reliable resets and hydration.
+// * SRP/DRY check: Pass - Hook returns to proven single-responsibility logic without redundant helpers.
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ContentStreamChunk, ReasoningStreamChunk } from '@/hooks/useAdvancedStreaming';

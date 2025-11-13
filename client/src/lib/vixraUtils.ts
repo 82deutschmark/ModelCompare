@@ -82,6 +82,176 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+export function sanitizeTitleCandidate(candidate: string): string {
+  if (!candidate) return "";
+  const cleaned = candidate
+    .replace(/\*\*/g, "")
+    .replace(/[_`]/g, "")
+    .trim();
+  return cleaned.replace(/^["'“”‘’`]+|["'“”‘’`]+$/g, "").trim();
+}
+
+export function hasMeaningfulText(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function extractTitleFromContent(
+  content: string,
+  options?: { skipSectionPreamble?: boolean }
+): string {
+  if (!hasMeaningfulText(content)) {
+    return "";
+  }
+
+  const headingMatch = content.match(/^\s*#\s+(.+?)\s*$/m);
+  if (headingMatch) {
+    const heading = sanitizeTitleCandidate(headingMatch[1]);
+    if (hasValue(heading)) {
+      return heading;
+    }
+  }
+
+  const boldTitleMatch = content.match(/\*\*Title\*\*\s*[:\-]\s*(.+)/i);
+  if (boldTitleMatch) {
+    const [line] = boldTitleMatch[1].split(/\r?\n/);
+    const title = sanitizeTitleCandidate(line);
+    if (hasValue(title)) {
+      return title;
+    }
+  }
+
+  const colonTitleMatch = content.match(/(?:^|\n)\s*Title\s*[:\-]\s*(.+)/i);
+  if (colonTitleMatch) {
+    const [line] = colonTitleMatch[1].split(/\r?\n/);
+    const title = sanitizeTitleCandidate(line);
+    if (hasValue(title)) {
+      return title;
+    }
+  }
+
+  const lines = content
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  for (const rawLine of lines) {
+    let line = rawLine.replace(/^[-*>\d.]+\s*/, "").trim();
+    if (!hasValue(line)) {
+      continue;
+    }
+
+    if (options?.skipSectionPreamble) {
+      if (/^abstract\b/i.test(line)) continue;
+      if (/^science\s+category\b/i.test(line)) continue;
+      if (/^keywords\b/i.test(line)) continue;
+    }
+
+    const sanitized = sanitizeTitleCandidate(line);
+    if (hasValue(sanitized) && sanitized.length >= 5) {
+      return sanitized;
+    }
+  }
+
+  return "";
+}
+
+export function getPrimarySectionContent(
+  sectionResponses: VixraSectionResponses,
+  sectionId: string
+): string | null {
+  const responses = sectionResponses[sectionId];
+  if (!responses) {
+    return null;
+  }
+
+  for (const response of Object.values(responses)) {
+    if (hasMeaningfulText(response?.content)) {
+      return response!.content!.trim();
+    }
+  }
+
+  return null;
+}
+
+export function extractTitleFromAbstract(content: string): string {
+  return extractTitleFromContent(content, { skipSectionPreamble: true });
+}
+
+function deriveTitleFromSections(sectionResponses: VixraSectionResponses): string {
+  const preferredOrder = [
+    "abstract",
+    "introduction",
+    "results",
+    "discussion",
+    "conclusion"
+  ];
+
+  for (const sectionId of preferredOrder) {
+    const content = getPrimarySectionContent(sectionResponses, sectionId);
+    if (hasMeaningfulText(content)) {
+      const candidate = extractTitleFromContent(
+        content!,
+        { skipSectionPreamble: sectionId === "abstract" }
+      );
+      if (hasValue(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  const orderedIds = PAPER_SECTIONS.map(section => section.id).filter(id => !preferredOrder.includes(id));
+  for (const sectionId of orderedIds) {
+    const content = getPrimarySectionContent(sectionResponses, sectionId);
+    if (hasMeaningfulText(content)) {
+      const candidate = extractTitleFromContent(content!);
+      if (hasValue(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  const aggregatedContent = [
+    ...preferredOrder,
+    ...orderedIds
+  ]
+    .map(sectionId => getPrimarySectionContent(sectionResponses, sectionId))
+    .filter((value): value is string => hasMeaningfulText(value))
+    .join("\n");
+
+  if (hasMeaningfulText(aggregatedContent)) {
+    const candidate = extractTitleFromContent(aggregatedContent!);
+    if (hasValue(candidate)) {
+      return candidate;
+    }
+  }
+
+  return "";
+}
+
+function resolvePaperTitle(
+  variables: VixraVariables,
+  sectionResponses: VixraSectionResponses
+): string {
+  if (hasValue(variables.Title)) {
+    return variables.Title.trim();
+  }
+
+  const abstractContent = getPrimarySectionContent(sectionResponses, "abstract");
+  if (hasMeaningfulText(abstractContent)) {
+    const abstractTitle = extractTitleFromAbstract(abstractContent!);
+    if (hasValue(abstractTitle)) {
+      return abstractTitle;
+    }
+  }
+
+  const derivedTitle = deriveTitleFromSections(sectionResponses);
+  if (hasValue(derivedTitle)) {
+    return derivedTitle;
+  }
+
+  return "";
+}
+
 /**
  * Generate missing variables by calling the shared model response API while preserving user input.
  * DOES NOT add hardcoded fallbacks - only LLM-generated or user-provided values.
@@ -278,13 +448,16 @@ export function exportVixraPaper(
   selectedModels: AIModel[]
 ): string {
   const timestamp = new Date();
-  
+
   // Use ONLY the variables that were actually provided - no auto-generation
-  const paperTitle = variables.Title || "Untitled Satirical Paper";
+  const paperTitle = resolvePaperTitle(variables, sectionResponses);
   const authorLine = variables.Authors || variables.Author || variables.ResearcherName || "Anonymous Research Collective";
   const scienceCategory = variables.ScienceCategory || DEFAULT_CATEGORY;
 
-  let paper = `# ${paperTitle}\n\n`;
+  let paper = "";
+  if (hasValue(paperTitle)) {
+    paper += `# ${paperTitle}\n\n`;
+  }
   paper += `**Authors:** ${authorLine}\n\n`;
 
   // ONLY include Institution if explicitly provided (not hardcoded)
@@ -370,7 +543,8 @@ export function downloadVixraPaper(
   selectedModels: AIModel[]
 ): void {
   const paperContent = exportVixraPaper(variables, sectionResponses, selectedModels);
-  const title = hasValue(variables.Title) ? variables.Title! : "vixra-paper";
+  const derivedTitle = resolvePaperTitle(variables, sectionResponses);
+  const title = hasValue(derivedTitle) ? derivedTitle : "vixra-paper";
   const safeTitle = title.replace(/[^a-z0-9-_]/gi, "_").toLowerCase();
   const timestamp = new Date().toISOString().slice(0, 10);
   const filename = `${safeTitle}_${timestamp}.md`;
@@ -411,12 +585,15 @@ export function printVixraPaper(
   }
 
   const paperContent = exportVixraPaper(variables, sectionResponses, selectedModels);
+  const resolvedTitle = resolvePaperTitle(variables, sectionResponses);
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     throw new Error("Could not open print window");
   }
 
-  const documentTitle = extractTitleFromMarkdown(paperContent) || "Vixra Research Paper";
+  const documentTitle = hasValue(resolvedTitle)
+    ? resolvedTitle
+    : extractTitleFromMarkdown(paperContent) || "Vixra Research Paper";
   const htmlBody = convertMarkdownToPrintHtml(paperContent);
 
   printWindow.document.write(`

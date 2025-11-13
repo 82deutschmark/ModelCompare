@@ -1,43 +1,45 @@
 /**
  * Model selector component for debate mode
  *
- * Author: Cascade
- * Date: October 15, 2025
- * PURPOSE: Handles model selection and configuration for both debate participants
- * SRP/DRY check: Pass - Single responsibility for model selection, no duplication with other model selection components
+ * Author: Claude Code using Sonnet 4.5
+ * Date: 2025-10-22
+ * PURPOSE: Handles model selection and configuration for both debate participants.
+ *          Refactored to use useDebateSetup and useQuery hooks directly.
+ *          Includes collapsible config panels to reduce visual clutter.
+ * SRP/DRY check: Pass - Single responsibility for model selection, uses existing hooks
  */
 
 import { Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ModelConfigurationPanel, type ModelConfiguration } from '@/components/ModelConfigurationPanel';
+import { ModelConfigurationPanel } from '@/components/ModelConfigurationPanel';
+import { useDebateSetup } from '@/hooks/useDebateSetup';
+import { useDebateStreaming } from '@/hooks/useDebateStreaming';
 import type { AIModel } from '@/types/ai-models';
 
-interface ModelSelectorProps {
-  models: AIModel[];
-  model1Id: string;
-  setModel1Id: (modelId: string) => void;
-  model2Id: string;
-  setModel2Id: (modelId: string) => void;
-  model1Config: ModelConfiguration;
-  setModel1Config: (config: ModelConfiguration) => void;
-  model2Config: ModelConfiguration;
-  setModel2Config: (config: ModelConfiguration) => void;
-  isStreaming: boolean;
-}
+export function ModelSelector() {
+  const {
+    model1Id,
+    setModel1Id,
+    model2Id,
+    setModel2Id,
+    model1Config,
+    setModel1Config,
+    model2Config,
+    setModel2Config,
+  } = useDebateSetup();
 
-export function ModelSelector({
-  models,
-  model1Id,
-  setModel1Id,
-  model2Id,
-  setModel2Id,
-  model1Config,
-  setModel1Config,
-  model2Config,
-  setModel2Config,
-  isStreaming,
-}: ModelSelectorProps) {
+  const { isStreaming } = useDebateStreaming();
+
+  const { data: models = [] } = useQuery({
+    queryKey: ['/api/models'],
+    queryFn: async () => {
+      const response = await fetch('/api/models');
+      if (!response.ok) throw new Error('Failed to fetch models');
+      return response.json() as Promise<AIModel[]>;
+    },
+  });
   return (
     <div className="space-y-3">
       <div className="flex items-center space-x-2">
@@ -89,7 +91,7 @@ export function ModelSelector({
         </div>
       </div>
 
-      {/* Model Configuration Panels - More Compact */}
+      {/* Model Configuration Panels - Always Expanded */}
       {model1Id && (
         <div className="pt-2 border-t">
           <div className="mb-2">

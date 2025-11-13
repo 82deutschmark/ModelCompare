@@ -64,77 +64,70 @@ export const ModelConfigurationPanel: React.FC<ModelConfigPanelProps> = ({
       )}
 
       <div className="space-y-3">
-        {/* Reasoning Configuration - Only for reasoning models */}
+        {/* Reasoning Configuration - Always enabled for reasoning models */}
         {modelIsReasoning && (
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Brain className="w-3 h-3" />
-              <Label className="text-xs font-medium">Reasoning</Label>
-              <Switch
-                checked={configuration.enableReasoning}
-                onCheckedChange={(enabled) => updateConfig({ enableReasoning: enabled })}
-                disabled={isStreaming}
-              />
+              <Label className="text-xs font-medium">Reasoning (Always On)</Label>
             </div>
 
-            {configuration.enableReasoning && (
-              <div className="grid grid-cols-3 gap-2 pl-4">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Effort</Label>
-                  <Select
-                    value={configuration.reasoningEffort}
-                    onValueChange={(value: any) => updateConfig({ reasoningEffort: value })}
-                    disabled={isStreaming}
-                  >
-                    <SelectTrigger className="h-6">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="minimal">Min</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Med</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Summary</Label>
-                  <Select
-                    value={configuration.reasoningSummary}
-                    onValueChange={(value: any) => updateConfig({ reasoningSummary: value })}
-                    disabled={isStreaming}
-                  >
-                    <SelectTrigger className="h-6">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">Auto</SelectItem>
-                      <SelectItem value="detailed">Detailed</SelectItem>
-                      <SelectItem value="concise">Concise</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Verbosity</Label>
-                  <Select
-                    value={configuration.textVerbosity}
-                    onValueChange={(value: any) => updateConfig({ textVerbosity: value })}
-                    disabled={isStreaming}
-                  >
-                    <SelectTrigger className="h-6">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Med</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Effort</Label>
+                <Select
+                  value={configuration.reasoningEffort}
+                  onValueChange={(value: any) => updateConfig({ reasoningEffort: value, enableReasoning: true })}
+                  disabled={isStreaming}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minimal">Min</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Med</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Summary</Label>
+                <Select
+                  value={configuration.reasoningSummary}
+                  onValueChange={(value: any) => updateConfig({ reasoningSummary: value, enableReasoning: true })}
+                  disabled={isStreaming}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto</SelectItem>
+                    <SelectItem value="detailed">Detailed</SelectItem>
+                    <SelectItem value="concise">Concise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Verbosity</Label>
+                <Select
+                  value={configuration.textVerbosity}
+                  onValueChange={(value: any) => updateConfig({ textVerbosity: value, enableReasoning: true })}
+                  disabled={isStreaming}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Med</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         )}
 

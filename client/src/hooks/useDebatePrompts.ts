@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { parseDebatePromptsFromMarkdown, type DebateInstructions } from '@/lib/promptParser';
 import { applyTemplateReplacements } from '@/lib/debatePromptUtils';
+import { getDebateIntensityDescriptor } from '@shared/debate-instructions.ts';
 
 export interface DebatePromptsState {
   debateData: DebateInstructions | null;
@@ -65,16 +66,22 @@ export function useDebatePrompts(): DebatePromptsState {
       ? customTopic
       : (debateData?.topics.find(t => t.id === selectedTopic)?.proposition || "");
 
+    const intensityDescriptor = getDebateIntensityDescriptor(debateData, adversarialLevel);
+    const intensityFullText = intensityDescriptor?.fullText || `Level ${adversarialLevel}`;
+    const intensityLabel = intensityDescriptor?.label || `Level ${adversarialLevel}`;
+    const intensitySummary = intensityDescriptor?.summary || "";
+
     const baseTemplate = applyTemplateReplacements(debateData?.baseTemplate || "", {
       topic: topicText,
-      intensity: String(adversarialLevel),
+      intensity: intensityFullText,
+      intensity_level: String(adversarialLevel),
+      intensity_label: intensityLabel,
+      intensity_summary: intensitySummary,
     });
-
-    const intensityText = debateData?.intensities?.[adversarialLevel] || "";
 
     const roleBlock = (role: "AFFIRMATIVE" | "NEGATIVE", position: "FOR" | "AGAINST") => {
       const resolved = applyTemplateReplacements(baseTemplate, { role, position });
-      return intensityText ? `${resolved}\n\n${intensityText}` : resolved;
+      return resolved;
     };
 
     const fallbackRebuttal = `You are responding to your opponent as the {role} debater arguing {position} the proposition: "{topic}".
@@ -89,15 +96,16 @@ Structure your rebuttal by:
 
     const rebuttalBase = applyTemplateReplacements(debateData?.templates.rebuttal || fallbackRebuttal, {
       topic: topicText,
-      intensity: String(adversarialLevel),
+      intensity: intensityFullText,
+      intensity_level: String(adversarialLevel),
+      intensity_label: intensityLabel,
+      intensity_summary: intensitySummary,
     });
-
-    const rebuttalTemplate = intensityText ? `${rebuttalBase}\n\n${intensityText}` : rebuttalBase;
 
     return {
       affirmativePrompt: roleBlock("AFFIRMATIVE", "FOR"),
       negativePrompt: roleBlock("NEGATIVE", "AGAINST"),
-      rebuttalTemplate,
+      rebuttalTemplate: rebuttalBase,
       topicText,
     };
   };

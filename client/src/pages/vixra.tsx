@@ -1,7 +1,7 @@
 /**
  * Author: Cascade using Claude Sonnet 4
  * Date: 2025-10-04
- * PURPOSE: Vixra Mode - Satirical academic paper generation with hero-centered UI redesign.
+ * PURPOSE: Vixra Mode - academic paper generation with hero-centered UI redesign.
  *          Single-column layout with PaperSetupCard hero, progress tracker,
  *          streaming section results, and export footer.
  *          Optimized for single-model auto-mode workflow while supporting manual mode.
@@ -9,7 +9,7 @@
  * shadcn/ui: Pass - Uses AppNavigation and custom Vixra components built on shadcn/ui
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,8 @@ import {
   downloadVixraPaper,
   copyVixraPaper,
   printVixraPaper,
+  extractTitleFromAbstract,
+  hasMeaningfulText,
   SCIENCE_CATEGORIES,
   type VixraVariables,
   type VixraSectionResponses
@@ -104,10 +106,11 @@ export default function VixraPage() {
 
   // Individual model response mutation
   const modelResponseMutation = useMutation({
-    mutationFn: async (data: { prompt: string; modelId: string; sectionId: string }) => {
+    mutationFn: async (data: { prompt: string; modelId: string; sectionId: string; options?: Record<string, unknown> }) => {
       const response = await apiRequest('POST', '/api/models/respond', {
         modelId: data.modelId,
-        prompt: data.prompt
+        prompt: data.prompt,
+        options: data.options
       });
       const responseData = await response.json() as ModelResponse;
       return { ...responseData, sectionId: data.sectionId, modelId: data.modelId };
@@ -132,10 +135,9 @@ export default function VixraPage() {
       );
 
       // Extract title from Abstract section if generated
-      if (data.sectionId === 'abstract' && data.content && !state.paperConfig.title) {
-        const titleMatch = data.content.match(/Title:\s*["']?(.+?)["']?\s*(?:\n|Science Category)/i);
-        if (titleMatch && titleMatch[1]) {
-          const extractedTitle = titleMatch[1].trim().replace(/^["']|["']$/g, '');
+      if (data.sectionId === 'abstract' && data.content && !hasMeaningfulText(state.paperConfig.title)) {
+        const extractedTitle = extractTitleFromAbstract(data.content);
+        if (hasMeaningfulText(extractedTitle)) {
           actions.updateTitle(extractedTitle);
         }
       }
@@ -225,30 +227,26 @@ export default function VixraPage() {
       throw new Error(`No template found for section: ${sectionId}`);
     }
 
-    // Generate missing variables (respects user input)
     const userVariables: VixraVariables = {
       Author: state.paperConfig.author,
       ScienceCategory: state.paperConfig.scienceCategory,
       Title: state.paperConfig.title,
     };
-    
+
     const completeVariables = await generateMissingVariables(userVariables, promptTemplates);
-    
-    // Update UI with generated title if it was missing
-    if (!state.paperConfig.title && completeVariables.Title) {
+
+    if (!hasMeaningfulText(state.paperConfig.title) && hasMeaningfulText(completeVariables.Title)) {
       actions.updateTitle(completeVariables.Title);
     }
-    
-    // Add previous section content as variables for dependencies
+
     const section = state.sections.find(s => s.id === sectionId);
-    const allVariables = { ...completeVariables };
-    
+    const allVariables: VixraVariables = { ...completeVariables };
+
     if (section?.dependencies) {
       section.dependencies.forEach(depId => {
         const depSection = state.sections.find(s => s.id === depId);
         if (depSection?.content) {
           allVariables[depId] = depSection.content;
-          // For single dependency, also add as {response}
           if (section.dependencies.length === 1) {
             allVariables.response = depSection.content;
           }
@@ -259,14 +257,56 @@ export default function VixraPage() {
     return substituteVariables(template, allVariables);
   }, [promptTemplates, state.paperConfig, state.sections, actions]);
 
-  // Generate a specific section
+  const selectedModelData = useMemo(() => (
+    models.find(model => model.id === state.selectedModel)
+  ), [models, state.selectedModel]);
+
+  useEffect(() => {
+    if (!selectedModelData) {
+      return;
+    }
+
+    const supportsReasoning = selectedModelData.isReasoning ?? selectedModelData.capabilities?.reasoning ?? false;
+    if (!supportsReasoning && state.modelConfig.enableReasoning) {
+      actions.updateModelConfig({
+        ...state.modelConfig,
+        enableReasoning: false
+      });
+    }
+  }, [selectedModelData, state.modelConfig, actions]);
+
+  const buildModelCallOptions = useCallback((): Record<string, unknown> | undefined => {
+    if (!selectedModelData) {
+      return undefined;
+    }
+
+    const options: Record<string, unknown> = {
+      maxTokens: state.modelConfig.maxTokens
+    };
+
+    if (selectedModelData.supportsTemperature) {
+      options.temperature = state.modelConfig.temperature;
+    }
+
+    const supportsReasoning = selectedModelData.isReasoning ?? selectedModelData.capabilities?.reasoning ?? false;
+    if (supportsReasoning && state.modelConfig.enableReasoning) {
+      options.reasoningConfig = {
+        effort: state.modelConfig.reasoningEffort,
+        summary: state.modelConfig.reasoningSummary,
+        verbosity: state.modelConfig.textVerbosity
+      };
+    }
+
+    return options;
+  }, [selectedModelData, state.modelConfig]);
+
   const generateSection = useCallback(async (sectionId?: string) => {
     const targetSection = sectionId || state.currentSectionId || getNextEligibleSection(actions.getCompletedSectionIds());
-    
+
     if (!targetSection) {
       toast({
         title: "No sections available",
-        description: "All sections are either completed or locked",
+        description: "All sections are completed",
         variant: "destructive",
       });
       return;
@@ -292,11 +332,12 @@ export default function VixraPage() {
 
     try {
       const prompt = await buildSectionPrompt(targetSection);
-      
+
       modelResponseMutation.mutate({
         prompt,
         modelId: state.selectedModel,
-        sectionId: targetSection
+        sectionId: targetSection,
+        options: buildModelCallOptions()
       });
     } catch (error) {
       toast({
@@ -305,7 +346,7 @@ export default function VixraPage() {
         variant: "destructive",
       });
     }
-  }, [state.currentSectionId, state.selectedModel, state.paperConfig.scienceCategory, actions, toast, buildSectionPrompt, modelResponseMutation]);
+  }, [state.currentSectionId, state.selectedModel, state.paperConfig.scienceCategory, actions, toast, buildSectionPrompt, modelResponseMutation, buildModelCallOptions]);
 
   // Start paper generation (manual or auto mode)
   const handleGeneratePaper = useCallback(() => {
@@ -329,7 +370,6 @@ export default function VixraPage() {
 
     actions.setIsGenerating(true);
     
-    // Start with first section
     const firstSection = getNextEligibleSection([]);
     if (firstSection) {
       generateSection(firstSection);
@@ -351,22 +391,31 @@ export default function VixraPage() {
   }, [state.isGenerating, toast, generateSection]);
 
   // Export handlers
+  const buildSectionResponses = useCallback((): VixraSectionResponses => {
+    const responses: VixraSectionResponses = {};
+    if (!state.selectedModel) {
+      return responses;
+    }
+
+    state.sections.forEach(section => {
+      if (section.status === 'completed' && section.content) {
+        responses[section.id] = {
+          [state.selectedModel]: {
+            content: section.content,
+            status: 'success',
+            responseTime: section.metadata?.responseTime || 0,
+            tokenUsage: section.metadata?.tokenUsage,
+          } as ModelResponse
+        };
+      }
+    });
+
+    return responses;
+  }, [state.sections, state.selectedModel]);
+
   const handleExportPDF = useCallback(() => {
     try {
-      const sectionResponses: VixraSectionResponses = {};
-      state.sections.forEach(section => {
-        if (section.status === 'completed' && section.content) {
-          sectionResponses[section.id] = {
-            [state.selectedModel]: {
-              content: section.content,
-              status: 'success',
-              responseTime: section.metadata?.responseTime || 0,
-              tokenUsage: section.metadata?.tokenUsage,
-            } as ModelResponse
-          };
-        }
-      });
-
+      const sectionResponses = buildSectionResponses();
       const variables: VixraVariables = {
         Author: state.paperConfig.author,
         ScienceCategory: state.paperConfig.scienceCategory,
@@ -387,24 +436,11 @@ export default function VixraPage() {
         variant: "destructive",
       });
     }
-  }, [state.sections, state.selectedModel, state.paperConfig, models, toast]);
+  }, [buildSectionResponses, state.paperConfig, models, state.selectedModel, toast]);
 
   const handleExportMarkdown = useCallback(async () => {
     try {
-      const sectionResponses: VixraSectionResponses = {};
-      state.sections.forEach(section => {
-        if (section.status === 'completed' && section.content) {
-          sectionResponses[section.id] = {
-            [state.selectedModel]: {
-              content: section.content,
-              status: 'success',
-              responseTime: section.metadata?.responseTime || 0,
-              tokenUsage: section.metadata?.tokenUsage,
-            } as ModelResponse
-          };
-        }
-      });
-
+      const sectionResponses = buildSectionResponses();
       const variables: VixraVariables = {
         Author: state.paperConfig.author,
         ScienceCategory: state.paperConfig.scienceCategory,
@@ -425,7 +461,7 @@ export default function VixraPage() {
         variant: "destructive",
       });
     }
-  }, [state.sections, state.selectedModel, state.paperConfig, models, toast]);
+  }, [buildSectionResponses, state.paperConfig, models, state.selectedModel, toast]);
 
   const handlePrint = handleExportPDF;
 
@@ -438,7 +474,7 @@ export default function VixraPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <AppNavigation
         title="Vixra Mode"
-        subtitle="Generate satirical academic papers with AI"
+        subtitle="Generate academic papers with AI"
         icon={FileText}
       />
 
@@ -464,6 +500,8 @@ export default function VixraPage() {
               selectedModel={state.selectedModel}
               models={models}
               onModelSelect={actions.selectModel}
+              modelConfig={state.modelConfig}
+              onModelConfigChange={actions.updateModelConfig}
               isAutoMode={state.generationMode === 'auto'}
               onModeToggle={(enabled) => actions.setGenerationMode(enabled ? 'auto' : 'manual')}
               onGenerate={handleGeneratePaper}

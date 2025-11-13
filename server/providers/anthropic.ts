@@ -23,7 +23,7 @@ export class AnthropicProvider extends BaseProvider {
       id: "claude-sonnet-4-5",
       name: "Claude Sonnet 4.5 (Sep 29 2025)",
       provider: "Anthropic",
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-5-20250929",
       knowledgeCutoff: "April 2024",
       capabilities: {
         reasoning: true, // Extended thinking available
@@ -107,7 +107,7 @@ export class AnthropicProvider extends BaseProvider {
       id: "claude-haiku-4-5-20251015",
       name: "Claude Haiku 4.5",
       provider: "Anthropic",
-      model: "claude-haiku-4-5-20251015",
+      model: "claude-haiku-4-5-20251001",
       knowledgeCutoff: "Unknown",
       capabilities: {
         reasoning: true,

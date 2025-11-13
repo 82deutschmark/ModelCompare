@@ -1,0 +1,11 @@
+# Normalize lockfile line endings to LF to prevent Windows CRLF churn
+package-lock.json text eol=lf
+
+# Keep images and binaries untouched
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.svg text eol=lf
+

@@ -49,47 +49,47 @@ export class OpenAIProvider extends BaseProvider {
       },
     },
     {
-  id: "gpt-5-mini-2025-08-07",
-  name: "GPT-5 Mini",
-  provider: "OpenAI",
-  model: "gpt-5-mini-2025-08-07",
-  knowledgeCutoff: "October 2024",
-  capabilities: {
-    reasoning: true, // Reasoning token support
-    multimodal: true,
-    functionCalling: true,
-    streaming: true,
-  },
-  pricing: {
-    inputPerMillion: 0.25,
-    outputPerMillion: 2.00,
-  },
-  limits: {
-    maxTokens: 128000,
-    contextWindow: 400000,
-  },
-},
-{
-  id: "gpt-5-nano-2025-08-07",
-  name: "GPT-5 Nano",
-  provider: "OpenAI",
-  model: "gpt-5-nano-2025-08-07",
-  knowledgeCutoff: "May 31, 2024",
-  capabilities: {
-    reasoning: true, // Reasoning token support (fast/low-cost)
-    multimodal: true,
-    functionCalling: true,
-    streaming: true,
-  },
-  pricing: {
-    inputPerMillion: 0.05,
-    outputPerMillion: 0.40,
-  },
-  limits: {
-    maxTokens: 128000,
-    contextWindow: 400000,
-  },
-},
+      id: "gpt-5-mini-2025-08-07",
+      name: "GPT-5 Mini",
+      provider: "OpenAI",
+      model: "gpt-5-mini-2025-08-07",
+      knowledgeCutoff: "October 2024",
+      capabilities: {
+        reasoning: true, // Reasoning token support
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.25,
+        outputPerMillion: 2.00,
+      },
+      limits: {
+        maxTokens: 128000,
+        contextWindow: 400000,
+      },
+    },
+    {
+      id: "gpt-5-nano-2025-08-07",
+      name: "GPT-5 Nano",
+      provider: "OpenAI",
+      model: "gpt-5-nano-2025-08-07",
+      knowledgeCutoff: "May 31, 2024",
+      capabilities: {
+        reasoning: true, // Reasoning token support (fast/low-cost)
+        multimodal: true,
+        functionCalling: true,
+        streaming: true,
+      },
+      pricing: {
+        inputPerMillion: 0.05,
+        outputPerMillion: 0.40,
+      },
+      limits: {
+        maxTokens: 128000,
+        contextWindow: 400000,
+      },
+    },
     {
       id: "gpt-4.1-nano-2025-04-14",
       name: "GPT-4.1 Nano",
@@ -258,10 +258,23 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   private buildPromptPayload(reference: PromptReference): Record<string, any> {
+    /*
+     * Author: gpt-5-codex
+     * Date: 2025-10-22 19:40 UTC
+     * PURPOSE: Construct the Responses API prompt payload from our PromptReference.
+     *          When `version` is set to "latest" (or falsy), omit the version field so the API resolves
+     *          to the latest published prompt version. This keeps debate flow always on the newest template.
+     * SRP/DRY check: Pass - Single responsibility for mapping PromptReference to request shape.
+     */
     const payload: Record<string, any> = {
       id: reference.id,
-      version: reference.version,
     };
+
+    // Omit explicit version when caller requests latest so OpenAI uses the newest published version.
+    const normalizedVersion = (reference.version || '').trim().toLowerCase();
+    if (normalizedVersion && normalizedVersion !== 'latest') {
+      payload.version = reference.version;
+    }
 
     const normalizedVariables = this.normalizePromptVariables(reference.variables ?? {});
     if (Object.keys(normalizedVariables).length > 0) {

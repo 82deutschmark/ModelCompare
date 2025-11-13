@@ -140,7 +140,7 @@ Source: `server/routes.ts`, provider registry `server/providers/index.ts`, base 
 ### POST /api/generate
 - Purpose: Unified generation endpoint for all modes (single source of truth).
 - Request body (`shared/api-types.ts` → `GenerateRequest`):
-  - `mode`: `'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment' | 'vixra'`
+  - `mode`: `'creative' | 'battle' | 'debate' | 'compare' | 'arc-agent' | 'plan-assessment' | 'vixra'`
   - `template: string`
   - `variables: Record<string,string>` (validated via `shared/variable-registry.ts` per mode)
   - `messages: UnifiedMessageIn[]` (reserved for future/context)

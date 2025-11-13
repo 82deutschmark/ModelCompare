@@ -82,7 +82,7 @@ export interface UnifiedMessage {
 }
 
 export interface GenerateRequest {
-  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment' | 'vixra';
+  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'arc-agent' | 'plan-assessment' | 'vixra';
   sessionId?: string;
   template: string;
   variables: Record<string, string>;
@@ -156,7 +156,7 @@ export interface TemplateMetadata {
 export interface StructuredTemplate {
   id: string;
   name: string;
-  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'research-synthesis' | 'plan-assessment' | 'vixra';
+  mode: 'creative' | 'battle' | 'debate' | 'compare' | 'arc-agent' | 'plan-assessment' | 'vixra';
   category: string;
   structure: {
     systemInstructions?: string;

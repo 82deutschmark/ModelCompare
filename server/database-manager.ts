@@ -198,7 +198,69 @@ export class DatabaseManager {
           "updated_at" timestamp DEFAULT now()
         );
       `);
-      
+
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS "debate_sessions" (
+          "id" text PRIMARY KEY,
+          "topic_text" text NOT NULL,
+          "model1_id" text NOT NULL,
+          "model2_id" text NOT NULL,
+          "adversarial_level" integer NOT NULL,
+          "turn_history" jsonb NOT NULL DEFAULT '[]'::jsonb,
+          "model1_response_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
+          "model2_response_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
+          "total_cost" numeric DEFAULT '0',
+          "created_at" timestamp DEFAULT now(),
+          "updated_at" timestamp DEFAULT now()
+        );
+      `);
+
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS "arc_runs" (
+          "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+          "task_id" varchar NOT NULL,
+          "challenge_name" text NOT NULL,
+          "puzzle_description" text NOT NULL,
+          "puzzle_payload" jsonb NOT NULL,
+          "target_pattern_summary" text,
+          "evaluation_focus" text,
+          "status" varchar NOT NULL,
+          "current_stage_id" varchar,
+          "stages" jsonb NOT NULL,
+          "total_cost_cents" integer,
+          "created_at" timestamp DEFAULT now(),
+          "updated_at" timestamp DEFAULT now(),
+          "completed_at" timestamp
+        );
+      `);
+
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS "arc_messages" (
+          "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+          "run_id" varchar NOT NULL REFERENCES "arc_runs"("id") ON DELETE cascade,
+          "role" varchar NOT NULL,
+          "stage_id" varchar,
+          "agent_id" varchar,
+          "content" text NOT NULL,
+          "reasoning" text,
+          "metadata" jsonb,
+          "created_at" timestamp DEFAULT now()
+        );
+      `);
+
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS "arc_artifacts" (
+          "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+          "run_id" varchar NOT NULL REFERENCES "arc_runs"("id") ON DELETE cascade,
+          "stage_id" varchar NOT NULL,
+          "type" varchar NOT NULL,
+          "title" text NOT NULL,
+          "description" text,
+          "data" jsonb,
+          "created_at" timestamp DEFAULT now()
+        );
+      `);
+
       console.log("✅ Database tables ensured");
     } catch (error) {
       console.warn("⚠️ Could not ensure tables exist:", (error as Error).message);

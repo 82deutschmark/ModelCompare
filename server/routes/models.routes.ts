@@ -145,13 +145,13 @@ router.get("/comparisons/:id", async (req, res) => {
 // Single Model Response Route
 router.post("/respond", async (req, res) => {
   try {
-    const { modelId, prompt } = req.body;
+    const { modelId, prompt, options } = req.body;
 
     if (!modelId || !prompt) {
       return res.status(400).json({ error: 'Missing modelId or prompt' });
     }
 
-    const result = await callModel(prompt, modelId);
+    const result = await callModel(prompt, modelId, options);
 
     res.json({
       content: result.content,

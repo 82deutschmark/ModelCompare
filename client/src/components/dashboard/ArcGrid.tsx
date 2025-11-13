@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArcAgiCard } from './DashboardCard';
+import { SPACE_EMOJIS } from '../../lib/spaceEmojis';
 
 // ARC color palette matching the image
 const ARC_COLORS = ['#000000', '#0074D9', '#FF4136', '#2ECC40', '#FFDC00', '#AAAAAA', '#F012BE', '#FF851B', '#7FDBFF', '#870C25'];
 
-// ARC-aligned space emoji palettes
-const SPACE_EMOJIS = {
-  legacy_default: ['⬛', '✅', '👽', '👤', '🪐', '🌍', '🛸', '☄️', '♥️', '⚠️'],
-  birds: ['🐦', '🦃', '🦆', '🦉', '🐤', '🦅', '🦜', '🦢', '🐓', '🦩'],
+// Extended emoji palettes (tech palette merged with core SPACE_EMOJIS)
+const EXTENDED_EMOJIS = {
+  ...SPACE_EMOJIS,
   tech: ['🤖', '🔬', '⚡', '🧬', '🚀', '💎', '⚛️', '🔮', '💫', '🌌'],
 } as const;
 
@@ -33,17 +33,17 @@ export const ArcGrid: React.FC<ArcGridProps> = ({
   
   useEffect(() => {
     // Initialize grid
-    const newGrid = Array(gridSize).fill(null).map(() => 
+    const newGrid = Array(gridSize).fill(null).map(() =>
       Array(gridSize).fill(null).map(() => Math.floor(Math.random() * 10))
     );
     setGrid(newGrid);
-    
+
     // Cycle between numbers and emojis every 3 seconds
     const displayInterval = setInterval(() => {
       setShowEmojis(prev => !prev);
       // Change emoji palette when switching to emoji mode
       if (!showEmojis) {
-        const palettes = Object.values(SPACE_EMOJIS);
+        const palettes = Object.values(EXTENDED_EMOJIS);
         const randomPalette = palettes[Math.floor(Math.random() * palettes.length)];
         setEmojiPalette([...randomPalette]);
       }

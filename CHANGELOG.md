@@ -1,10 +1,229 @@
 # Changelog
 <!--
- * Author: GPT-5 Codex
- * Date: 2025-10-19 00:34 UTC
+ * Author: Claude Code using Sonnet 4.5
+ * Date: 2025-10-21 21:45 UTC
+ * Date: 2025-10-22 01:21 UTC
+ * Date: 2025-10-22 00:50 UTC
+ * Date: 2025-10-21 04:30 UTC
+ * Date: 2025-10-21 03:33 UTC
+ * Date: 2025-11-06 03:45 UTC
  * PURPOSE: Maintain a human-readable history of notable changes for releases and audits.
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
+
+## [Version 0.4.41] - 2025-11-12 19:21 UTC
+
+### Changed
+- Add `.gitattributes` to normalize `package-lock.json` to LF and prevent CRLF-induced full-file diffs on Windows.
+- Cleaned working tree and index to remove whitespace-only/staged churn.
+
+## [Version 0.4.40] - 2025-11-06 20:30 UTC
+
+### Changed
+- Tightened global compare layout gutters and spacing to present more information on screen without scrolling.
+- Densified the prompt hero card, model controls, and quick stats to speed up multi-model setup.
+- Slimmed navigation, results stack, and response cards for a compact reading experience.
+
+## [Version 0.4.39] - 2025-11-06 19:50 UTC
+
+### Added
+- Authored `docs/2025-11-06-plan-arc-agents.md` outlining the stabilization plan for real OpenAI agent integrations.
+
+### Changed
+- Replaced stubbed ARC and Luigi agent executors with a shared OpenAI Responses API client that enforces JSON schemas and tracks usage costs.
+- Added unit coverage for the responses client along with ARC and Luigi SDK runners to ensure structured payloads are parsed correctly.
+
+## [Version 0.4.38] - 2025-11-06 04:10 UTC
+
+### Added
+- Authored validation plan `docs/2025-11-06-plan-arc-agent-validation.md` to guide follow-up QA for the ARC agent workspace.
+
+### Changed
+- Added metadata headers and archive notices to legacy research synthesis documentation to point readers to the ARC agent workspace.
+- Annotated navigation routing with the standardized file header comment.
+- Documented outstanding dependency resolution required for type checks.
+
+## [Version 0.4.37] - 2025-11-06 03:49 UTC
+
+### Added
+- Introduced the ARC agent workspace powered by the OpenAI Agents SDK, including new backend routes, storage tables, and a React interface for configuring puzzles, reviewing transcripts, and managing artifacts.
+
+## [Version 0.4.36] - 2025-11-06 03:45 UTC
+
+### Added
+- Linked upstream OpenAI agent reference repositories as isolated git submodules so future integrations can reuse official samples without polluting the core app tree.@libs/openai-agents-js@libs/openai-chatkit-advanced-samples
+
+## [Unreleased]
+
+## [Version 0.4.35] - 2025-11-05 14:15 UTC
+
+### Changed
+- Added domain-aware Plan Assessment experience with academic criteria, publication context options, and prompt conditioning so manuscript reviews receive relevant guidance while preserving software defaults.@client/src/pages/plan-assessment.tsx#1-247@client/src/components/plan-assessment/PlanAssessmentHero.tsx#1-481@client/src/config/planAssessmentDomainConfig.ts#1-134
+
+### Documentation
+- Captured the academic alignment plan outlining scope, tasks, and open questions for future iterations.@docs/2025-11-05-plan-academic-alignment.md#1-48
+
+## [Version 0.4.34] - 2025-11-05 01:45 UTC
+
+### Added
+- Added a peer-reviewer assessor persona that hunts AI slop, wiring enum support, prompt guidance, and UI selector copy into Plan Assessment mode so reviews flag hallucinations and filler reliably.@shared/variable-registry.ts#287-361@client/public/docs/plan-assessment-prompts.md#1-77@client/src/components/plan-assessment/PlanAssessmentHero.tsx#1-481
+
+### Documentation
+- Logged the peer-reviewer rollout plan covering scope, context, and validation tasks for future reference.@docs/2025-11-05-plan-peer-reviewer-ai-slop.md#1-44
+
+## [Version 0.4.33] - 2025-11-05 01:30 UTC
+
+### Changed
+- Removed the "Untitled Satirical Paper" fallback by deriving export titles from paper content and allowing blank headings when no title is available.@client/src/lib/vixraUtils.ts#85-600
+- Enhanced abstract title extraction and page state updates so automatic generation populates the title field using improved heuristics.@client/src/lib/vixraUtils.ts#98-254@client/src/pages/vixra.tsx#137-342
+- Centralized Vixra section response assembly to reuse derived titles across PDF, markdown, and clipboard exports.@client/src/pages/vixra.tsx#345-425
+- Added debate-style reasoning controls to the Vixra setup card, passing configuration through to generation requests and backend providers.@client/src/hooks/useVixraPaper.ts#30-272@client/src/components/vixra/PaperSetupCard.tsx#20-223@client/src/pages/vixra.tsx#107-465@server/routes/models.routes.ts#145-163@server/providers/index.ts#72-109
+
+## [Version 0.4.32] - 2025-11-03 01:28 UTC
+
+### Fixed
+- Increased the Quantum Metrics AGI countdown starting horizon to ten years so gameplay urgency aligns with long-term ARC dashboard theme.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+- Centered and emphasized the AGI countdown card with bold typography and animated glow so the ticking timer reads as the dashboard focal point.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+- Triggered the countdown immediately on page load and amplified chaos-driven acceleration so the timer cascades toward Singularity more aggressively.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+- Restyled Millennium Problem countdown tiles with shared neon card treatment so every timer mirrors the AGI ETA focal styling.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+- Reworked decay multipliers to compound beyond 1020% so each destabilized metric and chaos surge pushes the AGI timer into runaway collapse.@client/src/components/dashboard/QuantumMetrics.tsx#1-801
+
+## [Version 0.4.31] - 2025-11-03 01:05 UTC
+
+### Added
+- Looping slow-typing guidance overlay in the ARC neural prompt textarea so empty states animate "please enter or think your message here" with framer-motion timing and cleanup guards.@client/src/components/dashboard/PromptInterface.tsx#1-355
+- Typing guidance implementation plan documenting scope, risks, and definition of done for the ARC UI enhancement.@docs/2025-11-02-plan-typing-guidance.md#1-24
+
+## [Version 0.4.30] - 2025-11-02 04:52 UTC
+
+### Added
+- Hyperbolic "Primary Hyperstate" descriptor card with rotating neon gradients, multi-line pseudo-scientific accolades, and animated pulse overlays to amplify the Arc AGI dashboard parody aesthetic.@client/src/components/dashboard/PrimaryDescriptor.tsx#1-127
+- Integrated the primary descriptor module into the `/arc-agi` dashboard stack so the new status panel anchors the page above the existing quantum metrics grid.@client/src/pages/dashboard.tsx#1-536
+- Auto-opening dystopian "Terms of Data Harvesting" modal leveraging shadcn dialog primitives to reinforce the satirical tone with animated backgrounds and compliance bait copy.@client/src/components/dashboard/DataHarvestingModal.tsx#1-163@client/src/pages/ARC.tsx#1-544
+
+### Changed
+- Renamed the Arc AGI parody dashboard entry point to `client/src/pages/ARC.tsx` so file naming matches the `/arc-agi` route and improves discoverability.@client/src/pages/ARC.tsx#1-544@client/src/App.tsx#1-55
+
+## [Version 0.4.29] - 2025-10-25 23:35 UTC
+
+### Fixed
+- Restored DeepSeek and OpenRouter availability by reusing initialized provider instances instead of constructing ad hoc objects during lookups.@server/providers/index.ts#1-128
+- Corrected Anthropic Messages API identifiers for Sonnet 4.5 and Haiku 4.5 to stop `model_not_found_error` responses from the service.@server/providers/anthropic.ts#18-126
+- Hardened Express error handling to normalize responses via `formatErrorResponse` and avoid repeated 500 cascades after upstream failures.@server/middleware/error-handler.ts#1-27
+- Synced OpenAI Responses API models by registering `gpt-5-chat-latest` and `o3-mini-2025-01-31` so UI selections map to provider support after the Responses migration.@server/providers/openai.ts#1-218
+
+## [Version 0.4.28] - 2025-10-24 23:20 UTC
+
+### Added
+- OpenAI Agents SDK evaluation plan documenting Luigi agent inventory, current execution gaps, and phased migration strategy.@docs/2025-10-24-plan-openai-agents-sdk-evaluation.md#1-89
+
+### Changed
+- Introduced an in-process OpenAI Agents SDK runner, Luigi executor wiring, and environment configuration plumbing to toggle between REST and SDK modes for orchestrator execution.@server/luigi/openai-sdk-runner.ts#1-261@server/luigi/executor.ts#1-265@server/config.ts#8-236@server/routes/luigi.ts#26-125
+
+## [Version 0.4.27] - 2025-10-22 19:40 UTC
+
+### Changed
+- Default OpenAI Prompt Template resolution to the latest version for debate streaming:
+  - In `server/routes/debate.routes.ts`, set the stored prompt reference `version` to `"latest"`.
+  - In `server/providers/openai.ts`, omit the `version` field in the Responses payload when `version` is `"latest"` (or falsy) so OpenAI resolves to the newest published template automatically.
+  - This ensures debates always use the most up-to-date prompt without manual version bumps.
+
+### Changed
+- **Debate Page Layout Refactor**: Complete overhaul of debate setup UI for better usability
+  - Topic selector now appears in full-width bar at top (always visible)
+  - Left sidebar (25%): Model configuration, intensity settings, history, and controls
+  - Right content area (75%): Streaming display and debate messages
+  - Removed collapsible model configs - all settings now fully expanded and visible
+  - Eliminated prop drilling by refactoring components to use hooks directly
+  - Deleted `DebateSetupPanel` wrapper component
+  - Updated color scheme from amber to navy-blue for better accessibility
+
+### Fixed
+- Fixed TypeScript error in debate.routes.ts (missing BaseProvider type import)
+- Fixed debate setup controls visibility - all settings now remain visible during active debates
+
+## [Version 0.4.26] - 2025-10-21 21:45 UTC
+
+### Fixed
+- **🚨 CRITICAL: Debate Streaming Prompt Variables:** Removed extra intensity variables (`intensity_level`, `intensity_label`, `intensity_heading`, `intensity_summary`, `intensity_guidance`) from debate prompt variables that were causing OpenAI 400 errors. OpenAI's stored prompt template only recognizes the original 4 variables: `intensity`, `role`, `position`, `topic`. The parallel commit that added these extra variables broke debate startup with "Unknown prompt variables" errors.
+- **Debate Setup Panel Visibility:** Removed `setShowSetup(false)` calls that were hiding configuration controls when debates started. Users can now adjust reasoning effort, summary, verbosity, temperature, and max tokens settings throughout the debate without losing access to the control panel.
+- **Debate Prompts Caching:** Removed markdown file caching in `server/routes/debate.routes.ts` - file now reads fresh on every debate turn for simplicity and to prevent stale data in production deployments on Railway.
+- **Debate Intensity Descriptions:** Updated all 4 intensity level descriptions in `debate-prompts.md` to use concise, descriptive tone guidance instead of prescriptive instructions with example phrases.
+
+## [Version 0.4.25] - 2025-10-22 01:21 UTC
+
+### Changed
+- **Debate Intensity Guidance:** Stream init payloads now include full rhetoric descriptors, updated UI labels, and refreshed prompt documentation so provider prompts reference the correct textual intensity examples instead of numeric levels.
+
+## [Version 0.4.24] - 2025-10-22 00:50 UTC
+
+### Fixed
+- **Debate Main Alignment:** Reverted the debate component and session hook to the proven main branch implementation so sessions stream and hydrate correctly again.
+
+## [Version 0.4.23] - 2025-10-22 00:01 UTC
+
+### Fixed
+- **Debate Hydration Guard:** Require an active session identifier match before hydrating stored debate transcripts so clearing state for a new session no longer resurrects the previous transcript.
+
+## [Version 0.4.22] - 2025-10-21 04:30 UTC
+
+### Fixed
+- **Debate Session Bootstrap:** Reset active debate state before creating or reopening sessions so persisted history no longer blocks new debates from starting or empties the recent sessions drawer.
+## [Version 0.4.22] - 2025-10-21 03:33 UTC
+
+### Fixed
+- **Debate Session Bootstrap:** Add the `debate_sessions` table definition to `DatabaseManager.ensureTablesExist` so PostgreSQL
+  environments create the persistence schema and debate streams can start new sessions successfully.
+
+## [Version 0.4.21] - 2025-10-21 02:52 UTC
+
+### Fixed
+- **Debate Hydration Reset:** Clear the cached hydration signature whenever the active debate session resets or changes so reselections always repopulate transcripts.
+
+## [Version 0.4.20] - 2025-10-21 02:40 UTC
+
+### Fixed
+- **Debate Hydration Loop:** Prevented the debate session hydration effect from re-triggering on local transcript updates by
+  caching the last processed payload signature and trimming dependency noise, eliminating the maximum update depth crash.
+
+## [Version 0.4.19] - 2025-10-20 18:55 UTC
+
+### Added
+- **Debate Session Listings:** Introduced `listDebateSessions` in the storage layer and wired `/api/debate/sessions` to return
+  ordered session metadata (turn counts, costs, timestamps, optional jury notes) for both database and in-memory drivers.
+
+### Frontend
+- **Debate History Normalization:** Confirmed the debate page summary mapper continues to hydrate jury summaries, turn counts,
+  and costs from the enriched API payload.
+
+## [Version 0.4.18] - 2025-10-19 03:58 UTC
+
+### Fixed
+- **Debate Session Hydration:** Stopped `/api/debate/session/:id` refetches from wiping in-progress transcripts by skipping stale turn histories and preserving local response tracking until the server catches up.
+- **Setup Panel Regression:** Guarded debate setup state so the stage view no longer collapses back to the setup panel while the first stream is in flight.
+
+### Documentation
+- Logged the debugging and mitigation steps in `docs/2025-10-19-plan-debate-regression.md`.
+
+## [Version 0.4.17] - 2025-10-19 03:18 UTC
+
+### Fixed
+- **Debate Prompts Path:** Updated `server/routes/debate.routes.ts` to resolve `client/public/docs/debate-prompts.md` from the process working directory so production bundles continue loading intensity descriptors after moving to `dist/`.
+- **Error Visibility:** Expanded debate prompt load logging to include the resolved path for faster diagnosis when assets are missing.
+
+### Documentation
+- Captured the remediation strategy in `docs/2025-10-19-plan-debate-prompts-path.md`.
+
+## [Version 0.4.16] - 2025-10-19 01:10 UTC
+
+### Changed
+- **Debate Prompt Context:** Refactored `server/routes/debate.routes.ts` to load shared debate instructions, send developer/system/user
+  messages without redundancy, and forward textual adversarial guidance in `prompt.variables`.
+- **Shared Prompt Utilities:** Moved debate prompt parsing and template token replacement into `shared/` so both the client hook
+  and server streaming route reuse the same intensity descriptors and placeholder handling.
+
+### Documentation
+- Logged the debate intensity alignment plan in `docs/2025-10-19-plan-debate-intensity-alignment.md` for traceability.
 
 ## [Version 0.4.15] - 2025-10-18 22:20 UTC
 

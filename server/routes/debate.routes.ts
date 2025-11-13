@@ -1,20 +1,52 @@
 /*
- * Author: GPT-5 Codex
- * Date: 2025-10-18 00:55 UTC
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 01:19 UTC
  * PURPOSE: Align debate streaming routes with the two-stage client contract, providing an init endpoint,
- *          SSE dispatcher, shared streaming logic, and heartbeat keepalives so modern React clients can
- *          consume Responses API streams without premature proxy disconnects while persisting debate turns.
+ *          SSE dispatcher, shared streaming logic, heartbeat keepalives, and resilient asset loading so
+ *          modern React clients can consume Responses API streams without premature proxy disconnects while
+ *          persisting debate turns. Removed caching of debate prompts - file is read fresh each time for
+ *          simplicity and to avoid stale data in production.
  * SRP/DRY check: Pass - Route module handles debate HTTP concerns only; shared helpers prevent duplication
- *                across init and SSE entry points.
+ *                across init and SSE entry points, including prompt asset resolution.
  */
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { Router } from "express";
-import { getProviderForModel } from "../providers/index.js";
+import {
+  extractDebateInstructions,
+  formatDebateTemplate,
+  getDebateIntensityDescriptor,
+  type DebateInstructions,
+} from "@shared/debate-instructions.ts";
+import { getProviderForModel, type BaseProvider } from "../providers/index.js";
 import { storage } from "../storage.js";
 import { StreamSessionRegistry } from "../streaming/session-registry.js";
 import { SseStreamManager } from "../streaming/sse-manager.js";
 import { StreamHarness } from "../streaming/stream-harness.js";
 
 const router = Router();
+
+const DEBATE_PROMPTS_PATH = path.resolve(
+  process.cwd(),
+  "client",
+  "public",
+  "docs",
+  "debate-prompts.md",
+);
+
+function loadDebateInstructions(): DebateInstructions | null {
+  try {
+    // Read file fresh every time - no caching for simplicity
+    const markdown = readFileSync(DEBATE_PROMPTS_PATH, "utf-8");
+    return extractDebateInstructions(markdown);
+  } catch (error) {
+    console.error(
+      `Failed to load debate prompts markdown at ${DEBATE_PROMPTS_PATH}:`,
+      error,
+    );
+    return null;
+  }
+}
 
 class HttpError extends Error {
   statusCode: number;
@@ -33,7 +65,12 @@ interface DebateStreamPayload {
   topic: string;
   role: DebateRole;
   position: "FOR" | "AGAINST";
-  intensity: number;
+  intensityLevel: number;
+  intensityGuidance: string;
+  intensityHeading: string;
+  intensityLabel: string;
+  intensitySummary: string;
+  intensityFullText: string;
   opponentMessage: string | null;
   previousResponseId: string | null;
   turnNumber: number;
@@ -50,9 +87,16 @@ interface DebateStreamPayload {
 const STREAM_SESSION_TTL_MS = 5 * 60 * 1000;
 const streamSessionRegistry = new StreamSessionRegistry<DebateStreamPayload>(STREAM_SESSION_TTL_MS);
 
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-10-22 19:40 UTC
+ * PURPOSE: Default debate Prompt Template reference. Use version "latest" and let the provider
+ *          omit the explicit version so OpenAI resolves to the newest published template.
+ * SRP/DRY check: Pass - Centralized default for debate prompt reference only.
+ */
 const STORED_DEBATE_PROMPT: { id: string; version: string } = {
   id: "pmpt_6856e018a02c8196aa1ccd7eac56ee020cbd4441b7c750b1",
-  version: "4"
+  version: "latest"
 };
 
 const VALID_ROLES: DebateRole[] = ["AFFIRMATIVE", "NEGATIVE"];
@@ -168,9 +212,9 @@ async function resolveDebateSessionId(params: {
   topic: string;
   model1Id: string;
   model2Id: string;
-  intensity: number;
+  intensityLevel: number;
 }): Promise<string> {
-  const { sessionId, turnNumber, topic, model1Id, model2Id, intensity } = params;
+  const { sessionId, turnNumber, topic, model1Id, model2Id, intensityLevel } = params;
 
   if (sessionId) {
     const existing = await storage.getDebateSession(sessionId);
@@ -189,7 +233,7 @@ async function resolveDebateSessionId(params: {
       topicText: topic,
       model1Id,
       model2Id,
-      adversarialLevel: intensity,
+      adversarialLevel: intensityLevel,
       turnHistory: [],
       model1ResponseIds: [],
       model2ResponseIds: []
@@ -201,6 +245,13 @@ async function resolveDebateSessionId(params: {
   }
 }
 
+function sanitizeText(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
+}
+
 async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   if (!body) {
     throw new HttpError("Request body is required", 400);
@@ -210,10 +261,16 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   const topic = ensureString(body.topic, "topic");
   const role = normalizeRole(body.role);
   const position: "FOR" | "AGAINST" = role === "AFFIRMATIVE" ? "FOR" : "AGAINST";
-  const intensity = ensureNumber(body.intensity, "intensity");
+  const rawIntensity = body.intensityLevel ?? body.intensity;
+  const intensityLevel = ensureNumber(rawIntensity, "intensityLevel");
   const turnNumber = ensureNumber(body.turnNumber, "turnNumber");
   const model1Id = ensureString(body.model1Id, "model1Id");
   const model2Id = ensureString(body.model2Id, "model2Id");
+  const intensityGuidance = sanitizeText(body.intensityGuidance);
+  const intensityHeading = sanitizeText(body.intensityHeading);
+  const intensityLabel = sanitizeText(body.intensityLabel);
+  const intensitySummary = sanitizeText(body.intensitySummary);
+  const intensityFullText = sanitizeText(body.intensityFullText);
 
   const debateSessionId = await resolveDebateSessionId({
     sessionId: typeof body.sessionId === "string" ? body.sessionId : undefined,
@@ -221,7 +278,7 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
     topic,
     model1Id,
     model2Id,
-    intensity
+    intensityLevel
   });
 
   const opponentMessage =
@@ -238,7 +295,12 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
     topic,
     role,
     position,
-    intensity,
+    intensityLevel,
+    intensityGuidance,
+    intensityHeading,
+    intensityLabel,
+    intensitySummary,
+    intensityFullText,
     opponentMessage,
     previousResponseId,
     turnNumber,
@@ -253,25 +315,106 @@ async function prepareStreamPayload(body: any): Promise<DebateStreamPayload> {
   };
 }
 
-function buildInputMessages(payload: DebateStreamPayload): Array<{ role: string; content: string }> {
-  const { turnNumber, role, position, topic, intensity, opponentMessage } = payload;
+interface DebatePromptContext {
+  messages: Array<{ role: string; content: string }>;
+  intensityValue: string;
+  intensityGuidance: string;
+  intensityHeading: string;
+  intensityLabel: string;
+  intensityLevel: string;
+  intensitySummary: string;
+}
 
-  if (turnNumber === 1 || turnNumber === 2) {
-    const systemPrompt = `You are the ${role} debater ${position} the proposition: "${topic}".
-Present your opening argument following Robert's Rules of Order.
-Adversarial intensity level: ${intensity}.`;
-    return [{ role: "user", content: systemPrompt }];
+function formatOpponentQuote(message: string | null): string {
+  const trimmed = message?.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return `Opponent's latest statement:\n"""\n${trimmed}\n"""\n\n`;
+}
+
+function describeSupport(position: "FOR" | "AGAINST"): { verb: string; outcome: string } {
+  if (position === "FOR") {
+    return { verb: "support", outcome: "should be adopted" };
+  }
+  return { verb: "oppose", outcome: "should be rejected" };
+}
+
+function buildOpeningInstruction(payload: DebateStreamPayload, intensityHeading: string): string {
+  const { verb } = describeSupport(payload.position);
+  return `Present your opening argument following Robert's Rules of Order. Explain why the proposition "${payload.topic}" should ${verb}. Maintain the ${intensityHeading} adversarial guidance provided in the developer message.`;
+}
+
+function buildRebuttalInstruction(payload: DebateStreamPayload, intensityHeading: string): string {
+  const { outcome } = describeSupport(payload.position);
+  const opponentSection = formatOpponentQuote(payload.opponentMessage);
+  return `${opponentSection}Deliver a rebuttal that:
+1. Addresses your opponent's specific claims.
+2. Refutes their arguments with evidence and logic.
+3. Reinforces why the proposition "${payload.topic}" ${outcome}.
+4. Maintains the ${intensityHeading} adversarial guidance provided in the developer message.`;
+}
+
+function buildPromptContext(
+  payload: DebateStreamPayload,
+  instructions: DebateInstructions | null,
+): DebatePromptContext {
+  const descriptor = getDebateIntensityDescriptor(instructions, payload.intensityLevel);
+  const intensityLevel = String(payload.intensityLevel);
+  const intensityHeading = payload.intensityHeading || descriptor?.heading || `Level ${intensityLevel}`;
+  const intensityLabel = payload.intensityLabel || descriptor?.label || intensityHeading;
+  const intensitySummary = payload.intensitySummary || descriptor?.summary || "";
+  const descriptorGuidance = descriptor?.guidance?.trim() ?? "";
+  const providedGuidance = payload.intensityGuidance || "";
+  const intensityGuidance = providedGuidance || descriptorGuidance;
+  const descriptorFullText = descriptor?.fullText ?? (descriptorGuidance ? `${intensityHeading}\n${descriptorGuidance}` : intensityHeading);
+  const providedFullText = payload.intensityFullText || "";
+  const intensityValue = providedFullText || descriptorFullText;
+
+  const developerSections = [
+    "You are engaged in a debate with another LLM. The debate follows standard parliamentary procedure. You are ethically obligated to provide the best defense for your position. Your opponent will attempt to sway you and the jury; you must stick to your position and convictions.",
+  ];
+
+  if (intensityGuidance) {
+    developerSections.push(`Adversarial intensity guidance:\n${intensityGuidance}`);
+  } else if (descriptorFullText) {
+    developerSections.push(`Adversarial intensity guidance:\n${descriptorFullText}`);
+  } else {
+    developerSections.push(`Adversarial intensity level: ${intensityLevel}`);
   }
 
-  const rebuttalPrompt = `Your opponent just argued: "${opponentMessage ?? ""}"
+  const baseTemplate = instructions?.baseTemplate?.trim() ||
+    `You are the {role} debater arguing {position} the proposition: "{topic}". Maintain the adversarial guidance provided: {intensity}.`;
 
-Respond as the ${role} debater:
-1. Address your opponent's specific points
-2. Refute their arguments with evidence and logic
-3. Strengthen your own position
-4. Use adversarial intensity level: ${intensity}`;
+  const systemMessage = formatDebateTemplate(baseTemplate, {
+    role: payload.role,
+    position: payload.position,
+    topic: payload.topic,
+    intensity: intensityValue,
+    intensity_level: intensityLevel,
+    intensity_label: intensityLabel,
+    intensity_heading: intensityHeading,
+    intensity_summary: intensitySummary,
+    intensity_guidance: intensityGuidance,
+  }).trim();
 
-  return [{ role: "user", content: rebuttalPrompt }];
+  const userMessage = payload.turnNumber <= 2
+    ? buildOpeningInstruction(payload, intensityHeading)
+    : buildRebuttalInstruction(payload, intensityHeading);
+
+  return {
+    messages: [
+      { role: "developer", content: developerSections.join("\n\n") },
+      { role: "system", content: systemMessage },
+      { role: "user", content: userMessage },
+    ],
+    intensityValue,
+    intensityGuidance,
+    intensityHeading,
+    intensityLabel,
+    intensityLevel,
+    intensitySummary,
+  };
 }
 
 async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPayload): Promise<void> {
@@ -297,16 +440,18 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
       actualPreviousResponseId = responseIds[responseIds.length - 1] || null;
     }
 
-    const inputMessages = buildInputMessages(payload);
+    const debateInstructions = loadDebateInstructions();
+    const promptContext = buildPromptContext(payload, debateInstructions);
+    const inputMessages = promptContext.messages;
     const promptVariables: Record<string, string> = {
-      intensity: String(payload.intensity),
+      intensity: promptContext.intensityValue,
       position: payload.position,
       topic: payload.topic,
       role: payload.role,
     };
 
     harness.status("resolving_provider", undefined, { modelId: payload.modelId });
-    let provider;
+    let provider: BaseProvider;
     try {
       provider = getProviderForModel(payload.modelId);
     } catch (error) {
@@ -403,9 +548,50 @@ async function streamDebateTurn(harness: StreamHarness, payload: DebateStreamPay
 
 router.get("/sessions", async (req, res) => {
   try {
-    // For now, return empty array - in a real implementation, this would list user's debate sessions
-    // const sessions = await storage.getDebateSessions(); // Would need to add this method
-    res.json([]);
+    const sessions = await storage.listDebateSessions();
+
+    const toIsoString = (value: unknown): string | undefined => {
+      if (!value) {
+        return undefined;
+      }
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      if (typeof value === "string") {
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+      }
+      return undefined;
+    };
+
+    const summaries = sessions.map(session => {
+      const turnHistory = Array.isArray(session.turnHistory) ? session.turnHistory : [];
+      const totalCostValue = typeof session.totalCost === "number"
+        ? session.totalCost
+        : Number(session.totalCost ?? 0);
+      const numericCost = Number.isFinite(totalCostValue) ? totalCostValue : 0;
+
+      const payload: Record<string, unknown> = {
+        id: session.id,
+        topic: session.topicText,
+        model1Id: session.model1Id,
+        model2Id: session.model2Id,
+        adversarialLevel: session.adversarialLevel,
+        totalCost: numericCost,
+        turnCount: turnHistory.length,
+        createdAt: toIsoString(session.createdAt),
+        updatedAt: toIsoString(session.updatedAt),
+      };
+
+      const jurySummary = (session as unknown as { jurySummary?: unknown }).jurySummary;
+      if (jurySummary !== undefined && jurySummary !== null) {
+        payload.jurySummary = jurySummary;
+      }
+
+      return payload;
+    });
+
+    res.json(summaries);
   } catch (error) {
     console.error("Failed to get debate sessions:", error);
     res.status(500).json({ error: "Failed to get debate sessions" });
