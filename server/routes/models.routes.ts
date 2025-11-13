@@ -10,7 +10,7 @@ import { callModel } from "../providers/index.js";
 import { modelService } from "../services/model.service.js";
 import { getStorage } from "../storage.js";
 import { getDisplayForModelId, MODEL_CATALOG } from "../../shared/model-catalog.js";
-import { ensureDeviceUser, checkDeviceCredits, deductCreditsForSuccessfulCalls } from "../device-auth.js";
+import { ensureDeviceUser, reserveDeviceCredits, commitDeviceCredits, refundDeviceCredits } from "../device-auth.js";
 import { ApiResponse } from "../utils/response.js";
 
 const router = Router();
@@ -83,30 +83,53 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Compare models endpoint - protected with authentication and credit check
-router.post("/compare", ensureDeviceUser, checkDeviceCredits, async (req, res) => {
+// Compare models endpoint - protected with authentication and atomic credit reservation
+router.post("/compare", ensureDeviceUser, async (req, res) => {
   try {
     const { prompt, modelIds } = compareModelsSchema.parse(req.body);
 
-    // Use ModelService for parallel model calls
-    const responses: Record<string, any> = await modelService.compareModels(prompt, modelIds, req);
+    // Calculate credits needed (5 credits per model)
+    const creditsNeeded = modelIds.length * 5;
 
-    // Deduct credits for successful API calls (5 credits per model called)
-    const successfulCalls = modelIds.filter(modelId => responses[modelId]?.status === 'success').length;
-    await deductCreditsForSuccessfulCalls(req, successfulCalls, 5);
-
-    // Store the comparison
-    const storage = await getStorage();
-    const comparison = await storage.createComparison({
-      prompt,
-      selectedModels: modelIds,
-      responses,
+    // ATOMICALLY reserve credits BEFORE making expensive model calls
+    const reservationMiddleware = reserveDeviceCredits(creditsNeeded);
+    await new Promise<void>((resolve, reject) => {
+      reservationMiddleware(req, res, (err?: any) => {
+        if (err) reject(err);
+        else resolve();
+      });
     });
 
-    return ApiResponse.success(res, {
-      id: comparison.id,
-      responses,
-    });
+    // If we reach here, credits are reserved. Now make the model calls.
+    try {
+      // Use ModelService for parallel model calls
+      const responses: Record<string, any> = await modelService.compareModels(prompt, modelIds, req);
+
+      // Count successful calls
+      const successfulCalls = modelIds.filter(modelId => responses[modelId]?.status === 'success').length;
+
+      // Store the comparison
+      const storage = await getStorage();
+      const comparison = await storage.createComparison({
+        prompt,
+        selectedModels: modelIds,
+        responses,
+      });
+
+      // COMMIT the reservation (deduct credits)
+      await commitDeviceCredits(req);
+
+      return ApiResponse.success(res, {
+        id: comparison.id,
+        responses,
+        creditsUsed: creditsNeeded,
+        successfulCalls,
+      });
+    } catch (modelError) {
+      // Model calls failed - REFUND the reservation
+      await refundDeviceCredits(req);
+      throw modelError;
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return ApiResponse.error(res, "Invalid request data", 400, error.errors);
@@ -142,8 +165,8 @@ router.get("/comparisons/:id", async (req, res) => {
   }
 });
 
-// Single Model Response Route
-router.post("/respond", async (req, res) => {
+// Single Model Response Route - NOW WITH CREDIT CHECKS
+router.post("/respond", ensureDeviceUser, async (req, res) => {
   try {
     const { modelId, prompt, options } = req.body;
 
@@ -151,16 +174,35 @@ router.post("/respond", async (req, res) => {
       return res.status(400).json({ error: 'Missing modelId or prompt' });
     }
 
-    const result = await callModel(prompt, modelId, options);
-
-    res.json({
-      content: result.content,
-      reasoning: result.reasoning,
-      responseTime: result.responseTime,
-      tokenUsage: result.tokenUsage,
-      cost: result.cost,
-      modelConfig: result.modelConfig
+    // Reserve 5 credits for this single model call
+    const reservationMiddleware = reserveDeviceCredits(5);
+    await new Promise<void>((resolve, reject) => {
+      reservationMiddleware(req, res, (err?: any) => {
+        if (err) reject(err);
+        else resolve();
+      });
     });
+
+    try {
+      const result = await callModel(prompt, modelId, options);
+
+      // COMMIT the reservation (deduct credits)
+      await commitDeviceCredits(req);
+
+      res.json({
+        content: result.content,
+        reasoning: result.reasoning,
+        responseTime: result.responseTime,
+        tokenUsage: result.tokenUsage,
+        cost: result.cost,
+        modelConfig: result.modelConfig,
+        creditsUsed: 5,
+      });
+    } catch (modelError) {
+      // Model call failed - REFUND the reservation
+      await refundDeviceCredits(req);
+      throw modelError;
+    }
   } catch (error) {
     console.error('Model response error:', error);
     res.status(500).json({ error: 'Failed to get model response' });

@@ -90,6 +90,18 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Credit reservations for atomic credit management
+// Prevents race conditions by reserving credits before expensive operations
+export const creditReservations = pgTable("credit_reservations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  amount: integer("amount").notNull(),
+  status: varchar("status").notNull(), // 'pending', 'committed', 'refunded'
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(), // Additional context (endpoint, modelIds, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(), // 10-minute expiry
+});
+
 // Session storage for authentication
 export const sessions = pgTable("sessions", {
   sid: varchar("sid").primaryKey(),
@@ -226,6 +238,12 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertSessionSchema = createInsertSchema(sessions);
+
+export const insertCreditReservationSchema = createInsertSchema(creditReservations).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertLuigiRunSchema = createInsertSchema(luigiRuns).omit({
   id: true,
   createdAt: true,
@@ -277,6 +295,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
+
+export type InsertCreditReservation = z.infer<typeof insertCreditReservationSchema>;
+export type CreditReservation = typeof creditReservations.$inferSelect;
 
 export type InsertLuigiRun = z.infer<typeof insertLuigiRunSchema>;
 export type LuigiRun = typeof luigiRuns.$inferSelect;

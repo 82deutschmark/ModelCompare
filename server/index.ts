@@ -37,6 +37,7 @@ import { requestContextMiddleware, requestCompletionLogger, contextLog, contextE
 import { config, isDevelopment, isProduction, getSecurityConfig, getServerConfig } from "./config.js";
 import { configurePassport, configureSession } from "./auth.js";
 import { validateStripeConfig } from "./stripe.js";
+import { getStorage } from "./storage.js";
 
 const app = express();
 
@@ -169,10 +170,37 @@ app.use((req, res, next) => {
     contextLog(`🛡️ Security: Helmet=${securityConfig.enableHelmet}, CORS=${securityConfig.enableCors}`);
   });
 
+  // Credit reservation cleanup job - runs every 5 minutes
+  // This prevents abandoned reservations from permanently blocking credits
+  const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  const cleanupInterval = setInterval(async () => {
+    try {
+      const storage = await getStorage();
+      await storage.cleanupExpiredReservations();
+    } catch (error) {
+      contextError('Failed to cleanup expired credit reservations:', error);
+    }
+  }, CLEANUP_INTERVAL_MS);
+
+  // Run cleanup immediately on startup
+  (async () => {
+    try {
+      const storage = await getStorage();
+      await storage.cleanupExpiredReservations();
+      contextLog('✅ Initial credit reservation cleanup completed');
+    } catch (error) {
+      contextError('Failed to perform initial credit reservation cleanup:', error);
+    }
+  })();
+
   // Graceful shutdown handling
   const gracefulShutdown = async (signal: string) => {
     contextLog(`📨 Received ${signal}, starting graceful shutdown...`);
-    
+
+    // Stop the cleanup interval
+    clearInterval(cleanupInterval);
+    contextLog('⏸️ Credit cleanup job stopped');
+
     // Stop accepting new connections
     server.close(async (err) => {
       if (err) {
