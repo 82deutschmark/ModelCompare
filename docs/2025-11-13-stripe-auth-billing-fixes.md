@@ -13,35 +13,61 @@
 ### 1. Stripe Publishable Key Error
 
 **Problem**:
-The billing page displays an error: `Stripe publishable key (VITE_STRIPE_PUBLIC_KEY) is not set. Payments will not initialize.` even though the environment variable is set in `.env` and Railway deployment variables.
+The billing page displays an error: `Stripe publishable key (VITE_STRIPE_PUBLIC_KEY) is not set. Payments will not initialize.` even though the environment variable is set in Railway deployment variables.
 
 **Root Cause**:
-Vite environment variables prefixed with `VITE_` are **build-time** variables, not runtime variables. They must be available when running `npm run build`, as they are embedded directly into the JavaScript bundle during the build process.
+Railway uses a **Dockerfile** for deployment (configured in `railway.json`). The Dockerfile was missing build argument declarations for `VITE_` environment variables.
+
+Here's what was happening:
+1. Railway environment variables are available at **runtime** by default
+2. During Docker build, `npm run build` runs (which calls `vite build`)
+3. Vite needs `VITE_STRIPE_PUBLIC_KEY` at build time to embed it in the JavaScript bundle
+4. But the Dockerfile didn't have `ARG VITE_STRIPE_PUBLIC_KEY` to accept it as a build argument
+5. Result: Variable was `undefined` during build, empty string embedded in bundle
 
 **Solution**:
-1. **For Local Development**: Ensure `.env` file contains:
-   ```bash
-   VITE_STRIPE_PUBLIC_KEY=pk_test_...
-   ```
+Modified `Dockerfile` to accept build-time environment variables:
 
-2. **For Railway/Production Deployment**:
-   - Add `VITE_STRIPE_PUBLIC_KEY` to your Railway environment variables
-   - **Critical**: Add this variable to the **build environment**, not just runtime environment
-   - Rebuild the application after adding the variable
-   - Railway requires rebuilding when build-time env vars are added/changed
+```dockerfile
+# Accept build-time environment variables (Railway will pass these automatically)
+ARG VITE_STRIPE_PUBLIC_KEY
+ENV VITE_STRIPE_PUBLIC_KEY=$VITE_STRIPE_PUBLIC_KEY
 
-3. **Required Environment Variables**:
-   ```bash
-   # Client-side (build-time)
-   VITE_STRIPE_PUBLIC_KEY=pk_test_... or pk_live_...
+# Build: produces client at dist/public and server bundle at dist/index.js
+ENV NODE_ENV=production
+RUN npm run build
+```
 
-   # Server-side (runtime)
-   STRIPE_SECRET_KEY=sk_...
-   STRIPE_WEBHOOK_SECRET=whsec_...
-   ```
+**How It Works**:
+1. `ARG VITE_STRIPE_PUBLIC_KEY` - Declares a build argument that Railway will populate
+2. `ENV VITE_STRIPE_PUBLIC_KEY=$VITE_STRIPE_PUBLIC_KEY` - Makes the ARG available as an environment variable for the build process
+3. Railway automatically passes service environment variables as Docker build arguments
+4. Vite can now read the variable during `npm run build` and embed it in the bundle
+
+**Deployment Steps**:
+1. Push the updated Dockerfile to your repository
+2. Railway will automatically rebuild with the new Dockerfile
+3. The `VITE_STRIPE_PUBLIC_KEY` environment variable you already set will now be passed as a build argument
+4. Verify the error disappears on the billing page
+
+**For Local Development**:
+Create a `.env` file in the project root:
+```bash
+VITE_STRIPE_PUBLIC_KEY=pk_test_...
+```
+
+**Required Environment Variables**:
+```bash
+# Client-side (build-time) - needed for Vite
+VITE_STRIPE_PUBLIC_KEY=pk_test_... or pk_live_...
+
+# Server-side (runtime)
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
 
 **Files Modified**:
-- No code changes needed, documentation only
+- `Dockerfile:30-32` (added ARG and ENV for VITE_STRIPE_PUBLIC_KEY)
 
 **References**:
 - Error check: `client/src/pages/billing.tsx:62`
@@ -269,10 +295,10 @@ This matches the standard page structure used throughout the app:
 
 ### 1. Test Stripe Key (Local Development)
 ```bash
-# Ensure .env contains VITE_STRIPE_PUBLIC_KEY
-echo "VITE_STRIPE_PUBLIC_KEY=pk_test_..." >> .env
+# Create .env file with VITE_STRIPE_PUBLIC_KEY
+echo "VITE_STRIPE_PUBLIC_KEY=pk_test_..." > .env
 
-# Rebuild frontend to embed the variable
+# Rebuild to embed the variable
 npm run build
 
 # Start dev server
@@ -283,12 +309,14 @@ npm run dev
 ```
 
 ### 2. Test Stripe Key (Railway Production)
-1. Go to Railway project settings
-2. Add environment variable: `VITE_STRIPE_PUBLIC_KEY=pk_live_...`
-3. **Trigger a new deployment** (Railway may not auto-rebuild)
-4. Wait for build to complete
-5. Visit production billing page
+1. Ensure `VITE_STRIPE_PUBLIC_KEY` is set in Railway environment variables
+2. Push the updated Dockerfile to your repository
+3. Railway will automatically trigger a rebuild
+4. Check build logs - should see the variable being passed during build
+5. Visit production billing page after deployment completes
 6. Verify NO error alert appears
+
+**Note**: The Dockerfile fix is the key - Railway already had your environment variable, but wasn't passing it as a build argument until now.
 
 ### 3. Test Authentication Race Condition
 ```bash

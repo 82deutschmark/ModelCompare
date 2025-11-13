@@ -27,6 +27,10 @@ COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 COPY components.json ./
 
+# Accept build-time environment variables (Railway will pass these automatically)
+ARG VITE_STRIPE_PUBLIC_KEY
+ENV VITE_STRIPE_PUBLIC_KEY=$VITE_STRIPE_PUBLIC_KEY
+
 # Build: produces client at dist/public and server bundle at dist/index.js
 ENV NODE_ENV=production
 RUN npm run build
