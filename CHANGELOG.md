@@ -11,6 +11,12 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.41] - 2025-11-12 19:21 UTC
+
+### Changed
+- Add `.gitattributes` to normalize `package-lock.json` to LF and prevent CRLF-induced full-file diffs on Windows.
+- Cleaned working tree and index to remove whitespace-only/staged churn.
+
 ## [Version 0.4.40] - 2025-11-06 20:30 UTC
 
 ### Changed
