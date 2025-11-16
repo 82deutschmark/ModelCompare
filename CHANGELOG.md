@@ -11,6 +11,44 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Unreleased]
+
+### Added
+- **New Sherlock Alpha Models (OpenRouter):** Added two new free reasoning models from OpenRouter with massive 1.84M context windows
+  - `openrouter/sherlock-think-alpha` - Reasoning model with moderate speed (1-2 min), free pricing
+  - `openrouter/sherlock-dash-alpha` - Fast model (<30 sec), free pricing
+  - Both models support temperature control and reasoning capabilities
+  - Released November 15, 2025
+  - Location: `shared/model-catalog.ts:798-829`
+
+## [Version 0.4.42] - 2025-11-13 15:30 UTC
+
+### Fixed
+- **🚨 CRITICAL: Stripe Key Not Embedded in Build:** Fixed Dockerfile missing `ARG VITE_STRIPE_PUBLIC_KEY` declaration
+  - **Root Cause:** Railway uses Dockerfile for deployment. Environment variables need explicit `ARG` declarations to be available during Docker build stage. Vite needs `VITE_STRIPE_PUBLIC_KEY` at build time to embed in JavaScript bundle.
+  - **Solution:** Added `ARG VITE_STRIPE_PUBLIC_KEY` and `ENV VITE_STRIPE_PUBLIC_KEY=$VITE_STRIPE_PUBLIC_KEY` in Dockerfile before `npm run build`
+  - **Impact:** Stripe payment initialization now works correctly on Railway deployments. Variable is properly embedded in client bundle during build.
+  - **Files:** `Dockerfile:30-32`
+
+- **🚨 CRITICAL: Authentication Race Condition on Google Sign In:** Fixed credit loss when anonymous users sign in with Google OAuth
+  - **Root Cause:** OAuth callback created new user with fresh 500 credits, orphaning existing device user's credits. localStorage retained old device ID, causing auth state confusion.
+  - **Solution:**
+    1. Modified OAuth strategy to check for existing browser device ID header during authentication
+    2. Backend merges credits from anonymous device user to new OAuth user (e.g., 500 + 450 = 950 credits)
+    3. OAuth callback redirects with new device ID as query parameter
+    4. Client updates localStorage device ID and invalidates auth query to refetch with merged credits
+  - **Impact:** Users maintain complete credit history when upgrading from anonymous to OAuth authentication. No data loss, seamless transition.
+  - **Files:** `server/auth.ts:114-151`, `server/routes/auth.routes.ts:45-57`, `client/src/App.tsx:50-67`
+
+- **Billing Page Navigation Missing:** Added AppNavigation component to billing page for consistent UX
+  - **Root Cause:** Billing page didn't include AppNavigation component that all other pages use. No global layout wrapper exists.
+  - **Solution:** Added AppNavigation with CreditCard icon, proper page structure matching other pages
+  - **Impact:** Billing page now has full navigation header with menu, theme toggle, credit display, and user menu
+  - **Files:** `client/src/pages/billing.tsx:14,17,27-33,98-99`
+
+### Documentation
+- **Comprehensive Fix Documentation:** Created `docs/2025-11-13-stripe-auth-billing-fixes.md` documenting all three issues with root causes, solutions, testing instructions, and deployment checklist
+
 ## [Version 0.4.41] - 2025-11-12 19:21 UTC
 
 ### Changed

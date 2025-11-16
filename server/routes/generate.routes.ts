@@ -11,11 +11,13 @@ import { validateVariables, VARIABLE_REGISTRIES, type ModeType } from "../../sha
 import type { GenerateRequest, GenerateResponse, UnifiedMessage, ModelMessage } from "../../shared/api-types.js";
 import { getStorage } from "../storage.js";
 import { PromptBuilder } from "../prompt-builder.js";
+import { ensureDeviceUser, reserveDeviceCredits, commitDeviceCredits, refundDeviceCredits } from "../device-auth.js";
 
 const router = Router();
 
 // Unified Generate Endpoint - Single source of truth for all modes
-router.post("/", async (req, res) => {
+// NOW WITH ATOMIC CREDIT RESERVATION
+router.post("/", ensureDeviceUser, async (req, res) => {
   try {
     const requestBody = req.body as GenerateRequest;
     // Debug: trace incoming request early to verify middleware is not intercepting
@@ -62,6 +64,21 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // CRITICAL: Reserve credits BEFORE processing (5 credits per model/seat)
+    const creditsNeeded = seats.length * 5;
+    const reservationMiddleware = reserveDeviceCredits(creditsNeeded);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        reservationMiddleware(req, res, (err?: any) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch (reservationError) {
+      // Reservation failed - already sent 402 response
+      return;
+    }
+
     // Server-side variable resolution with logging
     let resolvedPrompt: string;
     let variableMapping: Record<string, string>;
@@ -80,6 +97,8 @@ router.post("/", async (req, res) => {
         warnings
       });
     } catch (error) {
+      // Variable resolution failed - refund credits
+      await refundDeviceCredits(req);
       return res.status(400).json({
         error: "Variable resolution failed",
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -97,55 +116,72 @@ router.post("/", async (req, res) => {
         'Access-Control-Allow-Headers': 'Cache-Control'
       });
 
-      // Process each seat for streaming
-      for (const seat of seats) {
-        const messageId = `msg_${Date.now()}_${seat.id}`;
-        const createdAt = new Date().toISOString();
+      let allSucceeded = true;
 
-        // Send message start event
-        res.write(`data: ${JSON.stringify({
-          type: 'messageStart',
-          messageId,
-          seatId: seat.id,
-          createdAt,
-          resolvedPrompt
-        })}\n\n`);
+      try {
+        // Process each seat for streaming
+        for (const seat of seats) {
+          const messageId = `msg_${Date.now()}_${seat.id}`;
+          const createdAt = new Date().toISOString();
 
-        try {
-          // Get streaming response from model
-          const result = await callModel(resolvedPrompt, seat.model.id);
-
-          // Send delta events (simulated for now - real streaming would send incremental)
+          // Send message start event
           res.write(`data: ${JSON.stringify({
-            type: 'delta',
+            type: 'messageStart',
             messageId,
-            text: result.content,
-            reasoning: result.reasoning
+            seatId: seat.id,
+            createdAt,
+            resolvedPrompt
           })}\n\n`);
 
-          // Send message end event
-          res.write(`data: ${JSON.stringify({
-            type: 'messageEnd',
-            messageId,
-            finishReason: 'stop',
-            tokenUsage: result.tokenUsage ?? { input: 0, output: 0 },
-            cost: result.cost ?? { total: 0, input: 0, output: 0 },
-            resolvedPrompt,
-            modelConfig: result.modelConfig
-          })}\n\n`);
+          try {
+            // Get streaming response from model
+            const result = await callModel(resolvedPrompt, seat.model.id);
 
-        } catch (error) {
-          // Send error event
-          res.write(`data: ${JSON.stringify({
-            type: 'error',
-            messageId,
-            code: 'MODEL_ERROR',
-            message: error instanceof Error ? error.message : 'Unknown error'
-          })}\n\n`);
+            // Send delta events (simulated for now - real streaming would send incremental)
+            res.write(`data: ${JSON.stringify({
+              type: 'delta',
+              messageId,
+              text: result.content,
+              reasoning: result.reasoning
+            })}\n\n`);
+
+            // Send message end event
+            res.write(`data: ${JSON.stringify({
+              type: 'messageEnd',
+              messageId,
+              finishReason: 'stop',
+              tokenUsage: result.tokenUsage ?? { input: 0, output: 0 },
+              cost: result.cost ?? { total: 0, input: 0, output: 0 },
+              resolvedPrompt,
+              modelConfig: result.modelConfig
+            })}\n\n`);
+
+          } catch (error) {
+            allSucceeded = false;
+            // Send error event
+            res.write(`data: ${JSON.stringify({
+              type: 'error',
+              messageId,
+              code: 'MODEL_ERROR',
+              message: error instanceof Error ? error.message : 'Unknown error'
+            })}\n\n`);
+          }
         }
-      }
 
-      res.end();
+        // COMMIT credits if at least one call succeeded
+        if (allSucceeded) {
+          await commitDeviceCredits(req);
+        } else {
+          // Partial failure - still commit (user used API resources)
+          await commitDeviceCredits(req);
+        }
+
+        res.end();
+      } catch (streamError) {
+        // Streaming failed entirely - refund credits
+        await refundDeviceCredits(req);
+        res.end();
+      }
     } else {
       // Non-streaming response - process first seat only for now
       const seat = seats[0];
@@ -177,8 +213,13 @@ router.post("/", async (req, res) => {
           warnings
         };
 
+        // COMMIT credits after successful model call
+        await commitDeviceCredits(req);
+
         res.json(response);
       } catch (error) {
+        // Model call failed - REFUND credits
+        await refundDeviceCredits(req);
         console.error("Generate endpoint error:", error);
         res.status(500).json({
           error: "Failed to generate response",
@@ -188,6 +229,8 @@ router.post("/", async (req, res) => {
     }
 
   } catch (error) {
+    // Unexpected error - refund credits
+    await refundDeviceCredits(req);
     console.error("Generate endpoint error:", error);
     res.status(500).json({ error: "Internal server error" });
   }

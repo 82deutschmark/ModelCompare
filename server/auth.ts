@@ -110,9 +110,10 @@ export function configurePassport() {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: resolveGoogleOAuthCallbackUrl()
+    callbackURL: resolveGoogleOAuthCallbackUrl(),
+    passReqToCallback: true  // Enable access to request object
   },
-  async (accessToken, refreshToken, profile, done) => {
+  async (req, accessToken, refreshToken, profile, done) => {
     try {
       const storage = await getStorage();
 
@@ -121,12 +122,32 @@ export function configurePassport() {
       const googleId = profile.id;
       const deviceId = `google_${googleId}`;
 
+      // Check if user is upgrading from anonymous device user
+      const browserDeviceId = req.headers['x-device-id'] as string;
+      let creditsToMerge = 0;
+
+      if (browserDeviceId && browserDeviceId !== deviceId) {
+        // User had an anonymous device session - check for existing credits
+        const existingDeviceUser = await storage.getUserByDeviceId(browserDeviceId);
+
+        if (existingDeviceUser) {
+          creditsToMerge = existingDeviceUser.credits || 0;
+          console.log(`Merging ${creditsToMerge} credits from device user ${browserDeviceId} to OAuth user ${deviceId}`);
+        }
+      }
+
       // Find or create user based on device ID (hashed)
       let user = await storage.getUserByDeviceId(deviceId);
 
       if (!user) {
         // Create new user with 500 starting credits - no PII stored
         user = await storage.createAnonymousUser(deviceId);
+      }
+
+      // Merge credits from previous device user if applicable
+      if (creditsToMerge > 0) {
+        user = await storage.addCredits(user.id, creditsToMerge);
+        console.log(`Successfully merged ${creditsToMerge} credits. New balance: ${user.credits}`);
       }
 
       // Ensure we return a properly shaped user object

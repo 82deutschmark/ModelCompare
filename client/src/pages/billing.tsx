@@ -11,8 +11,10 @@ import PricingTable from "@/components/PricingTable";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import RealStripeCheckout from "@/components/RealStripeCheckout";
+import AppNavigation from "@/components/AppNavigation";
 import type { CreditPackage } from "@/types/stripe";
 import { useState } from "react";
+import { CreditCard } from "lucide-react";
 
 export default function BillingPage() {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
@@ -22,14 +24,13 @@ export default function BillingPage() {
   } | null>(null);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Billing & Credits</h1>
-        <p className="text-muted-foreground mt-2">
-          Purchase credits to continue using AI model comparisons. You can browse packages below.
-        </p>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppNavigation
+        title="Billing & Credits"
+        subtitle="Purchase credits to continue using AI model comparisons"
+        icon={CreditCard}
+      />
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
 
       {/* Auth Section */}
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -81,19 +82,20 @@ export default function BillingPage() {
         }}
       />
 
-      {/* Render checkout when a package is selected */}
-      {checkout && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl">
-            <RealStripeCheckout
-              clientSecret={checkout.clientSecret}
-              packageInfo={checkout.packageInfo}
-              onSuccess={() => setCheckout(null)}
-              onCancel={() => setCheckout(null)}
-            />
+        {/* Render checkout when a package is selected */}
+        {checkout && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div className="w-full max-w-2xl">
+              <RealStripeCheckout
+                clientSecret={checkout.clientSecret}
+                packageInfo={checkout.packageInfo}
+                onSuccess={() => setCheckout(null)}
+                onCancel={() => setCheckout(null)}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }
