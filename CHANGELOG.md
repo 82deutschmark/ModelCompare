@@ -11,6 +11,16 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Unreleased]
+
+### Added
+- **New Sherlock Alpha Models (OpenRouter):** Added two new free reasoning models from OpenRouter with massive 1.84M context windows
+  - `openrouter/sherlock-think-alpha` - Reasoning model with moderate speed (1-2 min), free pricing
+  - `openrouter/sherlock-dash-alpha` - Fast model (<30 sec), free pricing
+  - Both models support temperature control and reasoning capabilities
+  - Released November 15, 2025
+  - Location: `shared/model-catalog.ts:798-829`
+
 ## [Version 0.4.42] - 2025-11-13 15:30 UTC
 
 ### Fixed
