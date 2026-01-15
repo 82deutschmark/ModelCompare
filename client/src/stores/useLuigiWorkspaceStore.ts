@@ -1,9 +1,8 @@
 /*
- * Author: Codex using GPT-5
- * Date: 2025-10-04T10:17:36Z
- * PURPOSE: Zustand store managing Luigi workspace form state, active run context, and UI flags.
- * SRP/DRY check: Pass - isolates Luigi workspace state management reused across page/components.
- * shadcn/ui: Pass - store only, no UI elements.
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:07:30Z
+ * PURPOSE: Zustand store managing ARC agent workspace form state and run context.
+ * SRP/DRY check: Pass - isolates workspace state management for reuse across workspace components.
  */
 
 import { create } from 'zustand';
@@ -16,11 +15,11 @@ import type {
 } from '@shared/luigi-types';
 
 export interface LuigiFormState {
-  missionName: string;
-  objective: string;
-  constraints?: string;
-  successCriteria?: string;
-  stakeholderNotes?: string;
+  taskId: string;
+  analysisBrief: string;
+  trainingPairs: string;
+  evaluationInput: string;
+  workspaceNotes: string;
 }
 
 export type LuigiStageSnapshot = LuigiStageState;
@@ -47,11 +46,11 @@ interface LuigiWorkspaceState {
 }
 
 const defaultForm: LuigiFormState = {
-  missionName: '',
-  objective: '',
-  constraints: '',
-  successCriteria: '',
-  stakeholderNotes: '',
+  taskId: '',
+  analysisBrief: '',
+  trainingPairs: '',
+  evaluationInput: '',
+  workspaceNotes: '',
 };
 
 export const useLuigiWorkspaceStore = create<LuigiWorkspaceState>((set) => ({

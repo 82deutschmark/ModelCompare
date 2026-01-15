@@ -1,46 +1,75 @@
 /*
- * Author: Codex using GPT-5
- * Date: 2025-10-04T10:28:15Z
- * PURPOSE: Luigi executor service orchestrating agent runs via external REST agent runner.
- * SRP/DRY check: Pass - encapsulates Luigi run lifecycle without touching routing or UI concerns.
- * shadcn/ui: Pass - backend only.
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:10:00Z
+ * PURPOSE: ARC agent executor orchestrating runs via REST or OpenAI Agents SDK pathways.
+ * SRP/DRY check: Pass - encapsulates run lifecycle while delegating transport and storage responsibilities.
  */
 
 import { callAgentByRest, type AgentRunRequest, type AgentRunResponse } from "../services/agent-runner";
 import { runLuigiOrchestratorWithSdk, type LuigiSdkRunOptions } from "./openai-sdk-runner";
 import { storage } from "../storage";
 import type { LuigiRun, LuigiMessage, LuigiArtifact } from "@shared/schema";
-import type { LuigiRunStatus, LuigiStageId, LuigiStageStatus } from "@shared/luigi-types";
+import type { LuigiRunStatus, LuigiStageId, LuigiStageStatus, ArcExample } from "@shared/luigi-types";
 import { LUIGI_STAGES } from "@shared/luigi-types";
 
 const VALID_STAGE_IDS = new Set<string>(LUIGI_STAGES.map((stage) => stage.id));
-const DEFAULT_STAGE_ID = (LUIGI_STAGES[0]?.id ?? 'start-time-task') as LuigiStageId;
+const DEFAULT_STAGE_ID = (LUIGI_STAGES[0]?.id ?? "ingest-arc-task") as LuigiStageId;
 
 function asLuigiStageId(value: unknown): LuigiStageId | null {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     return null;
   }
   return VALID_STAGE_IDS.has(value) ? (value as LuigiStageId) : null;
 }
 
 function normalizeArtifactData(data: unknown): Record<string, unknown> | undefined {
-  if (data === null || typeof data === 'undefined') {
+  if (data === null || typeof data === "undefined") {
     return undefined;
   }
 
-  if (typeof data === 'object' && !Array.isArray(data)) {
+  if (typeof data === "object" && !Array.isArray(data)) {
     return data as Record<string, unknown>;
   }
 
   return { value: data };
 }
 
+function stringifyExamples(examples: ArcExample[]): string {
+  return JSON.stringify(examples, null, 2);
+}
+
+function stringifyExample(example?: ArcExample): string | null {
+  if (!example) return null;
+  return JSON.stringify(example, null, 2);
+}
+
+function parseExamples(raw?: string | null): ArcExample[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed as ArcExample[];
+  } catch {
+    return [];
+  }
+}
+
+function parseExample(raw?: string | null): ArcExample | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as ArcExample;
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
 export interface LuigiRunParams {
-  missionName: string;
-  objective: string;
-  constraints?: string;
-  successCriteria?: string;
-  stakeholderNotes?: string;
+  taskId: string;
+  analysisBrief: string;
+  trainingExamples: ArcExample[];
+  evaluationExample?: ArcExample;
+  workspaceNotes?: string;
 }
 
 export interface LuigiExecutorOptions {
@@ -86,11 +115,11 @@ export class LuigiExecutor {
 
   async createRun(params: LuigiRunParams): Promise<LuigiRunContext> {
     const run = await storage.createLuigiRun({
-      missionName: params.missionName,
-      objective: params.objective,
-      constraints: params.constraints ?? null,
-      successCriteria: params.successCriteria ?? null,
-      stakeholderNotes: params.stakeholderNotes ?? null,
+      missionName: params.taskId,
+      objective: params.analysisBrief,
+      constraints: stringifyExamples(params.trainingExamples),
+      successCriteria: stringifyExample(params.evaluationExample),
+      stakeholderNotes: params.workspaceNotes ?? null,
       userPrompt: this.buildPrompt(params),
       status: "pending",
       currentStageId: null,
@@ -121,7 +150,7 @@ export class LuigiExecutor {
         await storage.appendLuigiMessage({
           runId,
           role: "system",
-          content: `Luigi run failed: ${error instanceof Error ? error.message : String(error)}`,
+          content: `ARC agent run failed: ${error instanceof Error ? error.message : String(error)}`,
         });
       });
     }
@@ -136,13 +165,23 @@ export class LuigiExecutor {
     await storage.appendLuigiMessage({
       runId,
       role: "system",
-      content: "Luigi orchestrator launching...",
+      content: "ARC orchestrator launching...",
     });
+
+    const trainingExamples = parseExamples(run.constraints);
+    const evaluationExample = parseExample(run.successCriteria);
 
     if (this.agentMode === 'sdk') {
       const response = await runLuigiOrchestratorWithSdk({
         run,
         options: this.sdkOptions,
+        arcContext: {
+          taskId: run.missionName,
+          analysisBrief: run.objective,
+          trainingExamples,
+          evaluationExample,
+          workspaceNotes: run.stakeholderNotes ?? undefined,
+        },
       });
       await this.handleAgentResponse(runId, response);
       return;
@@ -152,11 +191,12 @@ export class LuigiExecutor {
       agentId: this.orchestratorAgentId,
       input: {
         runId,
-        missionName: run.missionName,
-        objective: run.objective,
-        constraints: run.constraints ?? undefined,
-        successCriteria: run.successCriteria ?? undefined,
-        stakeholderNotes: run.stakeholderNotes ?? undefined,
+        taskId: run.missionName,
+        analysisBrief: run.objective,
+        trainingExamples,
+        evaluationExample,
+        workspaceNotes: run.stakeholderNotes ?? undefined,
+        userPrompt: run.userPrompt,
       },
     };
 
@@ -218,78 +258,11 @@ export class LuigiExecutor {
           type: artifact.type,
           title: artifact.title,
           description: artifact.description,
+          storagePath: artifact.storagePath,
           data: normalizeArtifactData(artifact.data),
         });
       }
     }
-
-    if (response.nextAction === "await_user") {
-      await storage.appendLuigiMessage({
-        runId,
-        role: "system",
-        content: "Luigi orchestrator is awaiting user input.",
-      });
-    }
-  }
-
-  async submitUserReply(runId: string, content: string): Promise<LuigiMessage> {
-    const message = await storage.appendLuigiMessage({
-      runId,
-      role: "user",
-      content,
-    });
-
-    if (this.agentMode === 'sdk') {
-      const run = await storage.getLuigiRun(runId);
-      if (!run) {
-        throw new Error(`Luigi run ${runId} not found while processing user reply`);
-      }
-      const response = await runLuigiOrchestratorWithSdk({
-        run,
-        userReply: content,
-        options: this.sdkOptions,
-      });
-      await this.handleAgentResponse(runId, response);
-      return message;
-    }
-
-    const payload: AgentRunRequest = {
-      agentId: this.orchestratorAgentId,
-      input: { runId, userReply: content },
-    };
-
-    await callAgentByRest(payload, {
-      baseUrl: this.restBaseUrl,
-      apiKey: this.restApiKey,
-      timeoutMs: this.timeoutMs,
-    });
-
-    return message;
-  }
-
-  async pauseRun(runId: string): Promise<LuigiRunContext> {
-    await storage.updateLuigiRun(runId, { status: "paused", updatedAt: new Date() });
-    return this.fetchContext(runId);
-  }
-
-  async resumeRun(runId: string): Promise<LuigiRunContext> {
-    await storage.updateLuigiRun(runId, { status: "running", updatedAt: new Date() });
-    void this.launchOrchestrator(runId);
-    return this.fetchContext(runId);
-  }
-
-  async cancelRun(runId: string): Promise<LuigiRunContext> {
-    await storage.updateLuigiRun(runId, {
-      status: "cancelled",
-      completedAt: new Date(),
-      updatedAt: new Date(),
-    });
-    await storage.appendLuigiMessage({
-      runId,
-      role: "system",
-      content: "Luigi run cancelled by user.",
-    });
-    return this.fetchContext(runId);
   }
 
   async fetchContext(runId: string): Promise<LuigiRunContext> {
@@ -297,6 +270,7 @@ export class LuigiExecutor {
     if (!run) {
       throw new Error(`Luigi run ${runId} not found`);
     }
+
     const [messages, artifacts] = await Promise.all([
       storage.getLuigiMessages(runId),
       storage.getLuigiArtifacts(runId),
@@ -306,13 +280,26 @@ export class LuigiExecutor {
   }
 
   private buildPrompt(params: LuigiRunParams): string {
-    return [
-      `Mission Name: ${params.missionName}`,
-      `Objective: ${params.objective}`,
-      params.constraints ? `Constraints: ${params.constraints}` : null,
-      params.successCriteria ? `Success Criteria: ${params.successCriteria}` : null,
-      params.stakeholderNotes ? `Stakeholder Notes: ${params.stakeholderNotes}` : null,
-    ].filter(Boolean).join('\n');
+    const sections = [
+      `ARC Task ID: ${params.taskId}`,
+      `Mission Brief: ${params.analysisBrief}`,
+      `Training Examples (JSON):\n${stringifyExamples(params.trainingExamples)}`,
+    ];
+
+    if (params.evaluationExample) {
+      sections.push(`Evaluation Example (JSON):\n${stringifyExample(params.evaluationExample)}`);
+    }
+
+    if (params.workspaceNotes) {
+      sections.push(`Workspace Notes: ${params.workspaceNotes}`);
+    }
+
+    sections.push(
+      'Guidance: Identify transformation rules, validate against training pairs, generalize to evaluation inputs, '
+        + 'and emit final predictions alongside reasoning.'
+    );
+
+    return sections.join('\n\n');
   }
 
   private initializeStageMap(): StageMap {

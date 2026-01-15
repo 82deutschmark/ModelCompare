@@ -1,8 +1,8 @@
-﻿/*
- * Author: Codex using GPT-5
- * Date: 2025-10-04T10:34:01Z
- * PURPOSE: Luigi API hooks built on TanStack Query for run lifecycle, messages, artifacts, and controls.
- * SRP/DRY check: Pass - centralizes Luigi HTTP calls so components reuse consistent logic.
+/*
+ * Author: gpt-5-codex (evolving prior GPT-5 Codex hooks)
+ * Date: 2025-11-06T04:11:00Z
+ * PURPOSE: ARC agent API hooks built on TanStack Query for run lifecycle, messages, artifacts, and controls.
+ * SRP/DRY check: Pass - centralizes ARC agent HTTP calls for reuse across workspace components.
  * shadcn/ui: Pass - hooks only, no UI elements.
  */
 

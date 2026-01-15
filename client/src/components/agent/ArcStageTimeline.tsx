@@ -1,9 +1,8 @@
-﻿/*
- * Author: Codex using GPT-5
- * Date: 2025-10-04T10:19:06Z
- * PURPOSE: Timeline component visualising Luigi stage progression and status badges.
- * SRP/DRY check: Pass - renders stages from provided data without managing state or side effects.
- * shadcn/ui: Pass - uses shadcn Card, ScrollArea, Badge components.
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:05:30Z
+ * PURPOSE: Render ARC agent stage progression with ARC-specific naming and status indicators.
+ * SRP/DRY check: Pass - purely presentational timeline driven by provided run summary data.
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +12,7 @@ import type { LuigiRunSummary, LuigiStageId } from '@shared/luigi-types';
 import { LUIGI_STAGES } from '@shared/luigi-types';
 import { cn } from '@/lib/utils';
 
-interface LuigiStageTimelineProps {
+interface ArcStageTimelineProps {
   stageMap: LuigiRunSummary['stages'];
   currentStageId?: LuigiStageId | null;
 }
@@ -32,11 +31,11 @@ function statusVariant(status: string): { variant: 'secondary' | 'outline' | 'de
   }
 }
 
-export function LuigiStageTimeline({ stageMap, currentStageId }: LuigiStageTimelineProps) {
+export function ArcStageTimeline({ stageMap, currentStageId }: ArcStageTimelineProps) {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Stage Timeline</CardTitle>
+        <CardTitle>ARC Pipeline</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[420px]">
@@ -64,7 +63,7 @@ export function LuigiStageTimeline({ stageMap, currentStageId }: LuigiStageTimel
                     {snapshot?.completedAt && (
                       <span>Completed: {new Date(snapshot.completedAt).toLocaleString()}</span>
                     )}
-                    {!snapshot?.startedAt && 'Not started yet'}
+                    {!snapshot?.startedAt && 'Awaiting activation'}
                   </div>
                   {snapshot?.blockingReason && (
                     <p className="mt-2 text-xs text-red-500">{snapshot.blockingReason}</p>

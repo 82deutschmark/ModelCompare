@@ -1,11 +1,9 @@
 /**
- * Author: Claude Code using Sonnet 4
- * Date: 2025-01-14
- * PURPOSE: Modernized AppNavigation component using advanced shadcn/ui components.
- * Uses NavigationMenu, Breadcrumb, Switch, and other shadcn/ui primitives for professional UI.
- * Maintains consistent navigation patterns while improving responsive design.
- * SRP/DRY check: Pass - Single responsibility (navigation), reuses shadcn/ui components
- * shadcn/ui: Pass - Uses NavigationMenu, Breadcrumb, Switch, and other shadcn/ui components
+ * Author: gpt-5-codex (building on Claude Code using Sonnet 4)
+ * Date: 2025-11-06T04:08:45Z
+ * PURPOSE: AppNavigation component with ARC agent workspace entry using shadcn/ui primitives.
+ * SRP/DRY check: Pass - Single navigation responsibility while extending existing mode registry.
+ * shadcn/ui: Pass - continues leveraging NavigationMenu, Breadcrumb, Switch, and related primitives.
  */
 
 import { Link, useLocation } from "wouter";
@@ -87,11 +85,11 @@ const navigationModes: NavigationMode[] = [
     category: 'advanced'
   },
   {
-    id: "research-synthesis",
-    name: "Research",
-    path: "/research-synthesis",
+    id: "arc-agent",
+    name: "ARC Workspace",
+    path: "/arc-agent",
     icon: Users,
-    description: "Collaborative research synthesis",
+    description: "ARC agent orchestration workspace",
     category: 'advanced'
   },
   {

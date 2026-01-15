@@ -1,14 +1,12 @@
 /**
- * Author: ChatGPT-4.1
- * Date: 2025-10-24T23:05:00Z
- * PURPOSE: Bridge Luigi orchestrator execution onto the OpenAI Agents SDK while
- *          emitting responses compatible with the existing agent runner contract.
- * SRP/DRY check: Pass - encapsulates SDK invocation logic without touching
- *                routing, storage orchestration, or REST fallback paths.
+ * Author: gpt-5-codex (building on ChatGPT-4.1)
+ * Date: 2025-11-06T04:10:30Z
+ * PURPOSE: Bridge ARC agent orchestrator execution onto OpenAI Agents SDK while emitting Luigi-compatible responses.
+ * SRP/DRY check: Pass - encapsulates SDK invocation logic without touching routing or storage orchestration.
  */
 
 import { Agent, run as runAgent } from '@openai/agents-core';
-import { LUIGI_STAGES } from '@shared/luigi-types';
+import { LUIGI_STAGES, type ArcExample } from '@shared/luigi-types';
 import type { LuigiMessage, LuigiRun } from '@shared/schema';
 import type { LuigiStageId, LuigiStageStatus } from '@shared/luigi-types';
 import { storage } from '../storage';
@@ -22,10 +20,19 @@ export interface LuigiSdkRunOptions {
   maxTurns?: number;
 }
 
+export interface LuigiArcContext {
+  taskId: string;
+  analysisBrief: string;
+  trainingExamples: ArcExample[];
+  evaluationExample?: ArcExample;
+  workspaceNotes?: string;
+}
+
 export interface LuigiSdkRunParams {
   run: LuigiRun;
   userReply?: string;
   options: LuigiSdkRunOptions;
+  arcContext?: LuigiArcContext;
 }
 
 type StageSnapshot = {
@@ -40,30 +47,31 @@ type StageSnapshotRecord = Partial<Record<LuigiStageId, StageSnapshot>>;
 const VALID_STAGE_STATUSES: readonly LuigiStageStatus[] = ['idle', 'in-progress', 'completed', 'blocked', 'failed'];
 const VALID_STAGE_STATUS_SET = new Set<LuigiStageStatus>(VALID_STAGE_STATUSES);
 
-const orchestratorInstructions = `You are the Luigi Master Orchestrator. Coordinate stage leads,
-aggregate validated information, and surface action items. Always respond in
-GitHub-flavoured Markdown with the following sections only:
+const orchestratorInstructions = `You are the ARC Orchestrator. Coordinate specialised agents to solve ARC puzzles by:
+- Extracting transformation hypotheses from training pairs.
+- Validating transformations across all examples and highlighting conflicts.
+- Generalising to evaluation grids with reasoning for each output.
+Always respond in GitHub-flavoured Markdown with the following sections only:
 
 ## Stage Progress
 - Bullet list summarising the current status for each relevant stage.
 
-## Key Risks
-- Bullet list of the most pressing risks or uncertainties.
+## Key Hypotheses
+- Bullet list describing active transformation hypotheses and their support.
 
 ## Required Inputs
-- Bullet list describing information or decisions needed from humans.
+- Bullet list of additional data or clarifications needed.
 
-## Recommended Actions
-- Bullet list of concrete next steps for the stage leads or stakeholders.
+## Proposed Outputs
+- Bullet list of predicted outputs (JSON arrays) with concise justification.
 
-When referencing stages, use their human-friendly names. Stay concise (<= 250
-words total) while maintaining clarity.`;
+Keep responses concise (<= 250 words) while preserving clarity.`;
 
 export async function runLuigiOrchestratorWithSdk(
   params: LuigiSdkRunParams,
 ): Promise<AgentRunResponse> {
-  const { run, userReply, options } = params;
-  const missionBrief = buildMissionBrief(run);
+  const { run, userReply, options, arcContext } = params;
+  const missionBrief = buildMissionBrief(run, arcContext);
   const stageSnapshots = coerceStageSnapshots(run);
   const stageSummary = buildStageSummary(stageSnapshots);
   const history = await fetchConversationHistory(run.id);
@@ -74,14 +82,14 @@ export async function runLuigiOrchestratorWithSdk(
     promptSections.push(conversationContext);
   }
   if (userReply) {
-    promptSections.push(`Latest stakeholder message:\n${userReply}`);
+    promptSections.push(`Latest human feedback:\n${userReply}`);
   }
   promptSections.push(
-    'Deliver the requested sections using Markdown and reference specific stages where helpful.',
+    'Deliver the requested sections using Markdown and include JSON arrays for any predicted outputs.'
   );
 
   const agent = new Agent({
-    name: 'Luigi Master Orchestrator',
+    name: 'ARC Master Orchestrator',
     instructions: orchestratorInstructions,
     model: options.model,
   });
@@ -96,20 +104,20 @@ export async function runLuigiOrchestratorWithSdk(
 
   return {
     status: 'running',
-    currentStageId: 'start-time-task',
+    currentStageId: 'ingest-arc-task',
     stageSnapshots: enrichedSnapshots,
     messages: [
       {
         role: 'orchestrator',
-        agentId: 'luigi-master-orchestrator',
+        agentId: 'arc-master-orchestrator',
         content: finalOutput,
       },
     ],
     artifacts: [
       {
-        stageId: 'start-time-task',
+        stageId: 'ingest-arc-task',
         type: 'markdown',
-        title: 'Luigi Orchestrator Briefing',
+        title: 'ARC Orchestrator Briefing',
         description: 'Markdown briefing generated via OpenAI Agents SDK.',
         data: { markdown: finalOutput },
       },
@@ -123,21 +131,51 @@ async function fetchConversationHistory(runId: string): Promise<LuigiMessage[]> 
     const messages = await storage.getLuigiMessages(runId, HISTORY_LIMIT);
     return messages;
   } catch (error) {
-    throw new Error(`Failed to load Luigi conversation history for run ${runId}: ${String(error)}`);
+    throw new Error(`Failed to load ARC conversation history for run ${runId}: ${String(error)}`);
   }
 }
 
-function buildMissionBrief(run: LuigiRun): string {
+function parseExamples(raw?: string | null): ArcExample[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as ArcExample[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseExample(raw?: string | null): ArcExample | undefined {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as ArcExample;
+  } catch {
+    return undefined;
+  }
+}
+
+function buildMissionBrief(run: LuigiRun, context?: LuigiArcContext): string {
+  const taskId = context?.taskId ?? run.missionName;
+  const analysisBrief = context?.analysisBrief ?? run.objective;
+  const trainingExamples = context?.trainingExamples ?? parseExamples(run.constraints);
+  const evaluationExample = context?.evaluationExample ?? parseExample(run.successCriteria);
+  const workspaceNotes = context?.workspaceNotes ?? run.stakeholderNotes ?? undefined;
+
   const lines: string[] = [
-    `Mission Name: ${run.missionName}`,
-    `Objective: ${run.objective}`,
+    `ARC Task ID: ${taskId}`,
+    `Mission Brief: ${analysisBrief}`,
+    `Training Examples (JSON):\n${JSON.stringify(trainingExamples, null, 2)}`,
   ];
 
-  if (run.constraints) lines.push(`Constraints: ${run.constraints}`);
-  if (run.successCriteria) lines.push(`Success Criteria: ${run.successCriteria}`);
-  if (run.stakeholderNotes) lines.push(`Stakeholder Notes: ${run.stakeholderNotes}`);
+  if (evaluationExample) {
+    lines.push(`Evaluation Example (JSON):\n${JSON.stringify(evaluationExample, null, 2)}`);
+  }
 
-  return `Mission Brief:\n${lines.join('\n')}`;
+  if (workspaceNotes) {
+    lines.push(`Workspace Notes: ${workspaceNotes}`);
+  }
+
+  return `Mission Brief:\n${lines.join('\n\n')}`;
 }
 
 function coerceStageSnapshots(run: LuigiRun): StageSnapshotRecord {
@@ -201,60 +239,46 @@ function buildConversationContext(messages: LuigiMessage[]): string {
 
 function formatRole(role: string): string {
   switch (role) {
-    case 'stage-lead':
-      return 'Stage Lead';
     case 'orchestrator':
       return 'Orchestrator';
+    case 'stage-lead':
+      return 'Stage Lead';
     case 'agent':
       return 'Agent';
     case 'user':
-      return 'Stakeholder';
+      return 'User';
     default:
-      return role;
+      return 'System';
   }
+}
+
+function normalizeStageStatus(status: unknown): LuigiStageStatus {
+  if (typeof status !== 'string') {
+    return 'idle';
+  }
+
+  if (VALID_STAGE_STATUS_SET.has(status as LuigiStageStatus)) {
+    return status as LuigiStageStatus;
+  }
+
+  return 'idle';
+}
+
+function markInitialStage(stages: StageSnapshotRecord, timestamp: string): StageSnapshotRecord {
+  const clone: StageSnapshotRecord = { ...stages };
+  if (!clone['ingest-arc-task']) {
+    clone['ingest-arc-task'] = { status: 'in-progress', startedAt: timestamp };
+  }
+  return clone;
 }
 
 function stringifyFinalOutput(finalOutput: unknown): string {
   if (typeof finalOutput === 'string') {
-    return finalOutput.trim();
+    return finalOutput;
   }
-
-  return JSON.stringify(finalOutput, null, 2);
-}
-
-function markInitialStage(
-  stages: StageSnapshotRecord,
-  timestamp: string,
-): StageSnapshotRecord {
-  const updated: StageSnapshotRecord = { ...stages };
-  const existing = updated['start-time-task'] ?? { status: 'idle' };
-  updated['start-time-task'] = {
-    ...existing,
-    status: 'completed',
-    startedAt: existing.startedAt ?? timestamp,
-    completedAt: timestamp,
-  };
-  return updated;
-}
-
-function normalizeStageStatus(value: unknown): LuigiStageStatus {
-  if (typeof value === 'string') {
-    if (VALID_STAGE_STATUS_SET.has(value as LuigiStageStatus)) {
-      return value as LuigiStageStatus;
-    }
-    if (value === 'complete') {
-      return 'completed';
-    }
-    if (value === 'in_progress') {
-      return 'in-progress';
-    }
-    if (value === 'blocking') {
-      return 'blocked';
-    }
-    if (value === 'error') {
-      return 'failed';
-    }
+  try {
+    return JSON.stringify(finalOutput, null, 2);
+  } catch (error) {
+    return `Unable to stringify orchestrator output: ${String(error)}`;
   }
-
-  return 'idle';
 }

@@ -1,3 +1,10 @@
+/*
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:08:30Z
+ * PURPOSE: Application router with ARC agent workspace route updates.
+ * SRP/DRY check: Pass - maintains route mapping without duplicating page logic.
+ */
+
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -10,7 +17,7 @@ import Home from "@/pages/home";
 import Battle from "@/pages/battle-chat";
 import CreativeCombat from "./pages/creative-combat";
 import Debate from "@/pages/debate";
-import ResearchSynthesis from "@/pages/research-synthesis";
+import ArcAgentWorkspace from "@/pages/arc-agent-workspace";
 import PlanAssessmentPage from "@/pages/plan-assessment";
 import NotFound from "@/pages/not-found";
 import BillingPage from "@/pages/billing";
@@ -27,7 +34,7 @@ function Router() {
       <Route path="/debate" component={Debate} />
       <Route path="/vixra" component={VixraPage} />
       <Route path="/arc-agi" component={ArcAgiPage} />
-      <Route path="/research-synthesis" component={ResearchSynthesis} />
+      <Route path="/arc-agent" component={ArcAgentWorkspace} />
       <Route path="/plan-assessment" component={PlanAssessmentPage} />
       <Route path="/billing" component={BillingPage} />
       <Route component={NotFound} />
@@ -36,7 +43,6 @@ function Router() {
 }
 
 function App() {
-  // Generate unique favicon for this tab/session
   useSimpleDynamicFavicon();
 
   return (

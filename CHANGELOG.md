@@ -11,6 +11,15 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.37] - 2025-11-06 04:11 UTC
+
+### Added
+- Launched the ARC Agent Workspace with ARC-specific run intake, timeline, conversation, and artifact components powered by the new agent modules.@client/src/pages/arc-agent-workspace.tsx@client/src/components/agent/ArcAgentRunForm.tsx@client/src/components/agent/ArcStageTimeline.tsx@client/src/components/agent/ArcConversationLog.tsx@client/src/components/agent/ArcArtifactPanel.tsx@client/src/components/agent/ArcRunControls.tsx
+- Documented the workspace transition plan for ongoing iterations.@docs/2025-11-06-plan-arc-agent-workspace.md
+
+### Changed
+- Updated navigation, shared types, and agent infrastructure to adopt ARC-focused terminology, stages, and configuration defaults.@client/src/App.tsx@client/src/components/AppNavigation.tsx@client/src/stores/useLuigiWorkspaceStore.ts@shared/luigi-types.ts@server/routes/luigi.ts@server/luigi/executor.ts@server/luigi/openai-sdk-runner.ts@server/config.ts
+
 ## [Version 0.4.36] - 2025-11-06 03:45 UTC
 
 ### Added

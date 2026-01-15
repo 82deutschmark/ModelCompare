@@ -1,9 +1,8 @@
 /*
- * Author: Codex using GPT-5
- * Date: 2025-10-04T02:04:20Z
- * PURPOSE: Express router exposing Luigi agent workspace REST endpoints.
- * SRP/DRY check: Pass - routes only, delegates to executor and storage.
- * shadcn/ui: Pass - backend only.
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:09:30Z
+ * PURPOSE: Express router exposing ARC agent workspace endpoints with ARC-specific validation.
+ * SRP/DRY check: Pass - routes only, delegates to executor and storage services.
  */
 
 import { Router } from 'express';
@@ -14,12 +13,18 @@ import { getLuigiConfig } from '../config.js';
 import type { LuigiRunParams } from '../luigi/executor';
 import { LUIGI_STAGES } from '@shared/luigi-types';
 
+const gridSchema = z.array(z.array(z.number().int().min(0).max(9)).min(1)).min(1);
+const arcExampleSchema = z.object({
+  input: gridSchema,
+  output: gridSchema.optional(),
+});
+
 const createRunSchema = z.object({
-  missionName: z.string().min(3),
-  objective: z.string().min(5),
-  constraints: z.string().optional(),
-  successCriteria: z.string().optional(),
-  stakeholderNotes: z.string().optional(),
+  taskId: z.string().min(3),
+  analysisBrief: z.string().min(10),
+  trainingExamples: z.array(arcExampleSchema).min(1),
+  evaluationExample: arcExampleSchema.optional(),
+  workspaceNotes: z.string().optional(),
 });
 
 const userReplySchema = z.object({

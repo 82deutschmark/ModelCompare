@@ -1,9 +1,8 @@
 /*
- *
- * Author: GPT-5 Codex
- * Date: 2025-10-17 and 14:18
- * PURPOSE: Centralized configuration loader; update ensures Helmet/CORS default on only in production while documenting hobby overrides; touches server/index.ts consumers.
- * SRP/DRY check: Pass - config remains single source for settings; confirmed no duplicate loaders exist elsewhere.
+ * Author: gpt-5-codex (extending prior GPT-5 Codex work)
+ * Date: 2025-11-06T04:10:45Z
+ * PURPOSE: Centralized configuration loader with ARC orchestrator defaults.
+ * SRP/DRY check: Pass - remains the single configuration authority for the server.
  */
 
 /**
@@ -160,7 +159,7 @@ export function loadConfig(): AppConfig {
     },
 
     luigi: {
-      orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || "luigi-master-orchestrator",
+      orchestratorAgentId: process.env.LUIGI_ORCHESTRATOR_ID || "arc-master-orchestrator",
       agentRunnerBaseUrl: process.env.AGENT_RUNNER_BASE_URL || "http://localhost:8700",
       agentRunnerApiKey: process.env.AGENT_RUNNER_API_KEY,
       agentMode: (process.env.LUIGI_AGENT_MODE === 'sdk' ? 'sdk' : 'rest') as LuigiAgentMode,

@@ -1,20 +1,19 @@
 /*
- * Author: Codex using GPT-5
- * Date: 2025-10-04T10:23:48Z
- * PURPOSE: Luigi business plan workspace page integrating form, timeline, conversation, and artifacts with live agents.
- * SRP/DRY check: Pass - composes existing Luigi components and hooks without duplicating logic.
- * shadcn/ui: Pass - uses existing shadcn/ui primitives throughout.
+ * Author: gpt-5-codex
+ * Date: 2025-11-06T04:08:00Z
+ * PURPOSE: ARC agent workspace page orchestrating ARC puzzle runs with OpenAI Agents-powered pipeline.
+ * SRP/DRY check: Pass - coordinates ARC workspace components and hooks without duplicating logic.
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { AppNavigation } from "@/components/AppNavigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LuigiRunForm, type LuigiRunFormValues } from "@/components/luigi/LuigiRunForm";
-import { LuigiStageTimeline } from "@/components/luigi/LuigiStageTimeline";
-import { LuigiConversationLog } from "@/components/luigi/LuigiConversationLog";
-import { LuigiArtifactPanel } from "@/components/luigi/LuigiArtifactPanel";
-import { LuigiRunControls } from "@/components/luigi/LuigiRunControls";
-import { useLuigiWorkspaceStore } from "@/stores/useLuigiWorkspaceStore";
+import { useEffect, useMemo, useState } from 'react';
+import { AppNavigation } from '@/components/AppNavigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArcAgentRunForm } from '@/components/agent/ArcAgentRunForm';
+import { ArcStageTimeline } from '@/components/agent/ArcStageTimeline';
+import { ArcConversationLog } from '@/components/agent/ArcConversationLog';
+import { ArcArtifactPanel } from '@/components/agent/ArcArtifactPanel';
+import { ArcRunControls } from '@/components/agent/ArcRunControls';
+import { useLuigiWorkspaceStore } from '@/stores/useLuigiWorkspaceStore';
 import {
   useCreateLuigiRun,
   useLuigiRun,
@@ -24,16 +23,16 @@ import {
   usePauseLuigiRun,
   useResumeLuigiRun,
   useCancelLuigiRun,
-} from "@/hooks/useLuigiApi";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import type { LuigiRunSummary } from "@shared/luigi-types";
+} from '@/hooks/useLuigiApi';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import type { LuigiRunSummary } from '@shared/luigi-types';
+import type { CreateLuigiRunRequest } from '@shared/luigi-types';
 
-export default function ResearchSynthesis() {
-  // Use individual selectors to avoid infinite re-renders
+export default function ArcAgentWorkspace() {
   const activeRunId = useLuigiWorkspaceStore((state) => state.activeRunId);
   const runSummary = useLuigiWorkspaceStore((state) => state.runSummary);
   const stageMap = useLuigiWorkspaceStore((state) => state.stageMap);
@@ -47,7 +46,7 @@ export default function ResearchSynthesis() {
   const setError = useLuigiWorkspaceStore((state) => state.setError);
 
   const { toast } = useToast();
-  const [replyDraft, setReplyDraft] = useState("");
+  const [replyDraft, setReplyDraft] = useState('');
 
   const createRun = useCreateLuigiRun();
   const pauseRun = usePauseLuigiRun();
@@ -64,7 +63,7 @@ export default function ResearchSynthesis() {
       setRunContext(runQuery.data.run);
     }
     if (runQuery.error) {
-      setError(runQuery.error instanceof Error ? runQuery.error.message : "Failed to load run");
+      setError(runQuery.error instanceof Error ? runQuery.error.message : 'Failed to load run');
     }
   }, [runQuery.data, runQuery.error, setRunContext, setError]);
 
@@ -80,18 +79,21 @@ export default function ResearchSynthesis() {
     }
   }, [artifactsQuery.data, setRunContext]);
 
-  const handleCreateRun = async (values: LuigiRunFormValues) => {
+  const handleCreateRun = async (payload: CreateLuigiRunRequest) => {
     setSubmitting(true);
     try {
-      const response = await createRun.mutateAsync(values);
+      const response = await createRun.mutateAsync(payload);
       setActiveRunId(response.run.id);
       setRunContext(response.run, [], []);
       setError(undefined);
-      toast({ title: "Luigi pipeline launched", description: "Agents are preparing the business plan." });
+      toast({
+        title: 'ARC agent launched',
+        description: 'The ARC orchestrator is analysing training grids.',
+      });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to launch Luigi pipeline";
+      const message = err instanceof Error ? err.message : 'Failed to launch ARC agent';
       setError(message);
-      toast({ title: "Launch failed", description: message, variant: "destructive" });
+      toast({ title: 'Launch failed', description: message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -113,18 +115,18 @@ export default function ResearchSynthesis() {
     if (!activeRunId) return;
     const response = await cancelRun.mutateAsync(activeRunId);
     setRunContext(response.run);
-    toast({ title: "Run cancelled", description: "Luigi run marked as cancelled." });
+    toast({ title: 'Run cancelled', description: 'ARC agent run cancelled.' });
   };
 
   const handleReply = async () => {
     if (!activeRunId || !replyDraft.trim()) return;
     try {
       await sendReply.mutateAsync({ runId: activeRunId, content: replyDraft.trim() });
-      setReplyDraft("");
-      toast({ title: "Reply sent", description: "Luigi orchestrator notified." });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to send reply";
-      toast({ title: "Reply failed", description: message, variant: "destructive" });
+      setReplyDraft('');
+      toast({ title: 'Reply sent', description: 'Feedback shared with the ARC orchestrator.' });
+    } catch (sendError) {
+      const message = sendError instanceof Error ? sendError.message : 'Failed to send reply';
+      toast({ title: 'Reply failed', description: message, variant: 'destructive' });
     }
   };
 
@@ -137,21 +139,18 @@ export default function ResearchSynthesis() {
 
   return (
     <div className="min-h-screen bg-muted/10">
-      <AppNavigation
-        title="Luigi Business Plan Workspace"
-        subtitle="Coordinate the Luigi agent federation to assemble a full execution plan"
-      />
+      <AppNavigation title="ARC Agent Workspace" subtitle="Coordinate an ARC-solving agent federation" />
       <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6">
         {error && (
           <Alert variant="destructive">
-            <AlertTitle>Workflow Issue</AlertTitle>
+            <AlertTitle>Workspace Issue</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         <div className="grid gap-6 xl:grid-cols-3">
           <div className="space-y-6">
-            <LuigiRunForm isSubmitting={isSubmitting || createRun.isPending} onSubmit={handleCreateRun} />
-            <LuigiRunControls
+            <ArcAgentRunForm isSubmitting={isSubmitting || createRun.isPending} onSubmit={handleCreateRun} />
+            <ArcRunControls
               run={runSummary}
               isMutating={isMutating}
               onPause={handlePause}
@@ -167,7 +166,7 @@ export default function ResearchSynthesis() {
             />
           </div>
           <div className="space-y-6">
-            <LuigiStageTimeline stageMap={stageMapWithFallback} currentStageId={runSummary?.currentStageId ?? null} />
+            <ArcStageTimeline stageMap={stageMapWithFallback} currentStageId={runSummary?.currentStageId ?? null} />
             <StatusCard
               run={runSummary}
               isLoading={runQuery.isLoading}
@@ -176,8 +175,8 @@ export default function ResearchSynthesis() {
             />
           </div>
           <div className="space-y-6">
-            <LuigiConversationLog messages={messages} />
-            <LuigiArtifactPanel artifacts={artifacts} />
+            <ArcConversationLog messages={messages} />
+            <ArcArtifactPanel artifacts={artifacts} />
           </div>
         </div>
       </div>
@@ -196,11 +195,11 @@ function CardReply({ disabled, value, onChange, onSubmit }: CardReplyProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>User Reply</CardTitle>
+        <CardTitle>User Feedback</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <Textarea
-          placeholder="Provide additional guidance or clarifications for the Luigi orchestrator."
+          placeholder="Suggest new hypotheses or highlight overlooked grid relationships for the ARC agent."
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
@@ -253,10 +252,9 @@ function StatusCard({ run, isLoading, messageCount, artifactCount }: StatusCardP
           <span className="font-medium text-foreground">{artifactCount}</span>
         </div>
         <div className="text-xs text-muted-foreground">
-          {run ? `Updated ${new Date(run.updatedAt).toLocaleString()}` : 'Launch a run to begin tracking.'}
+          {run ? `Updated ${new Date(run.updatedAt).toLocaleString()}` : 'Launch a run to start tracking.'}
         </div>
       </CardContent>
     </Card>
   );
 }
-
