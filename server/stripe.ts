@@ -81,16 +81,43 @@ export async function createPaymentIntent(
   packageId: string
 ): Promise<{ clientSecret: string; packageInfo: CreditPackage }> {
   try {
+    const storage = await getStorage();
+
     // Find the requested credit package
     const packageInfo = CREDIT_PACKAGES.find(pkg => pkg.id === packageId);
     if (!packageInfo) {
       throw new Error(`Invalid credit package ID: ${packageId}`);
     }
 
-    // Create the payment intent with Stripe
+    // Get user to access email for Stripe customer
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      throw new Error(`User not found: ${userId}`);
+    }
+
+    // Get or create Stripe customer
+    let customerId = user.stripeCustomerId;
+
+    if (!customerId) {
+      // Create new Stripe customer with user's email
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : undefined,
+        metadata: {
+          userId: user.id,
+        },
+      });
+
+      customerId = customer.id;
+      await storage.updateStripeCustomerId(userId, customerId);
+      contextLog(`Created Stripe customer ${customerId} for user ${userId}`);
+    }
+
+    // Create the payment intent with Stripe customer attached
     const paymentIntent = await stripe.paymentIntents.create({
       amount: packageInfo.price,
       currency: 'usd',
+      customer: customerId,
       automatic_payment_methods: {
         enabled: true,
       },
@@ -100,6 +127,7 @@ export async function createPaymentIntent(
         credits: packageInfo.credits.toString(),
       },
       description: `${packageInfo.name} - ${packageInfo.credits} credits`,
+      receipt_email: user.email || undefined,
     });
 
     contextLog(`Created payment intent for user ${userId}: ${packageInfo.name} (${packageInfo.credits} credits)`);

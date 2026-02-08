@@ -117,8 +117,7 @@ export function configurePassport() {
     try {
       const storage = await getStorage();
 
-      // Use Google profile ID as a device-like identifier
-      // This provides consistent identity verification without storing PII
+      // Use Google profile ID as device identifier for this OAuth user
       const googleId = profile.id;
       const deviceId = `google_${googleId}`;
 
@@ -136,28 +135,44 @@ export function configurePassport() {
         }
       }
 
-      // Find or create user based on device ID (hashed)
+      // Find or create user based on Google device ID
       let user = await storage.getUserByDeviceId(deviceId);
 
       if (!user) {
-        // Create new user with 500 starting credits - no PII stored
-        user = await storage.createAnonymousUser(deviceId);
+        // Create new user with Google profile data
+        user = await storage.upsertUser({
+          deviceId: deviceId,
+          email: profile.emails?.[0]?.value,
+          firstName: profile.name?.givenName,
+          lastName: profile.name?.familyName,
+          profileImageUrl: profile.photos?.[0]?.value,
+          credits: 500 + creditsToMerge,
+        });
+      } else {
+        // Update existing user with latest Google profile data and merge credits
+        user = await storage.upsertUser({
+          id: user.id,
+          deviceId: deviceId,
+          email: profile.emails?.[0]?.value,
+          firstName: profile.name?.givenName,
+          lastName: profile.name?.familyName,
+          profileImageUrl: profile.photos?.[0]?.value,
+          credits: (user.credits || 0) + creditsToMerge,
+        });
       }
 
-      // Merge credits from previous device user if applicable
       if (creditsToMerge > 0) {
-        user = await storage.addCredits(user.id, creditsToMerge);
         console.log(`Successfully merged ${creditsToMerge} credits. New balance: ${user.credits}`);
       }
 
-      // Ensure we return a properly shaped user object
+      // Return user for session
       const fullUser: Express.User = {
         id: user.id,
-        email: profile.emails?.[0]?.value || null,
-        deviceId: deviceId,
-        firstName: profile.name?.givenName || null,
-        lastName: profile.name?.familyName || null,
-        profileImageUrl: profile.photos?.[0]?.value || null,
+        email: user.email || null,
+        deviceId: user.deviceId,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        profileImageUrl: user.profileImageUrl || null,
         credits: user.credits || 500,
         stripeCustomerId: user.stripeCustomerId || null,
         stripeSubscriptionId: user.stripeSubscriptionId || null,

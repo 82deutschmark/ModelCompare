@@ -79,13 +79,16 @@ export const promptAudits = pgTable("prompt_audits", {
 });
 
 // User authentication and billing tables
-// ZDR (Zero Data Retention): NO PII - deviceID-only authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  deviceId: varchar("device_id"), // Hashed device-based identification (NO PII)
-  credits: integer("credits").default(500), // Starting credits
-  stripeCustomerId: varchar("stripe_customer_id"), // Hashed Stripe customer ID
-  stripeSubscriptionId: varchar("stripe_subscription_id"), // Hashed Stripe subscription ID
+  email: varchar("email"),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: text("profile_image_url"),
+  deviceId: varchar("device_id"), // For anonymous browsing before OAuth
+  credits: integer("credits").default(500),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

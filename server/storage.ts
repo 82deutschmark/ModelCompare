@@ -28,29 +28,9 @@
 import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type CreditReservation, type InsertCreditReservation, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type ArcRun, type InsertArcRun, type ArcMessage, type InsertArcMessage, type ArcArtifact, type InsertArcArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, creditReservations, luigiRuns, luigiMessages, luigiArtifacts, arcRuns, arcMessages, arcArtifacts, debateSessions } from "@shared/schema";
 import type { LuigiRunStatus, LuigiStageId } from "@shared/luigi-types";
 import type { ArcRunStatus, ArcStageId, ArcMessageRole } from "@shared/arc-types";
-import { randomUUID, createHash } from "crypto";
+import { randomUUID } from "crypto";
 import { db, ensureTablesExist } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
-
-/**
- * Hash device ID for privacy - ensures no PII is stored in database
- * Uses SHA-256 with a salt to create consistent but private hashes
- */
-function hashDeviceId(deviceId: string): string {
-  return createHash('sha256')
-    .update(`modelcompare_${deviceId}`)
-    .digest('hex');
-}
-
-/**
- * Hash Stripe IDs for privacy - ensures no direct Stripe identifiers stored
- * Uses SHA-256 with different salt to create consistent but private hashes
- */
-function hashStripeId(stripeId: string): string {
-  return createHash('sha256')
-    .update(`stripe_${stripeId}`)
-    .digest('hex');
-}
 
 type LuigiStagesPayload = Record<string, unknown>;
 
@@ -495,17 +475,15 @@ export class DbStorage implements IStorage {
   }
 
   async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
-    const hashedDeviceId = hashDeviceId(deviceId);
-    const [result] = await requireDb().select().from(users).where(eq(users.deviceId, hashedDeviceId));
+    const [result] = await requireDb().select().from(users).where(eq(users.deviceId, deviceId));
     return result;
   }
 
   async createAnonymousUser(deviceId: string): Promise<User> {
-    const hashedDeviceId = hashDeviceId(deviceId);
     const [result] = await requireDb()
       .insert(users)
       .values({
-        deviceId: hashedDeviceId,
+        deviceId: deviceId,
         credits: 500,
       })
       .returning();
@@ -525,9 +503,13 @@ export class DbStorage implements IStorage {
       const [result] = await requireDb()
         .update(users)
         .set({
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
           credits: userData.credits,
-          stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : null,
-          stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : null,
+          stripeCustomerId: userData.stripeCustomerId,
+          stripeSubscriptionId: userData.stripeSubscriptionId,
           updatedAt: new Date(),
         })
         .where(eq(users.id, userData.id))
@@ -537,10 +519,14 @@ export class DbStorage implements IStorage {
       const [result] = await requireDb()
         .insert(users)
         .values({
-          deviceId: userData.deviceId ? hashDeviceId(userData.deviceId) : null,
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          deviceId: userData.deviceId,
           credits: userData.credits ?? 500,
-          stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : null,
-          stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : null,
+          stripeCustomerId: userData.stripeCustomerId,
+          stripeSubscriptionId: userData.stripeSubscriptionId,
         })
         .returning();
       return result;
@@ -766,7 +752,7 @@ export class DbStorage implements IStorage {
     const [result] = await requireDb()
       .update(users)
       .set({
-        stripeCustomerId: hashStripeId(customerId),
+        stripeCustomerId: customerId,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
@@ -778,8 +764,8 @@ export class DbStorage implements IStorage {
     const [result] = await requireDb()
       .update(users)
       .set({
-        stripeCustomerId: info.stripeCustomerId ? hashStripeId(info.stripeCustomerId) : null,
-        stripeSubscriptionId: info.stripeSubscriptionId ? hashStripeId(info.stripeSubscriptionId) : null,
+        stripeCustomerId: info.stripeCustomerId ? info.stripeCustomerId : null,
+        stripeSubscriptionId: info.stripeSubscriptionId ? info.stripeSubscriptionId : null,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
@@ -1249,17 +1235,15 @@ export class MemStorage implements IStorage {
 
 
   async getUserByDeviceId(deviceId: string): Promise<User | undefined> {
-    const hashedDeviceId = hashDeviceId(deviceId);
     const users = Array.from(this.users.values());
-    return users.find(user => user.deviceId === hashedDeviceId);
+    return users.find(user => user.deviceId === deviceId);
   }
 
   async createAnonymousUser(deviceId: string): Promise<User> {
-    const hashedDeviceId = hashDeviceId(deviceId);
     const id = `anonymous_${Date.now()}_${Math.random().toString(36).substr(2)}`;
     const user: User = {
       id,
-      deviceId: hashedDeviceId,
+      deviceId: deviceId,
       credits: 500, // Anonymous users start with 500 credits
       stripeCustomerId: null,
       stripeSubscriptionId: null,
@@ -1292,8 +1276,12 @@ export class MemStorage implements IStorage {
       const updated: User = {
         ...existing,
         credits: userData.credits ?? existing.credits,
-        stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : existing.stripeCustomerId,
-        stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : existing.stripeSubscriptionId,
+        email: userData.email ?? existing.email,
+        firstName: userData.firstName ?? existing.firstName,
+        lastName: userData.lastName ?? existing.lastName,
+        profileImageUrl: userData.profileImageUrl ?? existing.profileImageUrl,
+        stripeCustomerId: userData.stripeCustomerId ?? existing.stripeCustomerId,
+        stripeSubscriptionId: userData.stripeSubscriptionId ?? existing.stripeSubscriptionId,
         updatedAt: new Date(),
       };
       
@@ -1304,10 +1292,14 @@ export class MemStorage implements IStorage {
       const id = randomUUID();
       const newUser: User = {
         id,
-        deviceId: userData.deviceId ? hashDeviceId(userData.deviceId) : null,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        deviceId: userData.deviceId,
         credits: userData.credits ?? 500,
-        stripeCustomerId: userData.stripeCustomerId ? hashStripeId(userData.stripeCustomerId) : null,
-        stripeSubscriptionId: userData.stripeSubscriptionId ? hashStripeId(userData.stripeSubscriptionId) : null,
+        stripeCustomerId: userData.stripeCustomerId,
+        stripeSubscriptionId: userData.stripeSubscriptionId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -1544,8 +1536,8 @@ export class MemStorage implements IStorage {
     
     const updated: User = {
       ...user,
-      stripeCustomerId: info.stripeCustomerId ? hashStripeId(info.stripeCustomerId) : user.stripeCustomerId,
-      stripeSubscriptionId: info.stripeSubscriptionId ? hashStripeId(info.stripeSubscriptionId) : user.stripeSubscriptionId,
+      stripeCustomerId: info.stripeCustomerId ? info.stripeCustomerId : user.stripeCustomerId,
+      stripeSubscriptionId: info.stripeSubscriptionId ? info.stripeSubscriptionId : user.stripeSubscriptionId,
       updatedAt: new Date(),
     };
     
