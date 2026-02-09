@@ -11,6 +11,44 @@
  * SRP/DRY check: Pass - changelog content is centralized in one file with no duplication across docs.
 -->
 
+## [Version 0.4.43] - 2025-07-02 19:30 UTC
+
+### Fixed
+- **🚨 CRITICAL: `getUserById` Runtime Crash in Stripe Payment Flow:** Fixed `storage.getUserById()` call that doesn't exist
+  - **Root Cause:** `server/stripe.ts:93` called `storage.getUserById(userId)` but the IStorage interface only has `getUser(id)`
+  - **Solution:** Changed to `storage.getUser(userId)`
+  - **Impact:** Payment intent creation now works without runtime errors
+  - **Files:** `server/stripe.ts:93`
+
+- **🚨 CRITICAL: `deserializeUser` Drops Profile Fields:** Fixed OAuth users losing email/name/avatar on page refresh
+  - **Root Cause:** `server/auth.ts:90-102` hardcoded `email: null`, `firstName: null`, etc. instead of using DB values
+  - **Solution:** Changed to use `user.email`, `user.firstName`, `user.lastName`, `user.profileImageUrl` from DB result
+  - **Impact:** OAuth users now retain their profile information across sessions
+  - **Files:** `server/auth.ts:90-102`
+
+- **🚨 CRITICAL: Session Store Pool Access Pattern:** Fixed unsafe private property access for PostgreSQL session store
+  - **Root Cause:** `server/auth.ts:206` used `(dbManager as any).pool` to access private property
+  - **Solution:** Added public `getPool()` method to `DatabaseManager` class and updated auth.ts to use it
+  - **Impact:** Proper encapsulation, no more TypeScript `any` casts for pool access
+  - **Files:** `server/database-manager.ts:174-180`, `server/auth.ts:204-205`
+
+### Added
+- **PaymentHistory Component + Backend:** Full billing history feature implementation
+  - **Database:** Added `payment_transactions` table to `shared/schema.ts` with invoice numbers, amounts, status, receipt URLs
+  - **Storage:** Added `createPaymentTransaction()`, `getPaymentTransactionsByUserId()`, `getPaymentTransactionByStripeId()` methods
+  - **API:** Added `GET /api/stripe/transactions` endpoint for fetching user's payment history
+  - **Webhook:** Updated Stripe webhook handler to record successful and failed transactions automatically
+  - **Frontend:** Created `PaymentHistory.tsx` component with:
+    - Invoice-style table layout with status badges
+    - Summary cards (total transactions, amounts, monthly, pending)
+    - Filtering by status and type
+    - CSV and JSON export functionality
+    - Copy transaction details and view receipt actions
+  - **Files:** `shared/schema.ts`, `server/storage.ts`, `server/routes/credits.routes.ts`, `server/stripe.ts`, `client/src/components/PaymentHistory.tsx`
+
+### Documentation
+- **Gap Assessment:** Created `docs/plans/070225-stripe-oauth-gap-assessment.md` documenting all Stripe and OAuth implementation gaps
+
 ## [Version 0.4.42] - 2025-11-13 15:30 UTC
 
 ### Fixed

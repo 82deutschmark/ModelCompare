@@ -1,12 +1,13 @@
 /*
  * Author: Cascade
  * Date: October 14, 2025 and 7:23pm UTC-04:00
- * PURPOSE: This routes file handles credit management and Stripe payment processing, including retrieving credit packages, creating payment intents for purchases, and handling Stripe webhooks for credit fulfillment. It integrates with auth middleware for protected routes and touches Stripe service for payment handling.
+ * PURPOSE: This routes file handles credit management and Stripe payment processing, including retrieving credit packages, creating payment intents for purchases, handling Stripe webhooks for credit fulfillment, and fetching payment transaction history. It integrates with auth middleware for protected routes and touches Stripe service for payment handling.
  * SRP/DRY check: Pass - Focused solely on payment and credit logic. Payment patterns were repeated in the monolithic routes.ts; this extracts them. Reviewed existing payment code to ensure no duplication.
  */
 import { Router } from "express";
 import { isAuthenticated } from "../auth.js";
 import { createPaymentIntent, handleStripeWebhook, getCreditPackages } from "../stripe.js";
+import { getStorage } from "../storage.js";
 
 const router = Router();
 
@@ -68,6 +69,24 @@ router.post("/webhook", async (req, res) => {
   } catch (error) {
     console.error('Error handling webhook:', error);
     res.status(400).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// Get payment transaction history for the authenticated user
+router.get("/transactions", isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const storage = await getStorage();
+    const transactions = await storage.getPaymentTransactionsByUserId(user.id);
+
+    res.json({ transactions });
+  } catch (error) {
+    console.error('Error fetching payment transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch payment history' });
   }
 });
 

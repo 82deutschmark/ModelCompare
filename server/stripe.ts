@@ -90,7 +90,7 @@ export async function createPaymentIntent(
     }
 
     // Get user to access email for Stripe customer
-    const user = await storage.getUserById(userId);
+    const user = await storage.getUser(userId);
     if (!user) {
       throw new Error(`User not found: ${userId}`);
     }
@@ -161,7 +161,7 @@ export async function handleStripeWebhook(
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       
-      const { userId, credits } = paymentIntent.metadata;
+      const { userId, credits, packageId } = paymentIntent.metadata;
       const creditsToAdd = parseInt(credits);
 
       if (!userId || !credits) {
@@ -171,6 +171,24 @@ export async function handleStripeWebhook(
       // Add credits to user account
       const storage = await getStorage();
       const updatedUser = await storage.addCredits(userId, creditsToAdd);
+      
+      // Record the transaction in payment history
+      const packageInfo = CREDIT_PACKAGES.find(pkg => pkg.id === packageId);
+      await storage.createPaymentTransaction({
+        userId,
+        stripePaymentIntentId: paymentIntent.id,
+        invoiceNumber: `INV-${Date.now()}-${paymentIntent.id.slice(-6).toUpperCase()}`,
+        description: packageInfo ? `${packageInfo.name} - ${packageInfo.credits} credits` : `Credit purchase - ${creditsToAdd} credits`,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency.toUpperCase(),
+        credits: creditsToAdd,
+        status: 'completed',
+        type: 'credit_purchase',
+        paymentMethod: paymentIntent.payment_method_types?.[0] || 'card',
+        cardLast4: (paymentIntent.payment_method as any)?.card?.last4 || null,
+        receiptUrl: paymentIntent.receipt_email ? `https://dashboard.stripe.com/payments/${paymentIntent.id}` : null,
+        metadata: { packageId, stripeCustomerId: paymentIntent.customer },
+      });
       
       contextLog(`Successfully added ${creditsToAdd} credits to user ${userId}. New balance: ${updatedUser.credits}`);
 
@@ -183,9 +201,32 @@ export async function handleStripeWebhook(
     // Handle payment failures
     if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const { userId, userEmail } = paymentIntent.metadata;
+      const { userId, credits, packageId } = paymentIntent.metadata;
       
-      contextError(`Payment failed for user ${userEmail} (${userId})`);
+      if (userId) {
+        // Record the failed transaction in payment history
+        const storage = await getStorage();
+        const packageInfo = CREDIT_PACKAGES.find(pkg => pkg.id === packageId);
+        await storage.createPaymentTransaction({
+          userId,
+          stripePaymentIntentId: paymentIntent.id,
+          invoiceNumber: `INV-${Date.now()}-${paymentIntent.id.slice(-6).toUpperCase()}`,
+          description: packageInfo ? `${packageInfo.name} - Payment Failed` : 'Credit purchase - Payment Failed',
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency.toUpperCase(),
+          credits: credits ? parseInt(credits) : null,
+          status: 'failed',
+          type: 'credit_purchase',
+          paymentMethod: paymentIntent.payment_method_types?.[0] || 'card',
+          metadata: { 
+            packageId, 
+            failureMessage: paymentIntent.last_payment_error?.message,
+            failureCode: paymentIntent.last_payment_error?.code,
+          },
+        });
+      }
+      
+      contextError(`Payment failed for user ${userId}`);
       
       return {
         success: true,

@@ -25,7 +25,7 @@
  * and availability.
  */
 
-import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type CreditReservation, type InsertCreditReservation, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type ArcRun, type InsertArcRun, type ArcMessage, type InsertArcMessage, type ArcArtifact, type InsertArcArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, creditReservations, luigiRuns, luigiMessages, luigiArtifacts, arcRuns, arcMessages, arcArtifacts, debateSessions } from "@shared/schema";
+import { type Comparison, type InsertComparison, type VixraSession, type InsertVixraSession, type PromptAuditRecord, type InsertPromptAudit, type User, type InsertUser, type UpsertUser, type StripeInfo, type CreditReservation, type InsertCreditReservation, type PaymentTransaction, type InsertPaymentTransaction, type LuigiRun, type InsertLuigiRun, type LuigiMessage, type InsertLuigiMessage, type LuigiArtifact, type InsertLuigiArtifact, type ArcRun, type InsertArcRun, type ArcMessage, type InsertArcMessage, type ArcArtifact, type InsertArcArtifact, type DebateSession, type InsertDebateSession, comparisons, vixraSessions, promptAudits, users, creditReservations, paymentTransactions, luigiRuns, luigiMessages, luigiArtifacts, arcRuns, arcMessages, arcArtifacts, debateSessions } from "@shared/schema";
 import type { LuigiRunStatus, LuigiStageId } from "@shared/luigi-types";
 import type { ArcRunStatus, ArcStageId, ArcMessageRole } from "@shared/arc-types";
 import { randomUUID } from "crypto";
@@ -145,6 +145,11 @@ export interface IStorage {
   // Stripe integration operations
   updateStripeCustomerId(userId: string, customerId: string): Promise<User>;
   updateUserStripeInfo(userId: string, info: StripeInfo): Promise<User>;
+
+  // Payment transaction history operations
+  createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction>;
+  getPaymentTransactionsByUserId(userId: string): Promise<PaymentTransaction[]>;
+  getPaymentTransactionByStripeId(stripePaymentIntentId: string): Promise<PaymentTransaction | undefined>;
 }
 
 // DbStorage class - PostgreSQL implementation
@@ -772,6 +777,31 @@ export class DbStorage implements IStorage {
       .returning();
     return result;
   }
+
+  // Payment transaction history operations
+  async createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction> {
+    const [result] = await requireDb()
+      .insert(paymentTransactions)
+      .values(transaction as any)
+      .returning();
+    return result;
+  }
+
+  async getPaymentTransactionsByUserId(userId: string): Promise<PaymentTransaction[]> {
+    return await requireDb()
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.userId, userId))
+      .orderBy(desc(paymentTransactions.createdAt));
+  }
+
+  async getPaymentTransactionByStripeId(stripePaymentIntentId: string): Promise<PaymentTransaction | undefined> {
+    const [result] = await requireDb()
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.stripePaymentIntentId, stripePaymentIntentId));
+    return result;
+  }
 }
 
 export class MemStorage implements IStorage {
@@ -787,7 +817,7 @@ export class MemStorage implements IStorage {
   private arcMessages: Map<string, ArcMessage[]>;
   private arcArtifacts: Map<string, ArcArtifact[]>;
   private debateSessions: Map<string, DebateSession>;
-
+  private paymentTransactions: Map<string, PaymentTransaction>;
 
   constructor() {
     this.comparisons = new Map();
@@ -802,6 +832,7 @@ export class MemStorage implements IStorage {
     this.arcMessages = new Map();
     this.arcArtifacts = new Map();
     this.debateSessions = new Map();
+    this.paymentTransactions = new Map();
   }
 
   async createComparison(insertComparison: InsertComparison): Promise<Comparison> {
@@ -1543,6 +1574,41 @@ export class MemStorage implements IStorage {
     
     this.users.set(userId, updated);
     return updated;
+  }
+
+  // Payment transaction history operations
+  async createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction> {
+    const id = randomUUID();
+    const newTransaction: PaymentTransaction = {
+      id,
+      userId: transaction.userId,
+      stripePaymentIntentId: transaction.stripePaymentIntentId || null,
+      invoiceNumber: transaction.invoiceNumber,
+      description: transaction.description,
+      amount: transaction.amount,
+      currency: transaction.currency || 'USD',
+      credits: transaction.credits || null,
+      status: transaction.status,
+      type: transaction.type,
+      paymentMethod: transaction.paymentMethod || null,
+      cardLast4: transaction.cardLast4 || null,
+      receiptUrl: transaction.receiptUrl || null,
+      metadata: transaction.metadata || null,
+      createdAt: new Date(),
+    };
+    this.paymentTransactions.set(id, newTransaction);
+    return newTransaction;
+  }
+
+  async getPaymentTransactionsByUserId(userId: string): Promise<PaymentTransaction[]> {
+    return Array.from(this.paymentTransactions.values())
+      .filter(t => t.userId === userId)
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  async getPaymentTransactionByStripeId(stripePaymentIntentId: string): Promise<PaymentTransaction | undefined> {
+    return Array.from(this.paymentTransactions.values())
+      .find(t => t.stripePaymentIntentId === stripePaymentIntentId);
   }
 }
 

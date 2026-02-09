@@ -86,14 +86,14 @@ export function configurePassport() {
       if (!user) {
         return done(new Error('User not found'), null);
       }
-      // Ensure we return a properly shaped user object
+      // Map DB result to Express.User, preserving all stored profile fields
       const fullUser: Express.User = {
         id: user.id,
-        email: null,
+        email: user.email || null,
         deviceId: user.deviceId || null,
-        firstName: null,
-        lastName: null,
-        profileImageUrl: null,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        profileImageUrl: user.profileImageUrl || null,
         credits: user.credits || 500,
         stripeCustomerId: user.stripeCustomerId || null,
         stripeSubscriptionId: user.stripeSubscriptionId || null,
@@ -201,13 +201,12 @@ export async function configureSession(app: Express) {
     const dbManager = getDatabaseManager();
     if (dbManager) {
       await dbManager.initialize();
-      // Access the pool directly from the manager's private property
-      // Note: This is a workaround since getPool() doesn't exist
-      const poolAccessor = (dbManager as any).pool;
+      // Use the public getPool() accessor for session store initialization
+      const pool = dbManager.getPool();
       
-      if (poolAccessor) {
+      if (pool) {
         sessionStore = new PgSession({
-          pool: poolAccessor,
+          pool: pool,
           tableName: 'sessions', // This should match our schema
           createTableIfMissing: true,
         });

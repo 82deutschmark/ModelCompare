@@ -171,6 +171,14 @@ export class DatabaseManager {
     return this.db;
   }
 
+  /**
+   * Get the underlying pg Pool instance for direct pool access
+   * Used by session stores (connect-pg-simple) that need a raw pool reference
+   */
+  getPool(): InstanceType<typeof Pool> | null {
+    return this.pool;
+  }
+
   async ensureTablesExist(): Promise<void> {
     if (!this.db) {
       throw new DatabaseError('Database not initialized');

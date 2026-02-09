@@ -105,6 +105,26 @@ export const creditReservations = pgTable("credit_reservations", {
   expiresAt: timestamp("expires_at").notNull(), // 10-minute expiry
 });
 
+// Payment transaction history for billing records
+// Records every Stripe payment event (success, failure, refund) for user-facing history
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  invoiceNumber: varchar("invoice_number").notNull(),
+  description: text("description").notNull(),
+  amount: integer("amount").notNull(), // Amount in cents (USD)
+  currency: varchar("currency").notNull().default('USD'),
+  credits: integer("credits"), // Credits purchased (null for refunds/adjustments)
+  status: varchar("status").notNull(), // 'completed', 'pending', 'failed', 'refunded'
+  type: varchar("type").notNull(), // 'credit_purchase', 'refund', 'adjustment'
+  paymentMethod: varchar("payment_method"), // 'card', 'bank_transfer', etc.
+  cardLast4: varchar("card_last4"), // Last 4 digits of card used
+  receiptUrl: text("receipt_url"), // Stripe receipt URL
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Session storage for authentication
 export const sessions = pgTable("sessions", {
   sid: varchar("sid").primaryKey(),
@@ -247,6 +267,11 @@ export const insertCreditReservationSchema = createInsertSchema(creditReservatio
   createdAt: true,
 });
 
+export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertLuigiRunSchema = createInsertSchema(luigiRuns).omit({
   id: true,
   createdAt: true,
@@ -301,6 +326,9 @@ export type Session = typeof sessions.$inferSelect;
 
 export type InsertCreditReservation = z.infer<typeof insertCreditReservationSchema>;
 export type CreditReservation = typeof creditReservations.$inferSelect;
+
+export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 
 export type InsertLuigiRun = z.infer<typeof insertLuigiRunSchema>;
 export type LuigiRun = typeof luigiRuns.$inferSelect;
