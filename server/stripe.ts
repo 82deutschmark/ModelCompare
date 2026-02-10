@@ -24,10 +24,28 @@ import Stripe from 'stripe';
 import { getStorage } from './storage.js';
 import { contextLog, contextError } from './request-context.js';
 
-// Initialize Stripe with secret key from environment
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil', // Use the API version supported by this Stripe package
-});
+let stripeClient: Stripe | null = null;
+
+function getStripeSecret(): string {
+  const secret = process.env.STRIPE_SECRET_KEY;
+  if (!secret) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+  }
+  return secret;
+}
+
+function getStripeClient(): Stripe {
+  if (!stripeClient) {
+    stripeClient = new Stripe(getStripeSecret(), {
+      apiVersion: '2025-08-27.basil',
+    });
+  }
+  return stripeClient;
+}
+
+export function __resetStripeClientForTests() {
+  stripeClient = null;
+}
 
 // Credit package definitions - these define what users can purchase
 export interface CreditPackage {
@@ -81,6 +99,7 @@ export async function createPaymentIntent(
   packageId: string
 ): Promise<{ clientSecret: string; packageInfo: CreditPackage }> {
   try {
+    const stripe = getStripeClient();
     const storage = await getStorage();
 
     // Find the requested credit package
@@ -151,6 +170,7 @@ export async function handleStripeWebhook(
   signature: string
 ): Promise<{ success: boolean; message: string }> {
   try {
+    const stripe = getStripeClient();
     // Verify webhook signature for security
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
     const event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
